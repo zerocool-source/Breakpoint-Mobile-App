@@ -11,6 +11,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -599,8 +600,16 @@ function TruckInspectionModal({ visible, onClose, onSubmit }: TruckInspectionMod
 export default function TruckInspectionScreen() {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
+  const navigation = useNavigation();
   const [showModal, setShowModal] = useState(false);
   const [inspections, setInspections] = useState<TruckInspection[]>(mockTruckInspections);
+
+  const handleBack = () => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    navigation.goBack();
+  };
 
   const handleNewInspection = () => {
     if (Platform.OS !== 'web') {
@@ -644,11 +653,19 @@ export default function TruckInspectionScreen() {
       >
         <Animated.View entering={FadeInDown.delay(100).springify()}>
           <View style={styles.header}>
-            <View>
-              <ThemedText style={styles.title}>Truck Inspection</ThemedText>
-              <ThemedText style={[styles.subtitle, { color: theme.textSecondary }]}>
-                Vehicle condition reports
-              </ThemedText>
+            <View style={styles.headerLeft}>
+              <Pressable
+                style={[styles.backButton, { backgroundColor: theme.surface }]}
+                onPress={handleBack}
+              >
+                <Feather name="arrow-left" size={22} color={theme.text} />
+              </Pressable>
+              <View>
+                <ThemedText style={styles.title}>Truck Inspection</ThemedText>
+                <ThemedText style={[styles.subtitle, { color: theme.textSecondary }]}>
+                  Vehicle condition reports
+                </ThemedText>
+              </View>
             </View>
             <Pressable
               style={[styles.newButton, { backgroundColor: BrandColors.azureBlue }]}
@@ -721,6 +738,19 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
     flexWrap: 'wrap',
     gap: Spacing.sm,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: BorderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: Spacing.md,
+    ...Shadows.card,
   },
   title: {
     fontSize: 28,

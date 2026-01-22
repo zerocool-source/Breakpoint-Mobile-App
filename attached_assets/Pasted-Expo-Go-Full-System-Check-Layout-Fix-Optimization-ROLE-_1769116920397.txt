@@ -1,0 +1,164 @@
+Expo Go Full System Check + Layout Fix + Optimization”
+
+ROLE: You are a senior Expo/React Native engineer. You will audit, diagnose, and fix every issue preventing a clean, stable Expo Go experience, especially layout/UI problems. You will make changes directly in the codebase and explain what you changed.
+
+1) First: Identify app + environment
+
+Detect Expo SDK version, React Native version, and React version from package.json.
+
+Confirm if project is managed Expo or uses prebuild/custom native folders.
+
+Output a short “Environment Summary” (SDK, RN, React, router used, state library used).
+
+2) Run full system checks (must do all)
+
+Run and report results for each (fix anything that fails):
+
+Dependencies / integrity
+
+npm install (or yarn / pnpm depending on lockfile)
+
+npx expo-doctor (fix warnings/errors)
+
+npx expo start --clear
+
+Check for duplicate or conflicting packages (especially navigation, gesture handler, reanimated, expo-router)
+
+TypeScript / lint
+
+If TS exists: npx tsc --noEmit and fix errors
+
+If ESLint exists: run it and fix high-impact problems (imports, hooks rules, unused vars)
+
+Expo Go compatibility
+
+Verify no native-only modules that break Expo Go
+
+Ensure app.json/app.config.js is valid and required permissions/plugins are correct
+
+3) Layout issues: diagnose + fix methodically
+
+You MUST:
+
+Find all screens/components with layout problems and list them.
+
+Fix common Expo Go layout pitfalls:
+
+Missing SafeAreaView (or incorrect use)
+
+Not respecting notches/status bar
+
+View containers missing flex: 1
+
+Overuse of absolute positioning
+
+Broken scroll views (ScrollView inside ScrollView, missing contentContainerStyle, etc.)
+
+Keyboard covering inputs (add KeyboardAvoidingView where needed)
+
+Text overflow / improper wrapping
+
+Inconsistent spacing due to hard-coded sizes
+
+Make layout responsive:
+
+Use useWindowDimensions() where needed
+
+Replace magic numbers with scalable spacing
+
+Ensure it works on small phones + big phones
+
+If using expo-router:
+
+Confirm correct folder structure for routes
+
+Ensure layouts use <Stack /> / <Tabs /> correctly
+
+Fix any header/safe-area stacking issues
+
+4) Styling standardization (pick ONE approach and apply consistently)
+
+Choose the best fit based on repo setup:
+
+StyleSheet-only (default), OR
+
+NativeWind/Tailwind RN (if already present), OR
+
+Styled-components (if already present)
+
+Then:
+
+Create a small theme / spacing utility (e.g., spacing scale: 4, 8, 12, 16, 24)
+
+Remove redundant inline styles and repeated layout patterns
+
+5) Performance + optimization pass
+
+Do these improvements where applicable:
+
+Convert heavy inline functions in render to useCallback (only where it matters)
+
+Add React.memo for expensive repeated components
+
+Use FlatList instead of mapping large lists inside ScrollView
+
+Remove unused dependencies and dead code
+
+Ensure images use expo-image if already installed; otherwise keep current approach stable
+
+Ensure minimal re-renders in navigation/layout components
+
+6) Expo Go “must-fix” runtime errors checklist
+
+Search the codebase for and fix:
+
+“Tried to register two views with the same name”
+
+Reanimated/plugin misconfig
+
+Gesture Handler missing root wrapper (if needed)
+
+Navigation container duplication
+
+StatusBar config issues
+
+Any redbox errors on start
+
+7) Deliverables (required)
+
+When done, output:
+
+What you found (bullet list)
+
+What you changed (file-by-file summary)
+
+How to run it (exact commands)
+
+Expo Go test plan (steps to verify on iOS + Android)
+
+If any issue cannot be fixed without more info, list exactly what you need.
+
+8) Constraints
+
+Do NOT introduce new libraries unless absolutely necessary.
+
+Keep the app compatible with Expo Go (managed workflow).
+
+Prefer small, safe refactors over risky rewrites.
+
+Now begin. Start by printing the Environment Summary, then run expo-doctor checks, then fix layout issues screen by screen.
+
+If you want an even more aggressive “layout fixer”
+
+Add this at the bottom of the prompt (optional):
+
+Extra requirement: Implement a reusable Screen wrapper component:
+
+Wraps SafeAreaView
+
+Applies flex: 1
+
+Standard padding + background
+
+Optional scroll mode using ScrollView
+Then refactor all screens to use it.

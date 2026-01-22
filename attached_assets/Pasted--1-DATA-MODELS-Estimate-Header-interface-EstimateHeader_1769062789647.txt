@@ -1,0 +1,383 @@
+
+1. DATA MODELS
+Estimate Header
+interface EstimateHeader {
+  estimateNumber: string;    // Auto-generated: EST-YYMM-####
+  status: string;            // draft, sent, approved, declined
+  repairTech: string;        // Who created the estimate
+  serviceTech: string;       // Who reported the issue
+  reportedDate: string;      // When issue was found
+  location: string;          // Property name
+  notes: string;             // Additional details
+}
+Estimate Line Item
+interface EstimateItem {
+  id: string;              // Unique identifier
+  name: string;            // Product/service name
+  description: string;     // Detailed description
+  quantity: number;        // How many units
+  rate: number;            // Price per unit
+  amount: number;          // quantity × rate
+  sku?: string;            // Product SKU code
+  itemClass: string;       // Category (pumps, filters, labor, etc.)
+  taxable: boolean;        // Whether to apply tax
+}
+Full Estimate
+interface Estimate {
+  id: string;
+  propertyId: string;
+  propertyName: string;
+  customerName: string;
+  address: string;
+  header: EstimateHeader;
+  lineItems: EstimateItem[];
+  subtotal: number;
+  taxRate: number;          // e.g., 0.0775 for 7.75%
+  tax: number;              // Calculated tax amount
+  total: number;            // subtotal + tax
+  photos: string[];         // Base64 or URLs
+  createdAt: string;
+  updatedAt: string;
+}
+2. ESTIMATE NUMBER GENERATION
+Format
+EST-YYMM-####
+
+Example
+EST-2601-3847
+
+Logic
+const generateEstimateNumber = () => {
+  const now = new Date();
+  const year = now.getFullYear().toString().slice(-2);  // "26"
+  const month = (now.getMonth() + 1).toString().padStart(2, '0');  // "01"
+  const random = Math.floor(1000 + Math.random() * 9000);  // 4-digit: 1000-9999
+  return `EST-${year}${month}-${random}`;
+};
+Display
+Blue pill badge below header
+13px font, bold, letter-spaced
+Background: ${primaryColor}15 (15% opacity)
+3. STATE MANAGEMENT
+States Needed
+// Header fields
+const [estimateNumber, setEstimateNumber] = useState('');
+const [status, setStatus] = useState('draft');
+const [repairTech, setRepairTech] = useState('');
+const [serviceTech, setServiceTech] = useState('');
+const [reportedDate, setReportedDate] = useState('');
+const [location, setLocation] = useState('');
+const [notes, setNotes] = useState('');
+// Line items
+const [lineItems, setLineItems] = useState<EstimateItem[]>([]);
+// Product search
+const [searchQuery, setSearchQuery] = useState('');
+const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+const [products, setProducts] = useState([]);
+const [isSearching, setIsSearching] = useState(false);
+// Photos
+const [estimatePhotos, setEstimatePhotos] = useState<string[]>([]);
+// UI state
+const [expandedSections, setExpandedSections] = useState({
+  header: true,
+  lineItems: true,
+  photos: true,
+  totals: true
+});
+4. PRODUCT CATALOG
+Categories
+const PRODUCT_CATEGORIES = [
+  { id: 'pumps', label: 'Pumps', icon: Wrench, searchTerms: ['pump', 'motor'] },
+  { id: 'filters', label: 'Filters', icon: Package, searchTerms: ['filter', 'cartridge'] },
+  { id: 'chemicals', label: 'Chemicals', icon: Droplet, searchTerms: ['chlorine', 'acid'] },
+  { id: 'heaters', label: 'Heaters', icon: Flame, searchTerms: ['heater', 'heat'] },
+  { id: 'parts', label: 'Parts', icon: Package, searchTerms: ['valve', 'gasket', 'o-ring'] },
+  { id: 'labor', label: 'Labor', icon: Clock, searchTerms: ['labor', 'service', 'install'] },
+];
+Product Structure
+interface Product {
+  id: string;
+  sku: string;
+  name: string;
+  description: string;
+  category: string;
+  unitPrice: number;
+  taxable: boolean;
+}
+Data Sources
+External API (Pool Brian): /v2/product_list endpoint
+Fallback Mock Data: Local array of common products
+5. LINE ITEM MANAGEMENT
+Adding Items
+const addLineItem = (product: Product) => {
+  const newItem: EstimateItem = {
+    id: `item-${Date.now()}`,
+    name: product.name,
+    description: product.description,
+    quantity: 1,
+    rate: product.unitPrice,
+    amount: product.unitPrice,
+    sku: product.sku,
+    itemClass: product.category,
+    taxable: product.taxable,
+  };
+  setLineItems([...lineItems, newItem]);
+};
+Updating Quantity
+const updateQuantity = (itemId: string, newQty: number) => {
+  setLineItems(items => items.map(item => 
+    item.id === itemId 
+      ? { ...item, quantity: newQty, amount: newQty * item.rate }
+      : item
+  ));
+};
+Updating Rate
+const updateRate = (itemId: string, newRate: number) => {
+  setLineItems(items => items.map(item => 
+    item.id === itemId 
+      ? { ...item, rate: newRate, amount: item.quantity * newRate }
+      : item
+  ));
+};
+Removing Items
+const removeLineItem = (itemId: string) => {
+  setLineItems(items => items.filter(item => item.id !== itemId));
+};
+Toggle Taxable
+const toggleTaxable = (itemId: string) => {
+  setLineItems(items => items.map(item => 
+    item.id === itemId 
+      ? { ...item, taxable: !item.taxable }
+      : item
+  ));
+};
+6. CALCULATIONS
+Subtotal
+const subtotal = lineItems.reduce((sum, item) => sum + item.amount, 0);
+Tax
+const TAX_RATE = 0.0775; // 7.75%
+const taxableAmount = lineItems
+  .filter(item => item.taxable)
+  .reduce((sum, item) => sum + item.amount, 0);
+const tax = taxableAmount * TAX_RATE;
+Total
+const total = subtotal + tax;
+7. PHOTO HANDLING
+Camera Capture
+const cameraInputRef = useRef<HTMLInputElement>(null);
+// Trigger camera
+<input
+  ref={cameraInputRef}
+  type="file"
+  accept="image/*"
+  capture="environment"
+  style={{ display: 'none' }}
+  onChange={handlePhotoCapture}
+/>
+const handlePhotoCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setEstimatePhotos([...estimatePhotos, ev.target?.result as string]);
+    };
+    reader.readAsDataURL(file);
+  }
+  e.target.value = ''; // Reset for next capture
+};
+Gallery Upload
+const galleryInputRef = useRef<HTMLInputElement>(null);
+<input
+  ref={galleryInputRef}
+  type="file"
+  accept="image/*"
+  multiple
+  style={{ display: 'none' }}
+  onChange={handleGalleryUpload}
+/>
+const handleGalleryUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const files = e.target.files;
+  if (files) {
+    Array.from(files).forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setEstimatePhotos(prev => [...prev, ev.target?.result as string]);
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+  e.target.value = '';
+};
+Delete Photo
+const deletePhoto = (index: number) => {
+  setEstimatePhotos(photos => photos.filter((_, i) => i !== index));
+};
+8. VOICE INPUT (Search)
+Setup
+const { isListening, transcript, startListening, stopListening, isSupported } = useSpeechRecognition();
+useEffect(() => {
+  if (transcript) {
+    setSearchQuery(transcript);
+    searchProducts(transcript);
+  }
+}, [transcript]);
+UI
+<button onClick={isListening ? stopListening : startListening}>
+  {isListening ? <MicOff /> : <Mic />}
+</button>
+9. UI COMPONENTS NEEDED
+Header Section
+Component	Purpose
+Back Button	Cancel and return
+Title	"New Estimate"
+Estimate Number Badge	Auto-generated number display
+Form Fields
+Field	Input Type
+Status	Dropdown (draft, sent, approved)
+Repair Tech	Text (auto-filled from login)
+Service Tech	Text/Dropdown
+Reported Date	Date picker
+Location	Text/Dropdown of properties
+Notes	Textarea
+Product Search
+Component	Purpose
+Search Input	Text query
+Voice Button	Speech-to-text
+Category Chips	Filter by category
+Product Results	Scrollable list
+Line Items Table
+Column	Type	Editable
+Product	Text	No (display only)
+SKU	Text	No
+Qty	Number Input	Yes (+/- buttons)
+Rate	Currency Input	Yes
+Amount	Currency	No (calculated)
+Tax	Toggle	Yes
+Delete	Button	-
+Totals Section
+Row	Value
+Subtotal	Sum of amounts
+Tax	Calculated
+Total	Subtotal + Tax
+Photo Section
+Component	Purpose
+Camera Button	Take new photo
+Gallery Button	Upload existing
+Photo Grid	Display thumbnails
+Delete Badge	Remove photo
+Action Buttons
+Button	Style	Action
+Save Draft	Outlined	Save without sending
+Send Estimate	Filled (accent)	Submit to customer
+10. EXPANDABLE SECTIONS
+Implementation Pattern
+const [expanded, setExpanded] = useState({
+  header: true,
+  products: false,
+  lineItems: true,
+  photos: false,
+  totals: true,
+});
+const toggleSection = (section: string) => {
+  setExpanded(prev => ({ ...prev, [section]: !prev[section] }));
+};
+// Section Header
+<button onClick={() => toggleSection('header')}>
+  <span>Header Information</span>
+  <ChevronDown style={{
+    transform: expanded.header ? 'rotate(180deg)' : 'rotate(0deg)',
+    transition: 'transform 0.2s ease',
+  }} />
+</button>
+// Section Content
+{expanded.header && (
+  <div style={{ animation: 'fadeIn 0.2s ease' }}>
+    {/* Header form fields */}
+  </div>
+)}
+11. API ENDPOINTS NEEDED
+Method	Endpoint	Purpose
+POST	/api/estimates	Create new estimate
+GET	/api/estimates	List all estimates
+GET	/api/estimates/:id	Get single estimate
+PUT	/api/estimates/:id	Update estimate
+DELETE	/api/estimates/:id	Delete estimate
+PATCH	/api/estimates/:id/status	Update status only
+GET	/api/products	Get product catalog
+GET	/api/products/search?q=	Search products
+12. DATABASE SCHEMA
+-- Estimates table
+CREATE TABLE estimates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  estimate_number VARCHAR(20) UNIQUE NOT NULL,
+  property_id UUID REFERENCES properties(id),
+  property_name VARCHAR(255),
+  customer_name VARCHAR(255),
+  address TEXT,
+  status VARCHAR(20) DEFAULT 'draft',
+  repair_tech_id UUID REFERENCES users(id),
+  service_tech_id UUID REFERENCES users(id),
+  reported_date DATE,
+  notes TEXT,
+  subtotal DECIMAL(10,2),
+  tax_rate DECIMAL(5,4),
+  tax DECIMAL(10,2),
+  total DECIMAL(10,2),
+  photos TEXT[], -- Array of URLs or base64
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+-- Estimate line items table
+CREATE TABLE estimate_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  estimate_id UUID REFERENCES estimates(id) ON DELETE CASCADE,
+  product_name VARCHAR(255),
+  description TEXT,
+  sku VARCHAR(50),
+  item_class VARCHAR(50),
+  quantity INTEGER DEFAULT 1,
+  rate DECIMAL(10,2),
+  amount DECIMAL(10,2),
+  taxable BOOLEAN DEFAULT true,
+  sort_order INTEGER
+);
+-- Products catalog table
+CREATE TABLE products (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  sku VARCHAR(50) UNIQUE,
+  name VARCHAR(255),
+  description TEXT,
+  category VARCHAR(50),
+  unit_price DECIMAL(10,2),
+  taxable BOOLEAN DEFAULT true,
+  active BOOLEAN DEFAULT true
+);
+13. WORKFLOW STATES
+┌─────────┐     ┌──────┐     ┌──────────┐     ┌───────────┐
+│  DRAFT  │ ──► │ SENT │ ──► │ APPROVED │ ──► │ CONVERTED │
+└─────────┘     └──────┘     └──────────┘     │  TO JOB   │
+                   │                          └───────────┘
+                   │         ┌──────────┐
+                   └───────► │ DECLINED │
+                             └──────────┘
+14. VALIDATION RULES
+Field	Rule
+Location	Required
+Line Items	At least 1 required
+Quantity	Must be > 0
+Rate	Must be >= 0
+Photos	Optional but recommended
+Notes	Optional
+15. FILES NEEDED TO RECREATE
+File	Purpose
+pages/repair-tech.tsx	Main component with all screens
+components/EstimateForm.tsx	Reusable estimate form
+components/LineItemRow.tsx	Single line item row
+components/ProductSearch.tsx	Product search with categories
+components/PhotoGrid.tsx	Photo display/management
+hooks/useSpeechRecognition.ts	Voice input hook
+shared/schema.ts	Drizzle schema definitions
+server/routes.ts	API endpoints
+server/storage.ts	Database operations
+
+Scroll to latest

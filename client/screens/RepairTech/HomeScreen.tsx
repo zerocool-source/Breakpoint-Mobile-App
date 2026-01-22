@@ -12,7 +12,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { ThemedText } from '@/components/ThemedText';
 import { Avatar } from '@/components/Avatar';
-import { LightBubbleBackground } from '@/components/LightBubbleBackground';
+import { BubbleBackground } from '@/components/BubbleBackground';
 import { ChatFAB } from '@/components/ChatFAB';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { useAuth } from '@/context/AuthContext';
@@ -295,7 +295,7 @@ export default function HomeScreen() {
   );
 
   return (
-    <LightBubbleBackground bubbleCount={15}>
+    <BubbleBackground bubbleCount={15}>
       <DraggableFlatList
         data={jobs}
         keyExtractor={(item) => item.id}
@@ -333,7 +333,7 @@ export default function HomeScreen() {
         onClose={() => setShowEmergencyModal(false)}
         onSubmit={(data) => console.log('Emergency:', data)}
       />
-    </LightBubbleBackground>
+    </BubbleBackground>
   );
 }
 

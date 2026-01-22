@@ -10,7 +10,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { ThemedText } from '@/components/ThemedText';
 import { Avatar } from '@/components/Avatar';
-import { LightBubbleBackground } from '@/components/LightBubbleBackground';
+import { BubbleBackground } from '@/components/BubbleBackground';
 import { ChatFAB } from '@/components/ChatFAB';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/hooks/useTheme';
@@ -190,7 +190,7 @@ export default function QueueScreen() {
   const urgentJobs = mockJobs.filter(j => j.priority === 'urgent' || j.priority === 'high');
 
   return (
-    <LightBubbleBackground bubbleCount={12}>
+    <BubbleBackground bubbleCount={12}>
       <LinearGradient
         colors={['#0078D4', '#0066B8', '#005499']}
         style={[styles.header, { paddingTop: insets.top + Spacing.md }]}
@@ -311,7 +311,7 @@ export default function QueueScreen() {
       </ScrollView>
 
       <ChatFAB onPress={handleChatPress} bottom={tabBarHeight} />
-    </LightBubbleBackground>
+    </BubbleBackground>
   );
 }
 

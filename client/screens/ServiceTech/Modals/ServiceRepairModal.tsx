@@ -7,6 +7,7 @@ import {
   TextInput,
   ScrollView,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -48,6 +49,7 @@ export function ServiceRepairModal({
 }: ServiceRepairModalProps) {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
+  const { height: windowHeight } = useWindowDimensions();
 
   const [issueDescription, setIssueDescription] = useState('');
   const [products, setProducts] = useState(AVAILABLE_PRODUCTS);
@@ -100,7 +102,7 @@ export function ServiceRepairModal({
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
-        <View style={[styles.modalContainer, { backgroundColor: theme.surface, paddingBottom: insets.bottom + Spacing.lg }]}>
+        <View style={[styles.modalContainer, { backgroundColor: theme.surface, paddingBottom: insets.bottom + Spacing.lg, maxHeight: windowHeight * 0.95 }]}>
           <LinearGradient
             colors={['#4A90D9', '#5B9FE8', '#6BADE8']}
             style={styles.header}
@@ -236,7 +238,6 @@ const styles = StyleSheet.create({
   modalContainer: {
     borderTopLeftRadius: BorderRadius.xl,
     borderTopRightRadius: BorderRadius.xl,
-    maxHeight: '95%',
   },
   header: {
     flexDirection: 'row',

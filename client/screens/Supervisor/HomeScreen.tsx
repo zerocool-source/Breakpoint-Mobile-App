@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Pressable, ScrollView, Platform, Modal } from 'react-native';
+import { View, StyleSheet, Pressable, ScrollView, Platform, Modal, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
@@ -172,6 +172,7 @@ function TeamChatModal({
   technicians 
 }: TeamChatModalProps) {
   const { theme } = useTheme();
+  const { height: windowHeight } = useWindowDimensions();
 
   return (
     <Modal
@@ -181,7 +182,7 @@ function TeamChatModal({
       onRequestClose={onClose}
     >
       <Pressable style={styles.modalOverlay} onPress={onClose}>
-        <View style={[styles.chatModalContent, { backgroundColor: theme.surface }]}>
+        <View style={[styles.chatModalContent, { backgroundColor: theme.surface, maxHeight: windowHeight * 0.8 }]}>
           <View style={styles.modalHeader}>
             <View>
               <ThemedText style={styles.modalTitle}>Messages</ThemedText>
@@ -1036,7 +1037,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: BorderRadius.xl,
     borderTopRightRadius: BorderRadius.xl,
     padding: Spacing.xl,
-    maxHeight: '80%',
   },
   chatSectionLabel: {
     fontSize: 12,

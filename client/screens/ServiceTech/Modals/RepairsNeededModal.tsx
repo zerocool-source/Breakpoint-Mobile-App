@@ -7,6 +7,7 @@ import {
   TextInput,
   ScrollView,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -34,6 +35,7 @@ export function RepairsNeededModal({
 }: RepairsNeededModalProps) {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
+  const { height: windowHeight } = useWindowDimensions();
 
   const [isUrgent, setIsUrgent] = useState(false);
   const [issueDescription, setIssueDescription] = useState('');
@@ -80,7 +82,7 @@ export function RepairsNeededModal({
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
-        <View style={[styles.modalContainer, { backgroundColor: theme.surface, paddingBottom: insets.bottom + Spacing.lg }]}>
+        <View style={[styles.modalContainer, { backgroundColor: theme.surface, paddingBottom: insets.bottom + Spacing.lg, maxHeight: windowHeight * 0.95 }]}>
           <View style={styles.header}>
             <View style={styles.headerContent}>
               <View style={styles.headerIconContainer}>
@@ -207,7 +209,6 @@ const styles = StyleSheet.create({
   modalContainer: {
     borderTopLeftRadius: BorderRadius.xl,
     borderTopRightRadius: BorderRadius.xl,
-    maxHeight: '95%',
   },
   header: {
     flexDirection: 'row',

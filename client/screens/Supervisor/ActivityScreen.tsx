@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Pressable, ScrollView, Modal, Platform } from 'react-native';
+import { View, StyleSheet, Pressable, ScrollView, Modal, Platform, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { Feather } from '@expo/vector-icons';
@@ -128,6 +128,7 @@ interface QCChecklistModalProps {
 function QCChecklistModal({ visible, onClose, inspection }: QCChecklistModalProps) {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
+  const { height: windowHeight } = useWindowDimensions();
   const [categories, setCategories] = useState<QCCategory[]>(
     inspection?.categories || defaultCategories
   );
@@ -159,7 +160,7 @@ function QCChecklistModal({ visible, onClose, inspection }: QCChecklistModalProp
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
-        <View style={[styles.modalContainer, { backgroundColor: theme.surface, paddingBottom: insets.bottom + Spacing.lg }]}>
+        <View style={[styles.modalContainer, { backgroundColor: theme.surface, paddingBottom: insets.bottom + Spacing.lg, maxHeight: windowHeight * 0.9 }]}>
           <View style={[styles.modalHeader, { backgroundColor: BrandColors.azureBlue }]}>
             <View style={styles.modalHeaderContent}>
               <Feather name="check-square" size={24} color="#FFFFFF" />
@@ -437,7 +438,6 @@ const styles = StyleSheet.create({
   modalContainer: {
     borderTopLeftRadius: BorderRadius.xl,
     borderTopRightRadius: BorderRadius.xl,
-    maxHeight: '90%',
   },
   modalHeader: {
     flexDirection: 'row',

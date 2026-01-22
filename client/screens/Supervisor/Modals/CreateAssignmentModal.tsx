@@ -7,6 +7,7 @@ import {
   TextInput,
   ScrollView,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -28,6 +29,7 @@ interface CreateAssignmentModalProps {
 export function CreateAssignmentModal({ visible, onClose }: CreateAssignmentModalProps) {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
+  const { height: windowHeight } = useWindowDimensions();
 
   const [assignmentType, setAssignmentType] = useState('');
   const [selectedTechnician, setSelectedTechnician] = useState('');
@@ -111,7 +113,7 @@ export function CreateAssignmentModal({ visible, onClose }: CreateAssignmentModa
         <View
           style={[
             styles.modalContainer,
-            { backgroundColor: theme.surface, paddingBottom: insets.bottom + Spacing.lg },
+            { backgroundColor: theme.surface, paddingBottom: insets.bottom + Spacing.lg, maxHeight: windowHeight * 0.9 },
           ]}
         >
           <View style={[styles.header, { backgroundColor: BrandColors.azureBlue }]}>
@@ -323,7 +325,6 @@ const styles = StyleSheet.create({
   modalContainer: {
     borderTopLeftRadius: BorderRadius.xl,
     borderTopRightRadius: BorderRadius.xl,
-    maxHeight: '90%',
     overflow: 'hidden',
   },
   header: {

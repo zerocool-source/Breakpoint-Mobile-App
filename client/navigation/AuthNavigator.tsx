@@ -4,6 +4,7 @@ import SplashScreen from '@/screens/SplashScreen';
 import RoleSelectionScreen, { Role } from '@/screens/RoleSelectionScreen';
 import LoginScreen from '@/screens/LoginScreen';
 import RootStackNavigator from '@/navigation/RootStackNavigator';
+import ServiceTechStackNavigator from '@/navigation/ServiceTechStackNavigator';
 import { useAuth } from '@/context/AuthContext';
 
 export default function AuthNavigator() {
@@ -30,5 +31,11 @@ export default function AuthNavigator() {
     return <LoginScreen onBack={handleBackToRoleSelection} />;
   }
 
+  // Route to the appropriate app based on role
+  if (selectedRole === 'service_tech') {
+    return <ServiceTechStackNavigator />;
+  }
+
+  // Repair Tech and other roles use the default navigator
   return <RootStackNavigator />;
 }

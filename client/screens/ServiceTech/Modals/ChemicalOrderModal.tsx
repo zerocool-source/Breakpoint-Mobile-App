@@ -6,6 +6,7 @@ import {
   Pressable,
   ScrollView,
   Platform,
+  TextInput,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -30,31 +31,18 @@ interface ChemicalRow {
   quantity: number;
 }
 
-const COMMON_CHEMICALS = [
-  'Chlorine (Liquid)',
+const CHEMICALS = [
+  'Chlorine',
   'Muriatic Acid',
-  'Tri-Chlor Tablets',
+  'Shock',
+  'Algaecide',
+  'pH Up',
+  'pH Down',
+  'Stabilizer',
+  'Other',
 ];
 
-const OTHER_CHEMICALS = [
-  'Algaecide Yellow Treat',
-  'Chlorine Neutralizer',
-  'Clarifier (Gold-N-Clear)',
-  'Conditioner (CYA)',
-  'DE Powder',
-  'Defoamer',
-  'Dichlor Granular',
-  'Extreme Enzyme',
-  'Non-Chlor Shock (MSP)',
-  'Red Tile Soap',
-  'Soda Ash',
-  'Sodium Bicarbonate',
-  'Test Strips',
-  'Tri-Chlor Granular',
-  'Other (Specify)',
-];
-
-const ALL_CHEMICALS = [...COMMON_CHEMICALS, ...OTHER_CHEMICALS];
+const URGENCY_OPTIONS = ['Routine', 'Next Visit', 'ASAP'];
 
 export function ChemicalOrderModal({
   visible,
@@ -68,6 +56,8 @@ export function ChemicalOrderModal({
   const [rows, setRows] = useState<ChemicalRow[]>([
     { id: '1', chemical: '', quantity: 1 },
   ]);
+  const [urgency, setUrgency] = useState('Routine');
+  const [notes, setNotes] = useState('');
 
   const handleAddRow = () => {
     if (Platform.OS !== 'web') {
@@ -113,6 +103,19 @@ export function ChemicalOrderModal({
 
   const isValid = rows.some((row) => row.chemical !== '');
 
+  const getUrgencyColor = (u: string) => {
+    switch (u) {
+      case 'ASAP':
+        return BrandColors.danger;
+      case 'Next Visit':
+        return BrandColors.vividTangerine;
+      case 'Routine':
+        return BrandColors.azureBlue;
+      default:
+        return theme.textSecondary;
+    }
+  };
+
   return (
     <Modal
       visible={visible}
@@ -151,11 +154,11 @@ export function ChemicalOrderModal({
               <View key={row.id} style={styles.chemicalRow}>
                 <View style={styles.rowHeader}>
                   <ThemedText style={styles.rowLabel}>Chemical {index + 1}</ThemedText>
-                  {rows.length > 1 && (
+                  {rows.length > 1 ? (
                     <Pressable onPress={() => handleRemoveRow(row.id)}>
                       <Feather name="trash-2" size={18} color={BrandColors.danger} />
                     </Pressable>
-                  )}
+                  ) : null}
                 </View>
 
                 <View style={[styles.pickerContainer, { borderColor: theme.border }]}>
@@ -165,12 +168,7 @@ export function ChemicalOrderModal({
                     style={[styles.picker, { color: theme.text }]}
                   >
                     <Picker.Item label="Select Chemical" value="" color={theme.textSecondary} />
-                    <Picker.Item label="--- Most Common ---" value="" enabled={false} />
-                    {COMMON_CHEMICALS.map((chem) => (
-                      <Picker.Item key={chem} label={chem} value={chem} />
-                    ))}
-                    <Picker.Item label="--- Other ---" value="" enabled={false} />
-                    {OTHER_CHEMICALS.map((chem) => (
+                    {CHEMICALS.map((chem) => (
                       <Picker.Item key={chem} label={chem} value={chem} />
                     ))}
                   </Picker>
@@ -203,6 +201,42 @@ export function ChemicalOrderModal({
                 Add Another Chemical
               </ThemedText>
             </Pressable>
+
+            <View style={styles.inputSection}>
+              <ThemedText style={styles.inputLabel}>Urgency</ThemedText>
+              <View style={[styles.pickerContainer, { borderColor: getUrgencyColor(urgency) }]}>
+                <Picker
+                  selectedValue={urgency}
+                  onValueChange={(value: string) => {
+                    if (Platform.OS !== 'web') {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }
+                    setUrgency(value);
+                  }}
+                  style={[styles.picker, { color: getUrgencyColor(urgency) }]}
+                >
+                  {URGENCY_OPTIONS.map((option) => (
+                    <Picker.Item key={option} label={option} value={option} />
+                  ))}
+                </Picker>
+              </View>
+            </View>
+
+            <View style={styles.inputSection}>
+              <ThemedText style={styles.inputLabel}>Notes (Optional)</ThemedText>
+              <View style={[styles.textAreaContainer, { borderColor: theme.border }]}>
+                <TextInput
+                  style={[styles.textArea, { color: theme.text }]}
+                  placeholder="Add special instructions..."
+                  placeholderTextColor={theme.textSecondary}
+                  value={notes}
+                  onChangeText={setNotes}
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
+                />
+              </View>
+            </View>
           </ScrollView>
 
           <View style={styles.footer}>
@@ -345,10 +379,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: Spacing.sm,
     paddingVertical: Spacing.md,
+    marginBottom: Spacing.lg,
   },
   addRowText: {
     fontSize: 15,
     fontWeight: '600',
+  },
+  inputSection: {
+    marginBottom: Spacing.lg,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: Spacing.sm,
+  },
+  textAreaContainer: {
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+  },
+  textArea: {
+    padding: Spacing.md,
+    fontSize: 15,
+    minHeight: 80,
   },
   footer: {
     paddingHorizontal: Spacing.lg,

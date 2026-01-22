@@ -7,9 +7,11 @@ import {
   TextInput,
   ScrollView,
   Platform,
+  Switch,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
+import { Picker } from '@react-native-picker/picker';
 import * as Haptics from 'expo-haptics';
 
 import { ThemedText } from '@/components/ThemedText';
@@ -24,10 +26,19 @@ interface ServiceRepairModalProps {
   propertyAddress: string;
 }
 
-interface Product {
-  id: string;
-  name: string;
-}
+const REPAIR_TYPES = [
+  'Replaced O-ring',
+  'Adjusted valve',
+  'Tightened fitting',
+  'Replaced gauge',
+  'Cleaned strainer',
+  'Minor plumbing',
+  'Other',
+];
+
+const PARTS_USED = ['O-rings', 'Gaskets', 'Fittings', 'Clips', 'Screws', 'None'];
+
+const PART_SOURCES = ['From truck', 'Property supply', 'None needed'];
 
 export function ServiceRepairModal({
   visible,
@@ -38,10 +49,37 @@ export function ServiceRepairModal({
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
 
+  const [repairType, setRepairType] = useState('');
+  const [selectedParts, setSelectedParts] = useState<string[]>([]);
+  const [partSource, setPartSource] = useState('From truck');
+  const [timeSpent, setTimeSpent] = useState(15);
   const [issueDescription, setIssueDescription] = useState('');
+  const [billable, setBillable] = useState(false);
   const [beforePhotos, setBeforePhotos] = useState<string[]>([]);
   const [afterPhotos, setAfterPhotos] = useState<string[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
+
+  const handleTogglePart = (part: string) => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    if (part === 'None') {
+      setSelectedParts((prev) => (prev.includes('None') ? [] : ['None']));
+    } else {
+      setSelectedParts((prev) => {
+        const withoutNone = prev.filter((p) => p !== 'None');
+        return withoutNone.includes(part)
+          ? withoutNone.filter((p) => p !== part)
+          : [...withoutNone, part];
+      });
+    }
+  };
+
+  const handleTimeChange = (delta: number) => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    setTimeSpent((prev) => Math.max(0, prev + delta));
+  };
 
   const handleSubmit = () => {
     if (Platform.OS !== 'web') {
@@ -63,12 +101,6 @@ export function ServiceRepairModal({
   };
 
   const handleAddAfterPhoto = () => {
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-  };
-
-  const handleAddProduct = () => {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
@@ -109,7 +141,84 @@ export function ServiceRepairModal({
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.inputSection}>
-              <ThemedText style={styles.inputLabel}>Issue Description</ThemedText>
+              <ThemedText style={styles.inputLabel}>Repair Type *</ThemedText>
+              <View style={[styles.pickerContainer, { borderColor: theme.border }]}>
+                <Picker
+                  selectedValue={repairType}
+                  onValueChange={(value: string) => setRepairType(value)}
+                  style={[styles.picker, { color: theme.text }]}
+                >
+                  <Picker.Item label="Select Repair Type" value="" color={theme.textSecondary} />
+                  {REPAIR_TYPES.map((type) => (
+                    <Picker.Item key={type} label={type} value={type} />
+                  ))}
+                </Picker>
+              </View>
+            </View>
+
+            <View style={styles.inputSection}>
+              <ThemedText style={styles.inputLabel}>Parts Used</ThemedText>
+              <View style={styles.checklistContainer}>
+                {PARTS_USED.map((part) => {
+                  const isSelected = selectedParts.includes(part);
+                  return (
+                    <Pressable
+                      key={part}
+                      style={styles.checklistItem}
+                      onPress={() => handleTogglePart(part)}
+                    >
+                      <View
+                        style={[
+                          styles.checkbox,
+                          { borderColor: isSelected ? BrandColors.azureBlue : theme.border },
+                          isSelected && { backgroundColor: BrandColors.azureBlue },
+                        ]}
+                      >
+                        {isSelected ? <Feather name="check" size={14} color="#FFFFFF" /> : null}
+                      </View>
+                      <ThemedText style={styles.checklistLabel}>{part}</ThemedText>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
+            <View style={styles.inputSection}>
+              <ThemedText style={styles.inputLabel}>Part Source</ThemedText>
+              <View style={[styles.pickerContainer, { borderColor: theme.border }]}>
+                <Picker
+                  selectedValue={partSource}
+                  onValueChange={(value: string) => setPartSource(value)}
+                  style={[styles.picker, { color: theme.text }]}
+                >
+                  {PART_SOURCES.map((source) => (
+                    <Picker.Item key={source} label={source} value={source} />
+                  ))}
+                </Picker>
+              </View>
+            </View>
+
+            <View style={styles.inputSection}>
+              <ThemedText style={styles.inputLabel}>Time Spent (minutes)</ThemedText>
+              <View style={styles.timeControls}>
+                <Pressable
+                  style={[styles.timeButton, { backgroundColor: theme.backgroundSecondary }]}
+                  onPress={() => handleTimeChange(-5)}
+                >
+                  <Feather name="minus" size={20} color={theme.text} />
+                </Pressable>
+                <ThemedText style={styles.timeValue}>{timeSpent}</ThemedText>
+                <Pressable
+                  style={[styles.timeButton, { backgroundColor: theme.backgroundSecondary }]}
+                  onPress={() => handleTimeChange(5)}
+                >
+                  <Feather name="plus" size={20} color={theme.text} />
+                </Pressable>
+              </View>
+            </View>
+
+            <View style={styles.inputSection}>
+              <ThemedText style={styles.inputLabel}>Description</ThemedText>
               <View style={[styles.textAreaContainer, { borderColor: theme.border }]}>
                 <TextInput
                   style={[styles.textArea, { color: theme.text }]}
@@ -163,26 +272,26 @@ export function ServiceRepairModal({
               </Pressable>
             </View>
 
-            <View style={styles.productsSection}>
-              <ThemedText style={styles.inputLabel}>Products/Parts Needed</ThemedText>
-              {products.length === 0 ? (
-                <ThemedText style={[styles.noProductsText, { color: theme.textSecondary }]}>
-                  No products added
-                </ThemedText>
-              ) : (
-                products.map((product) => (
-                  <View key={product.id} style={[styles.productItem, { backgroundColor: theme.backgroundSecondary }]}>
-                    <ThemedText>{product.name}</ThemedText>
-                  </View>
-                ))
-              )}
-              <Pressable
-                style={[styles.addProductButton, { backgroundColor: BrandColors.azureBlue }]}
-                onPress={handleAddProduct}
-              >
-                <Feather name="plus" size={18} color="#FFFFFF" />
-                <ThemedText style={styles.addProductButtonText}>Add Product</ThemedText>
-              </Pressable>
+            <View style={styles.billableSection}>
+              <View style={styles.billableRow}>
+                <ThemedText style={styles.inputLabel}>Billable</ThemedText>
+                <View style={styles.billableToggle}>
+                  <ThemedText style={[styles.billableLabel, { color: theme.textSecondary }]}>
+                    {billable ? 'Yes' : 'No'}
+                  </ThemedText>
+                  <Switch
+                    value={billable}
+                    onValueChange={(value) => {
+                      if (Platform.OS !== 'web') {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      }
+                      setBillable(value);
+                    }}
+                    trackColor={{ false: theme.border, true: BrandColors.success }}
+                    thumbColor="#FFFFFF"
+                  />
+                </View>
+              </View>
             </View>
           </ScrollView>
 
@@ -191,7 +300,7 @@ export function ServiceRepairModal({
               variant="primary"
               onPress={handleSubmit}
               fullWidth
-              disabled={!issueDescription.trim()}
+              disabled={!repairType}
             >
               Submit Service Repair
             </BPButton>
@@ -276,6 +385,52 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: Spacing.sm,
   },
+  pickerContainer: {
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    overflow: 'hidden',
+  },
+  picker: {
+    height: 50,
+  },
+  checklistContainer: {
+    gap: Spacing.sm,
+  },
+  checklistItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.xs,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: BorderRadius.xs,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checklistLabel: {
+    fontSize: 15,
+  },
+  timeControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.lg,
+  },
+  timeButton: {
+    width: 44,
+    height: 44,
+    borderRadius: BorderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  timeValue: {
+    fontSize: 24,
+    fontWeight: '600',
+    minWidth: 60,
+    textAlign: 'center',
+  },
   textAreaContainer: {
     borderWidth: 1,
     borderRadius: BorderRadius.md,
@@ -316,31 +471,21 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFFFFF',
   },
-  productsSection: {
+  billableSection: {
     marginBottom: Spacing.lg,
   },
-  noProductsText: {
-    fontSize: 13,
-    fontStyle: 'italic',
-    marginBottom: Spacing.sm,
+  billableRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  productItem: {
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-    marginBottom: Spacing.sm,
-  },
-  addProductButton: {
+  billableToggle: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     gap: Spacing.sm,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
   },
-  addProductButtonText: {
+  billableLabel: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#FFFFFF',
   },
   footer: {
     paddingHorizontal: Spacing.lg,

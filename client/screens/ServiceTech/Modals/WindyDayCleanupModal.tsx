@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
+import { Picker } from '@react-native-picker/picker';
 import * as Haptics from 'expo-haptics';
 
 import { ThemedText } from '@/components/ThemedText';
@@ -25,6 +26,17 @@ interface WindyDayCleanupModalProps {
   technicianName?: string;
 }
 
+const CLEANUP_TASKS = [
+  'Extra debris removal',
+  'Extended vacuuming',
+  'Filter cleaning',
+  'Surface skimming',
+  'Deck cleaning',
+  'Furniture reset',
+];
+
+const CONDITION_OPTIONS = ['Light wind', 'Moderate wind', 'Heavy wind', 'Storm debris'];
+
 export function WindyDayCleanupModal({
   visible,
   onClose,
@@ -35,8 +47,27 @@ export function WindyDayCleanupModal({
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
 
+  const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
+  const [timeSpent, setTimeSpent] = useState(15);
+  const [condition, setCondition] = useState('Moderate wind');
   const [notes, setNotes] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
+
+  const handleToggleTask = (task: string) => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    setSelectedTasks((prev) =>
+      prev.includes(task) ? prev.filter((t) => t !== task) : [...prev, task]
+    );
+  };
+
+  const handleTimeChange = (delta: number) => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    setTimeSpent((prev) => Math.max(0, prev + delta));
+  };
 
   const handleSubmit = () => {
     if (Platform.OS !== 'web') {
@@ -120,6 +151,72 @@ export function WindyDayCleanupModal({
             </View>
 
             <View style={styles.inputSection}>
+              <ThemedText style={styles.inputLabel}>Conditions</ThemedText>
+              <View style={[styles.pickerContainer, { borderColor: theme.border }]}>
+                <Picker
+                  selectedValue={condition}
+                  onValueChange={(value: string) => {
+                    if (Platform.OS !== 'web') {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }
+                    setCondition(value);
+                  }}
+                  style={[styles.picker, { color: theme.text }]}
+                >
+                  {CONDITION_OPTIONS.map((option) => (
+                    <Picker.Item key={option} label={option} value={option} />
+                  ))}
+                </Picker>
+              </View>
+            </View>
+
+            <View style={styles.inputSection}>
+              <ThemedText style={styles.inputLabel}>Cleanup Tasks</ThemedText>
+              <View style={styles.checklistContainer}>
+                {CLEANUP_TASKS.map((task) => {
+                  const isSelected = selectedTasks.includes(task);
+                  return (
+                    <Pressable
+                      key={task}
+                      style={styles.checklistItem}
+                      onPress={() => handleToggleTask(task)}
+                    >
+                      <View
+                        style={[
+                          styles.checkbox,
+                          { borderColor: isSelected ? BrandColors.tropicalTeal : theme.border },
+                          isSelected && { backgroundColor: BrandColors.tropicalTeal },
+                        ]}
+                      >
+                        {isSelected ? <Feather name="check" size={14} color="#FFFFFF" /> : null}
+                      </View>
+                      <ThemedText style={styles.checklistLabel}>{task}</ThemedText>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
+            <View style={styles.inputSection}>
+              <ThemedText style={styles.inputLabel}>Time Spent (minutes)</ThemedText>
+              <View style={styles.timeControls}>
+                <Pressable
+                  style={[styles.timeButton, { backgroundColor: theme.backgroundSecondary }]}
+                  onPress={() => handleTimeChange(-5)}
+                >
+                  <Feather name="minus" size={20} color={theme.text} />
+                </Pressable>
+                <ThemedText style={styles.timeValue}>{timeSpent}</ThemedText>
+                <Pressable
+                  style={[styles.timeButton, { backgroundColor: theme.backgroundSecondary }]}
+                  onPress={() => handleTimeChange(5)}
+                >
+                  <Feather name="plus" size={20} color={theme.text} />
+                </Pressable>
+              </View>
+            </View>
+
+            <View style={styles.inputSection}>
               <ThemedText style={styles.inputLabel}>Notes (Optional)</ThemedText>
               <View style={[styles.textAreaContainer, { borderColor: theme.border }]}>
                 <TextInput
@@ -129,7 +226,7 @@ export function WindyDayCleanupModal({
                   value={notes}
                   onChangeText={setNotes}
                   multiline
-                  numberOfLines={4}
+                  numberOfLines={3}
                   textAlignVertical="top"
                 />
                 <Pressable style={styles.voiceButton} onPress={handleVoiceInput}>
@@ -268,6 +365,52 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: Spacing.sm,
   },
+  pickerContainer: {
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    overflow: 'hidden',
+  },
+  picker: {
+    height: 50,
+  },
+  checklistContainer: {
+    gap: Spacing.sm,
+  },
+  checklistItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.xs,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: BorderRadius.xs,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checklistLabel: {
+    fontSize: 15,
+  },
+  timeControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.lg,
+  },
+  timeButton: {
+    width: 44,
+    height: 44,
+    borderRadius: BorderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  timeValue: {
+    fontSize: 24,
+    fontWeight: '600',
+    minWidth: 60,
+    textAlign: 'center',
+  },
   textAreaContainer: {
     borderWidth: 1,
     borderRadius: BorderRadius.md,
@@ -278,7 +421,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: Spacing.md,
     fontSize: 15,
-    minHeight: 100,
+    minHeight: 80,
   },
   voiceButton: {
     padding: Spacing.md,

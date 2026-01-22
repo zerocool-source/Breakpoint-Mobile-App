@@ -10,12 +10,13 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
+import { Picker } from '@react-native-picker/picker';
 import * as Haptics from 'expo-haptics';
 
 import { ThemedText } from '@/components/ThemedText';
 import { BPButton } from '@/components/BPButton';
 import { useTheme } from '@/hooks/useTheme';
-import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
+import { BrandColors, BorderRadius, Spacing } from '@/constants/theme';
 
 interface RepairsNeededModalProps {
   visible: boolean;
@@ -24,6 +25,17 @@ interface RepairsNeededModalProps {
   propertyAddress: string;
   technicianName?: string;
 }
+
+const ISSUE_TYPES = [
+  'Pump problem',
+  'Filter issue',
+  'Heater malfunction',
+  'Leak detected',
+  'Electrical issue',
+  'Other',
+];
+
+const PRIORITY_OPTIONS = ['Low', 'Normal', 'High', 'Urgent'];
 
 export function RepairsNeededModal({
   visible,
@@ -35,8 +47,10 @@ export function RepairsNeededModal({
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
 
-  const [isUrgent, setIsUrgent] = useState(false);
+  const [issueType, setIssueType] = useState('');
+  const [priority, setPriority] = useState('Normal');
   const [issueDescription, setIssueDescription] = useState('');
+  const [equipmentTag, setEquipmentTag] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
 
   const handleSubmit = () => {
@@ -69,6 +83,21 @@ export function RepairsNeededModal({
     minute: '2-digit',
     hour12: true,
   });
+
+  const getPriorityColor = (p: string) => {
+    switch (p) {
+      case 'Urgent':
+        return BrandColors.danger;
+      case 'High':
+        return BrandColors.vividTangerine;
+      case 'Normal':
+        return BrandColors.azureBlue;
+      case 'Low':
+        return '#8E8E93';
+      default:
+        return theme.textSecondary;
+    }
+  };
 
   return (
     <Modal
@@ -120,25 +149,41 @@ export function RepairsNeededModal({
               </View>
             </View>
 
-            <Pressable
-              style={styles.urgentCheckbox}
-              onPress={() => {
-                if (Platform.OS !== 'web') {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }
-                setIsUrgent(!isUrgent);
-              }}
-            >
-              <View style={[
-                styles.checkbox,
-                { borderColor: isUrgent ? BrandColors.vividTangerine : theme.border },
-                isUrgent && { backgroundColor: BrandColors.vividTangerine },
-              ]}>
-                {isUrgent && <Feather name="check" size={14} color="#FFFFFF" />}
+            <View style={styles.inputSection}>
+              <ThemedText style={styles.inputLabel}>Issue Type *</ThemedText>
+              <View style={[styles.pickerContainer, { borderColor: theme.border }]}>
+                <Picker
+                  selectedValue={issueType}
+                  onValueChange={(value: string) => setIssueType(value)}
+                  style={[styles.picker, { color: theme.text }]}
+                >
+                  <Picker.Item label="Select Issue Type" value="" color={theme.textSecondary} />
+                  {ISSUE_TYPES.map((type) => (
+                    <Picker.Item key={type} label={type} value={type} />
+                  ))}
+                </Picker>
               </View>
-              <Feather name="alert-triangle" size={18} color={BrandColors.vividTangerine} />
-              <ThemedText style={styles.urgentLabel}>Mark as Urgent</ThemedText>
-            </Pressable>
+            </View>
+
+            <View style={styles.inputSection}>
+              <ThemedText style={styles.inputLabel}>Priority *</ThemedText>
+              <View style={[styles.pickerContainer, { borderColor: getPriorityColor(priority) }]}>
+                <Picker
+                  selectedValue={priority}
+                  onValueChange={(value: string) => {
+                    if (Platform.OS !== 'web') {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }
+                    setPriority(value);
+                  }}
+                  style={[styles.picker, { color: getPriorityColor(priority) }]}
+                >
+                  {PRIORITY_OPTIONS.map((option) => (
+                    <Picker.Item key={option} label={option} value={option} />
+                  ))}
+                </Picker>
+              </View>
+            </View>
 
             <View style={styles.inputSection}>
               <ThemedText style={styles.inputLabel}>Describe the Issue *</ThemedText>
@@ -156,6 +201,19 @@ export function RepairsNeededModal({
                 <Pressable style={styles.voiceButton} onPress={handleVoiceInput}>
                   <Feather name="mic" size={20} color={BrandColors.azureBlue} />
                 </Pressable>
+              </View>
+            </View>
+
+            <View style={styles.inputSection}>
+              <ThemedText style={styles.inputLabel}>Equipment Tag</ThemedText>
+              <View style={[styles.textInputContainer, { borderColor: theme.border }]}>
+                <TextInput
+                  style={[styles.textInput, { color: theme.text }]}
+                  placeholder="Enter equipment ID..."
+                  placeholderTextColor={theme.textSecondary}
+                  value={equipmentTag}
+                  onChangeText={setEquipmentTag}
+                />
               </View>
             </View>
 
@@ -189,7 +247,7 @@ export function RepairsNeededModal({
               variant="primary"
               onPress={handleSubmit}
               fullWidth
-              disabled={!issueDescription.trim()}
+              disabled={!issueType || !issueDescription.trim()}
             >
               Submit Repair Request
             </BPButton>
@@ -282,25 +340,6 @@ const styles = StyleSheet.create({
   propertyMetaText: {
     fontSize: 13,
   },
-  urgentCheckbox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    marginBottom: Spacing.lg,
-    paddingVertical: Spacing.sm,
-  },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: BorderRadius.xs,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  urgentLabel: {
-    fontSize: 15,
-    fontWeight: '500',
-  },
   inputSection: {
     marginBottom: Spacing.lg,
   },
@@ -308,6 +347,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginBottom: Spacing.sm,
+  },
+  pickerContainer: {
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    overflow: 'hidden',
+  },
+  picker: {
+    height: 50,
   },
   textAreaContainer: {
     borderWidth: 1,
@@ -325,6 +372,14 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  textInputContainer: {
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+  },
+  textInput: {
+    padding: Spacing.md,
+    fontSize: 15,
   },
   photosSection: {
     marginBottom: Spacing.lg,

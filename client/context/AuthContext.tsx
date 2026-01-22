@@ -30,27 +30,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
 
   useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
-    try {
-      const token = await storage.getAuthToken();
-      if (token) {
-        const savedUser = await storage.getUser();
-        if (savedUser) {
-          setUser(savedUser);
-          if (savedUser.role) {
-            setSelectedRole(savedUser.role as UserRole);
-          }
-        }
+    // Clear any cached auth data on app start so users always see role selection
+    const initAuth = async () => {
+      try {
+        await storage.clearAll();
+      } catch (error) {
+        console.error('Failed to clear auth:', error);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error('Auth check failed:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    };
+    initAuth();
+  }, []);
 
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
     try {

@@ -103,7 +103,7 @@ export function BubbleBackground({ children, bubbleCount = 15 }: BubbleBackgroun
       colors={['#0a1628', '#0d2137', '#0a1628']}
       style={styles.container}
     >
-      <View style={styles.bubblesContainer}>
+      <View style={styles.bubblesContainer} pointerEvents="none">
         {bubbles.map((bubble, index) => (
           <Bubble key={index} {...bubble} />
         ))}

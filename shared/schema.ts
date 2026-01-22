@@ -212,6 +212,30 @@ export const sessionsRelations = relations(sessions, ({ one }) => ({
   }),
 }));
 
+export const propertyChannels = pgTable("property_channels", {
+  id: varchar("id", { length: 36 })
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: varchar("user_id", { length: 36 }).notNull().references(() => users.id),
+  propertyId: varchar("property_id", { length: 36 }).notNull().references(() => properties.id),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const propertyChannelsRelations = relations(propertyChannels, ({ one }) => ({
+  user: one(users, {
+    fields: [propertyChannels.userId],
+    references: [users.id],
+  }),
+  property: one(properties, {
+    fields: [propertyChannels.propertyId],
+    references: [properties.id],
+  }),
+}));
+
+export type PropertyChannel = typeof propertyChannels.$inferSelect;
+
 export const insertUserSchema = createInsertSchema(users).pick({
   email: true,
   password: true,

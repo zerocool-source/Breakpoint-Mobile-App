@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, StyleSheet, Pressable, ScrollView, Platform, Modal } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
@@ -13,6 +13,7 @@ import { Avatar } from '@/components/Avatar';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/hooks/useTheme';
 import { useUrgentAlerts, UrgentAlert } from '@/context/UrgentAlertsContext';
+import { usePropertyChannels } from '@/context/PropertyChannelsContext';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
 
 export interface ChatChannel {
@@ -144,6 +145,7 @@ export default function ChatChannelsScreen({ role = 'serviceTech' }: ChatChannel
   const { theme } = useTheme();
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const { alerts, markAsRead, clearAlert } = useUrgentAlerts();
+  const { channels: subscribedChannels } = usePropertyChannels();
   const [selectedAlert, setSelectedAlert] = useState<UrgentAlert | null>(null);
 
   const handleChannelPress = (channel: ChatChannel) => {
@@ -161,13 +163,31 @@ export default function ChatChannelsScreen({ role = 'serviceTech' }: ChatChannel
     setSelectedAlert(alert);
   };
 
+  const handleManageChannels = () => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    navigation.navigate('PropertyChannels');
+  };
+
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   };
 
   const officeChannels = mockChannels.filter(c => c.type === 'office');
   const supervisorChannels = mockChannels.filter(c => c.type === 'supervisor');
-  const propertyChannels = mockChannels.filter(c => c.type === 'property');
+  
+  const propertyChannels = useMemo(() => {
+    return subscribedChannels.map((sc): ChatChannel => ({
+      id: `prop_${sc.propertyId}`,
+      name: sc.property.name,
+      type: 'property',
+      icon: 'map-pin',
+      lastMessage: 'Tap to start a conversation about this property',
+      lastMessageTime: '',
+      unreadCount: 0,
+    }));
+  }, [subscribedChannels]);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.backgroundRoot }]}>
@@ -312,17 +332,49 @@ export default function ChatChannelsScreen({ role = 'serviceTech' }: ChatChannel
         </View>
 
         <View style={styles.section}>
-          <ThemedText style={[styles.sectionTitle, { color: theme.textSecondary }]}>
-            PROPERTY CHANNELS
-          </ThemedText>
-          {propertyChannels.map((channel, index) => (
-            <ChannelCard 
-              key={channel.id} 
-              channel={channel} 
-              onPress={() => handleChannelPress(channel)}
-              index={index + officeChannels.length + supervisorChannels.length}
-            />
-          ))}
+          <View style={styles.sectionHeader}>
+            <ThemedText style={[styles.sectionTitle, { color: theme.textSecondary }]}>
+              PROPERTY CHANNELS
+            </ThemedText>
+            {role === 'serviceTech' ? (
+              <Pressable style={styles.manageButton} onPress={handleManageChannels}>
+                <Feather name="settings" size={14} color={BrandColors.azureBlue} />
+                <ThemedText style={[styles.manageButtonText, { color: BrandColors.azureBlue }]}>
+                  Manage
+                </ThemedText>
+              </Pressable>
+            ) : null}
+          </View>
+          {propertyChannels.length > 0 ? (
+            propertyChannels.map((channel, index) => (
+              <ChannelCard 
+                key={channel.id} 
+                channel={channel} 
+                onPress={() => handleChannelPress(channel)}
+                index={index + officeChannels.length + supervisorChannels.length}
+              />
+            ))
+          ) : (
+            <Pressable 
+              style={[styles.emptyChannelsCard, { backgroundColor: theme.surface }]}
+              onPress={role === 'serviceTech' ? handleManageChannels : undefined}
+            >
+              <View style={[styles.emptyChannelsIcon, { backgroundColor: BrandColors.tropicalTeal + '20' }]}>
+                <Feather name="plus-circle" size={24} color={BrandColors.tropicalTeal} />
+              </View>
+              <View style={styles.emptyChannelsContent}>
+                <ThemedText style={styles.emptyChannelsTitle}>No Property Channels</ThemedText>
+                <ThemedText style={[styles.emptyChannelsText, { color: theme.textSecondary }]}>
+                  {role === 'serviceTech' 
+                    ? 'Tap to add properties to your channels' 
+                    : 'No properties subscribed yet'}
+                </ThemedText>
+              </View>
+              {role === 'serviceTech' ? (
+                <Feather name="chevron-right" size={20} color={theme.textSecondary} />
+              ) : null}
+            </Pressable>
+          )}
         </View>
       </ScrollView>
     </View>
@@ -547,5 +599,50 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.md,
+  },
+  manageButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  manageButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  emptyChannelsCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    marginBottom: Spacing.sm,
+    ...Shadows.subtle,
+  },
+  emptyChannelsIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: BorderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: Spacing.md,
+  },
+  emptyChannelsContent: {
+    flex: 1,
+    marginRight: Spacing.sm,
+  },
+  emptyChannelsTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  emptyChannelsText: {
+    fontSize: 13,
   },
 });

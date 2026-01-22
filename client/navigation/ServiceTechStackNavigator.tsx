@@ -8,6 +8,7 @@ import PropertyDetailScreen from '@/screens/ServiceTech/PropertyDetailScreen';
 import BodyOfWaterDetailScreen from '@/screens/ServiceTech/BodyOfWaterDetailScreen';
 import AssignmentDetailScreen from '@/screens/ServiceTech/AssignmentDetailScreen';
 import ChatConversationScreen from '@/screens/shared/ChatConversationScreen';
+import PropertyChannelsScreen from '@/screens/ServiceTech/PropertyChannelsScreen';
 import { useScreenOptions } from '@/hooks/useScreenOptions';
 import { useTheme } from '@/hooks/useTheme';
 import type { RouteStop, BodyOfWater, Assignment } from '@/lib/serviceTechMockData';
@@ -19,6 +20,7 @@ export type ServiceTechStackParamList = {
   BodyOfWaterDetail: { body: BodyOfWater; propertyName: string };
   AssignmentDetail: { assignment: Assignment };
   ChatConversation: { channel: ChatChannel };
+  PropertyChannels: undefined;
 };
 
 const Stack = createNativeStackNavigator<ServiceTechStackParamList>();
@@ -56,6 +58,11 @@ export default function ServiceTechStackNavigator() {
           headerShown: true,
           headerTitle: 'Chat',
         }}
+      />
+      <Stack.Screen
+        name="PropertyChannels"
+        component={PropertyChannelsScreen}
+        options={{ headerShown: false }}
       />
     </Stack.Navigator>
   );

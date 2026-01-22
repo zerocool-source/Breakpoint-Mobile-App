@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "node:http";
 import authRoutes, { authMiddleware, AuthenticatedRequest } from "./auth";
 import { db } from "./db";
-import { users, properties, jobs, assignments, estimates, routeStops } from "@shared/schema";
+import { users, properties, jobs, assignments, estimates, routeStops, propertyChannels } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -124,6 +124,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching technicians:", error);
       res.status(500).json({ error: "Failed to fetch technicians" });
+    }
+  });
+
+  app.get("/api/property-channels", authMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      const channels = await db.query.propertyChannels.findMany({
+        where: and(
+          eq(propertyChannels.userId, req.user!.id),
+          eq(propertyChannels.isActive, true)
+        ),
+        with: {
+          property: true,
+        },
+      });
+      res.json(channels);
+    } catch (error) {
+      console.error("Error fetching property channels:", error);
+      res.status(500).json({ error: "Failed to fetch property channels" });
+    }
+  });
+
+  app.post("/api/property-channels", authMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { propertyId } = req.body;
+      if (!propertyId) {
+        return res.status(400).json({ error: "Property ID is required" });
+      }
+
+      const existing = await db.query.propertyChannels.findFirst({
+        where: and(
+          eq(propertyChannels.userId, req.user!.id),
+          eq(propertyChannels.propertyId, propertyId)
+        ),
+      });
+
+      if (existing) {
+        const [updated] = await db.update(propertyChannels)
+          .set({ isActive: true, updatedAt: new Date() })
+          .where(eq(propertyChannels.id, existing.id))
+          .returning();
+        return res.json(updated);
+      }
+
+      const [channel] = await db.insert(propertyChannels).values({
+        userId: req.user!.id,
+        propertyId,
+      }).returning();
+      res.json(channel);
+    } catch (error) {
+      console.error("Error adding property channel:", error);
+      res.status(500).json({ error: "Failed to add property channel" });
+    }
+  });
+
+  app.delete("/api/property-channels/:propertyId", authMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      const propId = req.params.propertyId as string;
+      const userId = req.user!.id;
+      const existing = await db.query.propertyChannels.findFirst({
+        where: (pc, { and, eq }) => and(
+          eq(pc.userId, userId),
+          eq(pc.propertyId, propId)
+        ),
+      });
+      if (existing) {
+        await db.update(propertyChannels)
+          .set({ isActive: false, updatedAt: new Date() })
+          .where(eq(propertyChannels.id, existing.id));
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error removing property channel:", error);
+      res.status(500).json({ error: "Failed to remove property channel" });
     }
   });
 

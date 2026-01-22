@@ -14,6 +14,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import { NetworkProvider } from '@/context/NetworkContext';
 import { BatteryProvider } from '@/context/BatteryContext';
 import { UrgentAlertsProvider } from '@/context/UrgentAlertsContext';
+import { PropertyChannelsProvider } from '@/context/PropertyChannelsContext';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 export default function App() {
@@ -27,9 +28,11 @@ export default function App() {
                 <BatteryProvider>
                   <UrgentAlertsProvider>
                     <AuthProvider>
-                      <NavigationContainer>
-                        <AuthNavigator />
-                      </NavigationContainer>
+                      <PropertyChannelsProvider>
+                        <NavigationContainer>
+                          <AuthNavigator />
+                        </NavigationContainer>
+                      </PropertyChannelsProvider>
                     </AuthProvider>
                   </UrgentAlertsProvider>
                 </BatteryProvider>

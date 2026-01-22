@@ -10,6 +10,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -415,9 +416,17 @@ function NewSupportiveActionModal({ visible, onClose, onSubmit }: NewSupportiveA
 export default function SupportiveActionsScreen() {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
+  const navigation = useNavigation();
   const [filter, setFilter] = useState<FilterStatus>('all');
   const [showNewActionModal, setShowNewActionModal] = useState(false);
   const [actions, setActions] = useState<SupportiveAction[]>(mockSupportiveActions);
+
+  const handleBack = () => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    navigation.goBack();
+  };
 
   const filters: { key: FilterStatus; label: string }[] = [
     { key: 'all', label: 'All' },
@@ -472,11 +481,19 @@ export default function SupportiveActionsScreen() {
       >
         <Animated.View entering={FadeInDown.delay(100).springify()}>
           <View style={styles.header}>
-            <View>
-              <ThemedText style={styles.title}>Supportive Actions</ThemedText>
-              <ThemedText style={[styles.subtitle, { color: theme.textSecondary }]}>
-                Performance coaching documentation
-              </ThemedText>
+            <View style={styles.headerLeft}>
+              <Pressable
+                style={[styles.backButton, { backgroundColor: theme.surface }]}
+                onPress={handleBack}
+              >
+                <Feather name="arrow-left" size={22} color={theme.text} />
+              </Pressable>
+              <View>
+                <ThemedText style={styles.title}>Supportive Actions</ThemedText>
+                <ThemedText style={[styles.subtitle, { color: theme.textSecondary }]}>
+                  Performance coaching documentation
+                </ThemedText>
+              </View>
             </View>
             <Pressable
               style={[styles.newButton, { backgroundColor: BrandColors.azureBlue }]}
@@ -587,6 +604,20 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: Spacing.lg,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: BorderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: Spacing.md,
+    ...Shadows.card,
   },
   title: {
     fontSize: 28,

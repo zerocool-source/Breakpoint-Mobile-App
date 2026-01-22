@@ -95,6 +95,12 @@ client/
 - **Backend**: `npm run server:dev` (port 5000)
 
 ## Recent Changes
+- January 22, 2026: Enhanced RepairTech with swipeable job cards (left swipe: Navigate, right swipe: Details/Complete)
+- January 22, 2026: Changed RepairTech to dark blue BubbleBackground with rising bubbles (matching Supervisor theme)
+- January 22, 2026: Enhanced NewEstimateModal with full product catalog and line items functionality
+- January 22, 2026: Added ProductPicker with search, category filters (Pumps, Filters, Heaters, etc.), and product list
+- January 22, 2026: Line items now include quantity controls, rate display, and running totals with tax calculation
+- January 22, 2026: Updated RepairTech tab icons: tool for Queue, clipboard for Jobs, file-text for Estimates
 - January 22, 2026: Redesigned Repair Tech app with light bubble background theme
 - January 22, 2026: New HomeScreen with blue gradient header, progress cards, next stop, quick actions grid, draggable jobs
 - January 22, 2026: New QueueScreen with 2x2 metrics grid and collapsible sections

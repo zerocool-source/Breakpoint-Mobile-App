@@ -41,9 +41,7 @@ const roles: RoleOption[] = [
     id: 'supervisor',
     title: 'Supervisor',
     subtitle: 'Team overview, assignments',
-    avatar: null,
-    icon: 'headphones',
-    iconColor: BrandColors.tropicalTeal,
+    avatar: require('../../assets/images/avatar-supervisor.png'),
   },
   {
     id: 'repair_tech',

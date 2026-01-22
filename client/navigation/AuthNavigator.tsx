@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
 
 import SplashScreen from '@/screens/SplashScreen';
-import RoleSelectionScreen from '@/screens/RoleSelectionScreen';
+import RoleSelectionScreen, { Role } from '@/screens/RoleSelectionScreen';
 import LoginScreen from '@/screens/LoginScreen';
 import RootStackNavigator from '@/navigation/RootStackNavigator';
-import { useAuth, UserRole } from '@/context/AuthContext';
+import { useAuth } from '@/context/AuthContext';
 
 export default function AuthNavigator() {
   const { isAuthenticated, selectedRole, setSelectedRole } = useAuth();
   const [showSplash, setShowSplash] = useState(true);
 
-  const handleRoleSelect = (role: UserRole) => {
+  const handleRoleSelect = (role: Role) => {
     setSelectedRole(role);
   };
 

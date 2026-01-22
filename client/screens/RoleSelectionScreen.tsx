@@ -18,13 +18,15 @@ import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
 
 const { width } = Dimensions.get('window');
 
-type Role = 'service_tech' | 'supervisor' | 'repair_tech' | 'repair_foreman';
+export type Role = 'service_tech' | 'supervisor' | 'repair_tech' | 'repair_foreman';
 
 interface RoleOption {
   id: Role;
   title: string;
   subtitle: string;
   avatar: any;
+  icon?: keyof typeof Feather.glyphMap;
+  iconColor?: string;
   isHighlighted?: boolean;
   highlightColor?: string;
 }
@@ -40,7 +42,9 @@ const roles: RoleOption[] = [
     id: 'supervisor',
     title: 'Supervisor',
     subtitle: 'Team overview, assignments',
-    avatar: require('../../assets/images/avatar-repair-tech.png'),
+    avatar: null,
+    icon: 'headphones',
+    iconColor: BrandColors.tropicalTeal,
   },
   {
     id: 'repair_tech',
@@ -55,6 +59,8 @@ const roles: RoleOption[] = [
     title: 'Repair Foreman',
     subtitle: 'Team management, oversight',
     avatar: null,
+    icon: 'tool',
+    iconColor: BrandColors.vividTangerine,
     highlightColor: BrandColors.vividTangerine,
   },
 ];
@@ -90,6 +96,31 @@ function RoleCard({ role, index, onSelect }: RoleCardProps) {
   const isHighlighted = role.isHighlighted;
   const hasBorder = role.highlightColor && !isHighlighted;
 
+  const renderAvatar = () => {
+    if (role.avatar) {
+      return (
+        <Image
+          source={role.avatar}
+          style={styles.roleAvatar}
+          contentFit="cover"
+        />
+      );
+    }
+    
+    const iconBgColor = isHighlighted 
+      ? 'rgba(255,255,255,0.2)' 
+      : (role.iconColor || BrandColors.azureBlue) + '20';
+    const iconFgColor = isHighlighted 
+      ? '#FFFFFF' 
+      : (role.iconColor || BrandColors.azureBlue);
+
+    return (
+      <View style={[styles.iconPlaceholder, { backgroundColor: iconBgColor }]}>
+        <Feather name={role.icon || 'user'} size={24} color={iconFgColor} />
+      </View>
+    );
+  };
+
   return (
     <Animated.View
       entering={FadeInDown.delay(200 + index * 100).springify()}
@@ -104,19 +135,10 @@ function RoleCard({ role, index, onSelect }: RoleCardProps) {
           isHighlighted && { backgroundColor: role.highlightColor },
           hasBorder && { borderColor: role.highlightColor, borderWidth: 2 },
         ]}
+        testID={`role-card-${role.id}`}
       >
         <View style={styles.roleAvatarContainer}>
-          {role.avatar ? (
-            <Image
-              source={role.avatar}
-              style={styles.roleAvatar}
-              contentFit="cover"
-            />
-          ) : (
-            <View style={[styles.iconPlaceholder, { backgroundColor: role.highlightColor + '20' }]}>
-              <Feather name="tool" size={24} color={role.highlightColor} />
-            </View>
-          )}
+          {renderAvatar()}
         </View>
         <View style={styles.roleContent}>
           <ThemedText

@@ -18,10 +18,12 @@ import {
   mockQCInspections,
   mockTechnicians,
   mockTechnicianAssignmentStats,
+  mockProperties,
   supervisorInfo,
   type QCInspection,
   type Technician,
 } from '@/lib/supervisorMockData';
+import { RepairsNeededModal, ChemicalOrderModal } from '@/screens/ServiceTech/Modals';
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -287,10 +289,13 @@ export default function SupervisorHomeScreen() {
   const [quickActionsExpanded, setQuickActionsExpanded] = useState(true);
   const [selectedTechnician, setSelectedTechnician] = useState<Technician | null>(null);
   const [showBreakdownModal, setShowBreakdownModal] = useState(false);
+  const [showRepairsModal, setShowRepairsModal] = useState(false);
+  const [showChemicalModal, setShowChemicalModal] = useState(false);
   
   const metrics = mockWeeklyMetrics;
   const inspections = mockQCInspections.slice(0, 4);
   const technicians = mockTechnicians;
+  const defaultProperty = mockProperties[0];
 
   const handleChatPress = () => {
     if (Platform.OS !== 'web') {
@@ -301,6 +306,11 @@ export default function SupervisorHomeScreen() {
   const handleQuickAction = (action: string) => {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+    if (action === 'repairs') {
+      setShowRepairsModal(true);
+    } else if (action === 'chemical') {
+      setShowChemicalModal(true);
     }
   };
 
@@ -502,6 +512,21 @@ export default function SupervisorHomeScreen() {
         onSendMessage={() => {
           setShowBreakdownModal(false);
         }}
+      />
+
+      <RepairsNeededModal
+        visible={showRepairsModal}
+        onClose={() => setShowRepairsModal(false)}
+        propertyName={defaultProperty.name}
+        propertyAddress={defaultProperty.address}
+        technicianName="Supervisor"
+      />
+
+      <ChemicalOrderModal
+        visible={showChemicalModal}
+        onClose={() => setShowChemicalModal(false)}
+        propertyName={defaultProperty.name}
+        propertyAddress={defaultProperty.address}
       />
     </View>
   );

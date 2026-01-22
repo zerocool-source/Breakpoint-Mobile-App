@@ -10,12 +10,9 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { Picker } from '@react-native-picker/picker';
 import * as Haptics from 'expo-haptics';
-import { LinearGradient } from 'expo-linear-gradient';
 
 import { ThemedText } from '@/components/ThemedText';
-import { BPButton } from '@/components/BPButton';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing } from '@/constants/theme';
 
@@ -27,37 +24,25 @@ interface RepairsNeededModalProps {
   technicianName?: string;
 }
 
-const ISSUE_TYPES = [
-  'Pump problem',
-  'Filter issue',
-  'Heater malfunction',
-  'Leak detected',
-  'Electrical issue',
-  'Other',
-];
-
-const PRIORITY_OPTIONS = ['Low', 'Normal', 'High', 'Urgent'];
-
 export function RepairsNeededModal({
   visible,
   onClose,
   propertyName,
   propertyAddress,
-  technicianName = 'John Smith',
+  technicianName = 'Service Technician',
 }: RepairsNeededModalProps) {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
 
-  const [issueType, setIssueType] = useState('');
-  const [priority, setPriority] = useState('Normal');
+  const [isUrgent, setIsUrgent] = useState(false);
   const [issueDescription, setIssueDescription] = useState('');
-  const [equipmentTag, setEquipmentTag] = useState('');
-  const [photos, setPhotos] = useState<string[]>([]);
 
   const handleSubmit = () => {
     if (Platform.OS !== 'web') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
+    setIssueDescription('');
+    setIsUrgent(false);
     onClose();
   };
 
@@ -85,21 +70,6 @@ export function RepairsNeededModal({
     hour12: true,
   });
 
-  const getPriorityColor = (p: string) => {
-    switch (p) {
-      case 'Urgent':
-        return BrandColors.danger;
-      case 'High':
-        return BrandColors.vividTangerine;
-      case 'Normal':
-        return BrandColors.azureBlue;
-      case 'Low':
-        return '#8E8E93';
-      default:
-        return theme.textSecondary;
-    }
-  };
-
   return (
     <Modal
       visible={visible}
@@ -108,20 +78,21 @@ export function RepairsNeededModal({
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
-        <LinearGradient
-          colors={['#FFFFFF', '#E3F2FD', '#FFF3E0', '#FFFFFF']}
-          locations={[0, 0.3, 0.7, 1]}
-          style={[styles.modalContainer, { paddingBottom: insets.bottom + Spacing.lg }]}
-        >
-          <View style={[styles.header, { backgroundColor: BrandColors.vividTangerine }]}>
+        <View style={[styles.modalContainer, { backgroundColor: theme.surface, paddingBottom: insets.bottom + Spacing.lg }]}>
+          <View style={styles.header}>
             <View style={styles.headerContent}>
               <View style={styles.headerIconContainer}>
-                <Feather name="alert-triangle" size={24} color="#FFFFFF" />
+                <Feather name="alert-triangle" size={24} color={BrandColors.vividTangerine} />
               </View>
-              <ThemedText style={styles.headerTitle}>Repairs Needed</ThemedText>
+              <View>
+                <ThemedText style={styles.headerTitle}>Repairs Needed</ThemedText>
+                <ThemedText style={[styles.headerSubtitle, { color: theme.textSecondary }]}>
+                  Report a repair issue
+                </ThemedText>
+              </View>
             </View>
             <Pressable style={styles.closeButton} onPress={onClose}>
-              <Feather name="x" size={24} color="#FFFFFF" />
+              <Feather name="x" size={24} color={theme.text} />
             </Pressable>
           </View>
 
@@ -130,107 +101,78 @@ export function RepairsNeededModal({
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
           >
-            <View style={[styles.propertyCard, { backgroundColor: theme.backgroundSecondary }]}>
+            <View style={styles.propertySection}>
               <ThemedText style={styles.propertyName}>{propertyName}</ThemedText>
-              <View style={styles.propertyRow}>
-                <Feather name="map-pin" size={14} color={theme.textSecondary} />
-                <ThemedText style={[styles.propertyAddress, { color: theme.textSecondary }]}>
-                  {propertyAddress}
+              <ThemedText style={[styles.propertyAddress, { color: theme.textSecondary }]}>
+                {propertyAddress}
+              </ThemedText>
+            </View>
+
+            <View style={styles.metaRow}>
+              <View style={styles.metaItem}>
+                <ThemedText style={[styles.metaLabel, { color: theme.textSecondary }]}>Technician</ThemedText>
+                <ThemedText style={styles.metaValue}>{technicianName}</ThemedText>
+              </View>
+              <View style={styles.metaItem}>
+                <ThemedText style={[styles.metaLabel, { color: theme.textSecondary }]}>Time</ThemedText>
+                <ThemedText style={styles.metaValue}>{currentTime}</ThemedText>
+              </View>
+            </View>
+
+            <Pressable 
+              style={[styles.urgentCard, { borderColor: isUrgent ? BrandColors.vividTangerine : theme.border }]}
+              onPress={() => {
+                if (Platform.OS !== 'web') {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
+                setIsUrgent(!isUrgent);
+              }}
+            >
+              <View style={[styles.checkbox, isUrgent && styles.checkboxChecked]}>
+                {isUrgent ? <Feather name="check" size={14} color="#FFFFFF" /> : null}
+              </View>
+              <View style={styles.urgentTextContainer}>
+                <ThemedText style={styles.urgentTitle}>Mark as Urgent</ThemedText>
+                <ThemedText style={[styles.urgentSubtitle, { color: theme.textSecondary }]}>
+                  Notifies admin team immediately
                 </ThemedText>
               </View>
-              <View style={styles.propertyMetaRow}>
-                <View style={styles.propertyMetaItem}>
-                  <Feather name="user" size={14} color={theme.textSecondary} />
-                  <ThemedText style={[styles.propertyMetaText, { color: theme.textSecondary }]}>
-                    {technicianName}
-                  </ThemedText>
-                </View>
-                <View style={styles.propertyMetaItem}>
-                  <Feather name="clock" size={14} color={theme.textSecondary} />
-                  <ThemedText style={[styles.propertyMetaText, { color: theme.textSecondary }]}>
-                    {currentTime}
-                  </ThemedText>
-                </View>
+              <View style={styles.urgentIcon}>
+                <Feather name="alert-triangle" size={20} color={theme.textSecondary} />
               </View>
-            </View>
+            </Pressable>
 
             <View style={styles.inputSection}>
-              <ThemedText style={styles.inputLabel}>Issue Type *</ThemedText>
-              <View style={[styles.pickerContainer, { borderColor: theme.border }]}>
-                <Picker
-                  selectedValue={issueType}
-                  onValueChange={(value: string) => setIssueType(value)}
-                  style={[styles.picker, { color: theme.text }]}
-                >
-                  <Picker.Item label="Select Issue Type" value="" color={theme.textSecondary} />
-                  {ISSUE_TYPES.map((type) => (
-                    <Picker.Item key={type} label={type} value={type} />
-                  ))}
-                </Picker>
+              <View style={styles.labelRow}>
+                <ThemedText style={styles.inputLabel}>Describe the Issue *</ThemedText>
+                <Pressable style={styles.voiceButton} onPress={handleVoiceInput}>
+                  <Feather name="mic" size={16} color="#FFFFFF" />
+                  <ThemedText style={styles.voiceButtonText}>Voice</ThemedText>
+                </Pressable>
               </View>
-            </View>
-
-            <View style={styles.inputSection}>
-              <ThemedText style={styles.inputLabel}>Priority *</ThemedText>
-              <View style={[styles.pickerContainer, { borderColor: getPriorityColor(priority) }]}>
-                <Picker
-                  selectedValue={priority}
-                  onValueChange={(value: string) => {
-                    if (Platform.OS !== 'web') {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    }
-                    setPriority(value);
-                  }}
-                  style={[styles.picker, { color: getPriorityColor(priority) }]}
-                >
-                  {PRIORITY_OPTIONS.map((option) => (
-                    <Picker.Item key={option} label={option} value={option} />
-                  ))}
-                </Picker>
-              </View>
-            </View>
-
-            <View style={styles.inputSection}>
-              <ThemedText style={styles.inputLabel}>Describe the Issue *</ThemedText>
               <View style={[styles.textAreaContainer, { borderColor: theme.border }]}>
                 <TextInput
                   style={[styles.textArea, { color: theme.text }]}
-                  placeholder="Describe the repair needed..."
+                  placeholder="Tap the voice button or type the repair needed..."
                   placeholderTextColor={theme.textSecondary}
                   value={issueDescription}
                   onChangeText={setIssueDescription}
                   multiline
-                  numberOfLines={4}
+                  numberOfLines={6}
                   textAlignVertical="top"
-                />
-                <Pressable style={styles.voiceButton} onPress={handleVoiceInput}>
-                  <Feather name="mic" size={20} color={BrandColors.azureBlue} />
-                </Pressable>
-              </View>
-            </View>
-
-            <View style={styles.inputSection}>
-              <ThemedText style={styles.inputLabel}>Equipment Tag</ThemedText>
-              <View style={[styles.textInputContainer, { borderColor: theme.border }]}>
-                <TextInput
-                  style={[styles.textInput, { color: theme.text }]}
-                  placeholder="Enter equipment ID..."
-                  placeholderTextColor={theme.textSecondary}
-                  value={equipmentTag}
-                  onChangeText={setEquipmentTag}
                 />
               </View>
             </View>
 
             <View style={styles.photosSection}>
-              <ThemedText style={styles.inputLabel}>Photos</ThemedText>
+              <ThemedText style={styles.inputLabel}>Photos (Optional)</ThemedText>
               <View style={styles.photoButtons}>
                 <Pressable
-                  style={[styles.photoButton, { borderColor: theme.border }]}
+                  style={[styles.photoButton, { borderColor: BrandColors.azureBlue }]}
                   onPress={handleTakePhoto}
                 >
-                  <Feather name="camera" size={24} color={theme.textSecondary} />
-                  <ThemedText style={[styles.photoButtonText, { color: theme.textSecondary }]}>
+                  <Feather name="camera" size={24} color={BrandColors.azureBlue} />
+                  <ThemedText style={[styles.photoButtonText, { color: BrandColors.azureBlue }]}>
                     Take Photo
                   </ThemedText>
                 </Pressable>
@@ -248,16 +190,19 @@ export function RepairsNeededModal({
           </ScrollView>
 
           <View style={styles.footer}>
-            <BPButton
-              variant="primary"
+            <Pressable
+              style={[
+                styles.submitButton,
+                { backgroundColor: BrandColors.azureBlue },
+                !issueDescription.trim() && styles.submitButtonDisabled,
+              ]}
               onPress={handleSubmit}
-              fullWidth
-              disabled={!issueType || !issueDescription.trim()}
+              disabled={!issueDescription.trim()}
             >
-              Submit Repair Request
-            </BPButton>
+              <ThemedText style={styles.submitButtonText}>Submit Repair Request</ThemedText>
+            </Pressable>
           </View>
-        </LinearGradient>
+        </View>
       </View>
     </Modal>
   );
@@ -272,35 +217,37 @@ const styles = StyleSheet.create({
   modalContainer: {
     borderTopLeftRadius: BorderRadius.xl,
     borderTopRightRadius: BorderRadius.xl,
-    maxHeight: '90%',
-    overflow: 'hidden',
+    maxHeight: '95%',
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     paddingVertical: Spacing.lg,
     paddingHorizontal: Spacing.lg,
-    borderTopLeftRadius: BorderRadius.xl,
-    borderTopRightRadius: BorderRadius.xl,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.05)',
   },
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
+    gap: Spacing.md,
   },
   headerIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: BorderRadius.full,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    width: 44,
+    height: 44,
+    borderRadius: BorderRadius.md,
+    backgroundColor: BrandColors.vividTangerine + '15',
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#FFFFFF',
+  },
+  headerSubtitle: {
+    fontSize: 13,
+    marginTop: 2,
   },
   closeButton: {
     width: 32,
@@ -314,77 +261,105 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: Spacing.lg,
   },
-  propertyCard: {
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
+  propertySection: {
     marginBottom: Spacing.lg,
   },
   propertyName: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     marginBottom: Spacing.xs,
-  },
-  propertyRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    marginBottom: Spacing.sm,
   },
   propertyAddress: {
     fontSize: 14,
   },
-  propertyMetaRow: {
+  metaRow: {
     flexDirection: 'row',
-    gap: Spacing.lg,
+    justifyContent: 'space-between',
+    paddingBottom: Spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.05)',
+    marginBottom: Spacing.lg,
   },
-  propertyMetaItem: {
+  metaItem: {},
+  metaLabel: {
+    fontSize: 12,
+    marginBottom: 2,
+  },
+  metaValue: {
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  urgentCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    marginBottom: Spacing.xl,
   },
-  propertyMetaText: {
-    fontSize: 13,
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#D1D5DB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: Spacing.md,
+  },
+  checkboxChecked: {
+    backgroundColor: BrandColors.vividTangerine,
+    borderColor: BrandColors.vividTangerine,
+  },
+  urgentTextContainer: {
+    flex: 1,
+  },
+  urgentTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  urgentSubtitle: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  urgentIcon: {
+    marginLeft: Spacing.sm,
   },
   inputSection: {
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.xl,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
   },
   inputLabel: {
     fontSize: 14,
     fontWeight: '600',
-    marginBottom: Spacing.sm,
   },
-  pickerContainer: {
-    borderWidth: 1,
-    borderRadius: BorderRadius.md,
-    overflow: 'hidden',
+  voiceButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: BrandColors.azureBlue,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.full,
+    gap: Spacing.xs,
   },
-  picker: {
-    height: 50,
+  voiceButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
   },
   textAreaContainer: {
     borderWidth: 1,
     borderRadius: BorderRadius.md,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
   },
   textArea: {
-    flex: 1,
     padding: Spacing.md,
     fontSize: 15,
-    minHeight: 100,
-  },
-  voiceButton: {
-    padding: Spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  textInputContainer: {
-    borderWidth: 1,
-    borderRadius: BorderRadius.md,
-  },
-  textInput: {
-    padding: Spacing.md,
-    fontSize: 15,
+    minHeight: 120,
   },
   photosSection: {
     marginBottom: Spacing.lg,
@@ -392,6 +367,7 @@ const styles = StyleSheet.create({
   photoButtons: {
     flexDirection: 'row',
     gap: Spacing.md,
+    marginTop: Spacing.sm,
   },
   photoButton: {
     flex: 1,
@@ -410,7 +386,19 @@ const styles = StyleSheet.create({
   footer: {
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.1)',
+  },
+  submitButton: {
+    paddingVertical: Spacing.lg,
+    borderRadius: BorderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  submitButtonDisabled: {
+    opacity: 0.6,
+  },
+  submitButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

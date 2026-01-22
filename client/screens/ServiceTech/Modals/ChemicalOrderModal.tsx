@@ -12,10 +12,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import * as Haptics from 'expo-haptics';
-import { LinearGradient } from 'expo-linear-gradient';
 
 import { ThemedText } from '@/components/ThemedText';
-import { BPButton } from '@/components/BPButton';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing } from '@/constants/theme';
 
@@ -30,20 +28,31 @@ interface ChemicalRow {
   id: string;
   chemical: string;
   quantity: number;
+  unit: string;
 }
 
 const CHEMICALS = [
-  'Chlorine',
-  'Muriatic Acid',
-  'Shock',
-  'Algaecide',
-  'pH Up',
-  'pH Down',
-  'Stabilizer',
-  'Other',
+  { value: '', label: 'Select...' },
+  { value: 'Chlorine', label: 'Chlorine' },
+  { value: 'Muriatic Acid', label: 'Muriatic Acid' },
+  { value: 'Shock', label: 'Shock' },
+  { value: 'Algaecide', label: 'Algaecide' },
+  { value: 'pH Up', label: 'pH Up' },
+  { value: 'pH Down', label: 'pH Down' },
+  { value: 'Stabilizer', label: 'Stabilizer' },
+  { value: 'Defoamer', label: 'Defoamer' },
+  { value: 'Calcium', label: 'Calcium' },
+  { value: 'Other', label: 'Other' },
 ];
 
-const URGENCY_OPTIONS = ['Routine', 'Next Visit', 'ASAP'];
+const UNITS = [
+  { value: '1 Quart', label: '1 Quart' },
+  { value: '1 Gallon', label: '1 Gallon' },
+  { value: '2.5 Gallon', label: '2.5 Gallon' },
+  { value: '5 Gallon', label: '5 Gallon' },
+  { value: '50 lb Bag', label: '50 lb Bag' },
+  { value: '25 lb Bucket', label: '25 lb Bucket' },
+];
 
 export function ChemicalOrderModal({
   visible,
@@ -55,16 +64,15 @@ export function ChemicalOrderModal({
   const { theme } = useTheme();
 
   const [rows, setRows] = useState<ChemicalRow[]>([
-    { id: '1', chemical: '', quantity: 1 },
+    { id: '1', chemical: '', quantity: 1, unit: '1 Quart' },
   ]);
-  const [urgency, setUrgency] = useState('Routine');
   const [notes, setNotes] = useState('');
 
   const handleAddRow = () => {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
-    setRows([...rows, { id: String(Date.now()), chemical: '', quantity: 1 }]);
+    setRows([...rows, { id: String(Date.now()), chemical: '', quantity: 1, unit: '1 Quart' }]);
   };
 
   const handleRemoveRow = (id: string) => {
@@ -78,6 +86,10 @@ export function ChemicalOrderModal({
 
   const handleChemicalChange = (id: string, chemical: string) => {
     setRows(rows.map((row) => (row.id === id ? { ...row, chemical } : row)));
+  };
+
+  const handleUnitChange = (id: string, unit: string) => {
+    setRows(rows.map((row) => (row.id === id ? { ...row, unit } : row)));
   };
 
   const handleQuantityChange = (id: string, delta: number) => {
@@ -99,23 +111,19 @@ export function ChemicalOrderModal({
     if (Platform.OS !== 'web') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
+    setRows([{ id: '1', chemical: '', quantity: 1, unit: '1 Quart' }]);
+    setNotes('');
     onClose();
   };
 
-  const isValid = rows.some((row) => row.chemical !== '');
-
-  const getUrgencyColor = (u: string) => {
-    switch (u) {
-      case 'ASAP':
-        return BrandColors.danger;
-      case 'Next Visit':
-        return BrandColors.vividTangerine;
-      case 'Routine':
-        return BrandColors.azureBlue;
-      default:
-        return theme.textSecondary;
-    }
+  const handleCancel = () => {
+    setRows([{ id: '1', chemical: '', quantity: 1, unit: '1 Quart' }]);
+    setNotes('');
+    onClose();
   };
+
+  const selectedChemicals = rows.filter((row) => row.chemical !== '');
+  const isValid = selectedChemicals.length > 0;
 
   return (
     <Modal
@@ -125,29 +133,22 @@ export function ChemicalOrderModal({
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
-        <LinearGradient
-          colors={['#FFFFFF', '#E3F2FD', '#FFF3E0', '#FFFFFF']}
-          locations={[0, 0.3, 0.7, 1]}
-          style={[styles.modalContainer, { paddingBottom: insets.bottom + Spacing.lg }]}
-        >
+        <View style={[styles.modalContainer, { backgroundColor: theme.surface, paddingBottom: insets.bottom + Spacing.lg }]}>
           <View style={[styles.header, { backgroundColor: BrandColors.azureBlue }]}>
             <View style={styles.headerContent}>
               <View style={styles.headerIconContainer}>
                 <Feather name="droplet" size={24} color="#FFFFFF" />
               </View>
-              <View style={styles.headerTextContainer}>
-                <ThemedText style={styles.headerTitle}>Chemical Order</ThemedText>
-                <ThemedText style={styles.headerSubtitle} numberOfLines={1}>
-                  {propertyName}
-                </ThemedText>
-                <ThemedText style={styles.headerAddress} numberOfLines={1}>
-                  {propertyAddress}
-                </ThemedText>
-              </View>
+              <ThemedText style={styles.headerTitle}>Chemical Order</ThemedText>
             </View>
             <Pressable style={styles.closeButton} onPress={onClose}>
               <Feather name="x" size={24} color="#FFFFFF" />
             </Pressable>
+          </View>
+
+          <View style={[styles.propertyHeader, { backgroundColor: BrandColors.azureBlue }]}>
+            <ThemedText style={styles.propertyName}>{propertyName}</ThemedText>
+            <ThemedText style={styles.propertyAddress}>{propertyAddress}</ThemedText>
           </View>
 
           <ScrollView
@@ -155,84 +156,108 @@ export function ChemicalOrderModal({
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
           >
-            {rows.map((row, index) => (
+            {rows.map((row) => (
               <View key={row.id} style={styles.chemicalRow}>
-                <View style={styles.rowHeader}>
-                  <ThemedText style={styles.rowLabel}>Chemical {index + 1}</ThemedText>
-                  {rows.length > 1 ? (
-                    <Pressable onPress={() => handleRemoveRow(row.id)}>
-                      <Feather name="trash-2" size={18} color={BrandColors.danger} />
-                    </Pressable>
-                  ) : null}
-                </View>
-
-                <View style={[styles.pickerContainer, { borderColor: theme.border }]}>
-                  <Picker
-                    selectedValue={row.chemical}
-                    onValueChange={(value: string) => handleChemicalChange(row.id, value)}
-                    style={[styles.picker, { color: theme.text }]}
-                  >
-                    <Picker.Item label="Select Chemical" value="" color={theme.textSecondary} />
-                    {CHEMICALS.map((chem) => (
-                      <Picker.Item key={chem} label={chem} value={chem} />
-                    ))}
-                  </Picker>
-                </View>
-
-                <View style={styles.quantitySection}>
-                  <ThemedText style={styles.quantityLabel}>Quantity</ThemedText>
-                  <View style={styles.quantityControls}>
-                    <Pressable
-                      style={[styles.quantityButton, { backgroundColor: theme.backgroundSecondary }]}
-                      onPress={() => handleQuantityChange(row.id, -1)}
-                    >
-                      <Feather name="minus" size={20} color={theme.text} />
-                    </Pressable>
-                    <ThemedText style={styles.quantityValue}>{row.quantity}</ThemedText>
-                    <Pressable
-                      style={[styles.quantityButton, { backgroundColor: theme.backgroundSecondary }]}
-                      onPress={() => handleQuantityChange(row.id, 1)}
-                    >
-                      <Feather name="plus" size={20} color={theme.text} />
-                    </Pressable>
+                <View style={styles.chemicalMainRow}>
+                  <View style={styles.chemicalSelectContainer}>
+                    <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>CHEMICAL</ThemedText>
+                    <View style={[styles.pickerContainer, { borderColor: theme.border }]}>
+                      <Picker
+                        selectedValue={row.chemical}
+                        onValueChange={(value: string) => handleChemicalChange(row.id, value)}
+                        style={styles.picker}
+                      >
+                        {CHEMICALS.map((chem) => (
+                          <Picker.Item key={chem.value} label={chem.label} value={chem.value} />
+                        ))}
+                      </Picker>
+                    </View>
                   </View>
+
+                  <View style={styles.qtyContainer}>
+                    <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>QTY</ThemedText>
+                    <View style={styles.quantityControls}>
+                      <Pressable
+                        style={[styles.quantityButton, { borderColor: theme.border }]}
+                        onPress={() => handleQuantityChange(row.id, -1)}
+                      >
+                        <Feather name="minus" size={16} color={theme.text} />
+                      </Pressable>
+                      <ThemedText style={styles.quantityValue}>{row.quantity}</ThemedText>
+                      <Pressable
+                        style={[styles.quantityButton, { borderColor: theme.border }]}
+                        onPress={() => handleQuantityChange(row.id, 1)}
+                      >
+                        <Feather name="plus" size={16} color={theme.text} />
+                      </Pressable>
+                    </View>
+                  </View>
+
+                  <Pressable
+                    style={styles.deleteButton}
+                    onPress={() => handleRemoveRow(row.id)}
+                  >
+                    <Feather name="trash-2" size={20} color={BrandColors.danger} />
+                  </Pressable>
                 </View>
+
+                {row.chemical ? (
+                  <View style={styles.unitRow}>
+                    <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>UNIT</ThemedText>
+                    <View style={[styles.pickerContainer, { borderColor: theme.border }]}>
+                      <Picker
+                        selectedValue={row.unit}
+                        onValueChange={(value: string) => handleUnitChange(row.id, value)}
+                        style={styles.picker}
+                      >
+                        {UNITS.map((unit) => (
+                          <Picker.Item key={unit.value} label={unit.label} value={unit.value} />
+                        ))}
+                      </Picker>
+                    </View>
+                  </View>
+                ) : null}
               </View>
             ))}
 
-            <Pressable style={styles.addRowButton} onPress={handleAddRow}>
-              <Feather name="plus-circle" size={20} color={BrandColors.azureBlue} />
-              <ThemedText style={[styles.addRowText, { color: BrandColors.azureBlue }]}>
-                Add Another Chemical
+            <Pressable style={[styles.addChemicalButton, { borderColor: BrandColors.azureBlue }]} onPress={handleAddRow}>
+              <Feather name="plus" size={20} color={BrandColors.azureBlue} />
+              <ThemedText style={[styles.addChemicalText, { color: BrandColors.azureBlue }]}>
+                Add Chemical
               </ThemedText>
             </Pressable>
 
-            <View style={styles.inputSection}>
-              <ThemedText style={styles.inputLabel}>Urgency</ThemedText>
-              <View style={[styles.pickerContainer, { borderColor: getUrgencyColor(urgency) }]}>
-                <Picker
-                  selectedValue={urgency}
-                  onValueChange={(value: string) => {
-                    if (Platform.OS !== 'web') {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    }
-                    setUrgency(value);
-                  }}
-                  style={[styles.picker, { color: getUrgencyColor(urgency) }]}
-                >
-                  {URGENCY_OPTIONS.map((option) => (
-                    <Picker.Item key={option} label={option} value={option} />
-                  ))}
-                </Picker>
-              </View>
+            <View style={[styles.summarySection, { backgroundColor: theme.backgroundSecondary }]}>
+              <ThemedText style={styles.summaryTitle}>ORDER SUMMARY</ThemedText>
+              {selectedChemicals.length > 0 ? (
+                selectedChemicals.map((row) => (
+                  <View key={row.id} style={styles.summaryRow}>
+                    <ThemedText style={styles.summaryChemical}>{row.chemical}</ThemedText>
+                    <ThemedText style={[styles.summaryQty, { color: theme.textSecondary }]}>
+                      {row.quantity} x {row.unit}
+                    </ThemedText>
+                  </View>
+                ))
+              ) : (
+                <View style={styles.summaryRow}>
+                  <ThemedText style={[styles.summaryChemical, { color: theme.textSecondary }]}>
+                    Not selected
+                  </ThemedText>
+                  <ThemedText style={[styles.summaryQty, { color: theme.textSecondary }]}>
+                    1 x —
+                  </ThemedText>
+                </View>
+              )}
             </View>
 
-            <View style={styles.inputSection}>
-              <ThemedText style={styles.inputLabel}>Notes (Optional)</ThemedText>
+            <View style={styles.notesSection}>
+              <ThemedText style={[styles.notesLabel, { color: theme.textSecondary }]}>
+                Order Notes (Optional)
+              </ThemedText>
               <View style={[styles.textAreaContainer, { borderColor: theme.border }]}>
                 <TextInput
                   style={[styles.textArea, { color: theme.text }]}
-                  placeholder="Add special instructions..."
+                  placeholder="Add delivery notes, timing preferences, or special instructions..."
                   placeholderTextColor={theme.textSecondary}
                   value={notes}
                   onChangeText={setNotes}
@@ -245,16 +270,26 @@ export function ChemicalOrderModal({
           </ScrollView>
 
           <View style={styles.footer}>
-            <BPButton
-              variant="primary"
+            <Pressable
+              style={[styles.cancelButton, { backgroundColor: theme.backgroundSecondary }]}
+              onPress={handleCancel}
+            >
+              <ThemedText style={styles.cancelButtonText}>Cancel</ThemedText>
+            </Pressable>
+            <Pressable
+              style={[
+                styles.submitButton,
+                { backgroundColor: BrandColors.azureBlue },
+                !isValid && styles.submitButtonDisabled,
+              ]}
               onPress={handleSubmit}
-              fullWidth
               disabled={!isValid}
             >
-              Submit Order
-            </BPButton>
+              <Feather name="send" size={18} color="#FFFFFF" />
+              <ThemedText style={styles.submitButtonText}>Send Order</ThemedText>
+            </Pressable>
           </View>
-        </LinearGradient>
+        </View>
       </View>
     </Modal>
   );
@@ -269,56 +304,54 @@ const styles = StyleSheet.create({
   modalContainer: {
     borderTopLeftRadius: BorderRadius.xl,
     borderTopRightRadius: BorderRadius.xl,
-    maxHeight: '90%',
-    overflow: 'hidden',
+    maxHeight: '95%',
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: Spacing.lg,
+    paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.lg,
     borderTopLeftRadius: BorderRadius.xl,
     borderTopRightRadius: BorderRadius.xl,
   },
   headerContent: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    flex: 1,
+    alignItems: 'center',
     gap: Spacing.sm,
   },
   headerIconContainer: {
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
     borderRadius: BorderRadius.full,
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  headerTextContainer: {
-    flex: 1,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: '#FFFFFF',
   },
-  headerSubtitle: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: 'rgba(255,255,255,0.9)',
-    marginTop: 2,
-  },
-  headerAddress: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.7)',
-    marginTop: 2,
-  },
   closeButton: {
     width: 32,
     height: 32,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  propertyHeader: {
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.lg,
+  },
+  propertyName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  propertyAddress: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.8)',
   },
   scrollView: {
     flex: 1,
@@ -328,74 +361,108 @@ const styles = StyleSheet.create({
   },
   chemicalRow: {
     marginBottom: Spacing.lg,
-    paddingBottom: Spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.1)',
   },
-  rowHeader: {
+  chemicalMainRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.sm,
+    alignItems: 'flex-end',
+    gap: Spacing.sm,
   },
-  rowLabel: {
-    fontSize: 14,
+  chemicalSelectContainer: {
+    flex: 1,
+  },
+  fieldLabel: {
+    fontSize: 11,
     fontWeight: '600',
+    letterSpacing: 0.5,
+    marginBottom: Spacing.xs,
   },
   pickerContainer: {
     borderWidth: 1,
     borderRadius: BorderRadius.md,
-    marginBottom: Spacing.md,
     overflow: 'hidden',
   },
   picker: {
     height: 50,
   },
-  quantitySection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  quantityLabel: {
-    fontSize: 14,
-    fontWeight: '500',
+  qtyContainer: {
+    width: 100,
   },
   quantityControls: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.md,
+    height: 50,
   },
   quantityButton: {
-    width: 40,
-    height: 40,
-    borderRadius: BorderRadius.md,
+    width: 32,
+    height: 32,
+    borderWidth: 1,
+    borderRadius: BorderRadius.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
   quantityValue: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
-    minWidth: 30,
+    minWidth: 36,
     textAlign: 'center',
   },
-  addRowButton: {
+  deleteButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: BrandColors.danger + '10',
+    borderRadius: BorderRadius.md,
+    marginBottom: 4,
+  },
+  unitRow: {
+    marginTop: Spacing.sm,
+  },
+  addChemicalButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.sm,
     paddingVertical: Spacing.md,
-    marginBottom: Spacing.lg,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderRadius: BorderRadius.md,
+    marginBottom: Spacing.xl,
   },
-  addRowText: {
+  addChemicalText: {
     fontSize: 15,
     fontWeight: '600',
   },
-  inputSection: {
+  summarySection: {
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
     marginBottom: Spacing.lg,
   },
-  inputLabel: {
+  summaryTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    marginBottom: Spacing.sm,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: Spacing.xs,
+  },
+  summaryChemical: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '500',
+  },
+  summaryQty: {
+    fontSize: 13,
+  },
+  notesSection: {
+    marginBottom: Spacing.lg,
+  },
+  notesLabel: {
+    fontSize: 13,
+    fontWeight: '500',
     marginBottom: Spacing.sm,
   },
   textAreaContainer: {
@@ -408,9 +475,39 @@ const styles = StyleSheet.create({
     minHeight: 80,
   },
   footer: {
+    flexDirection: 'row',
+    gap: Spacing.md,
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.md,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.1)',
+    borderTopColor: 'rgba(0,0,0,0.05)',
+  },
+  cancelButton: {
+    flex: 0.4,
+    paddingVertical: Spacing.lg,
+    borderRadius: BorderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  submitButton: {
+    flex: 0.6,
+    flexDirection: 'row',
+    paddingVertical: Spacing.lg,
+    borderRadius: BorderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+  },
+  submitButtonDisabled: {
+    opacity: 0.6,
+  },
+  submitButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
   },
 });

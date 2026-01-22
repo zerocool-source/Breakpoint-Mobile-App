@@ -9,7 +9,7 @@ import Animated, {
 
 import { ThemedText } from "@/components/ThemedText";
 import { useTheme } from "@/hooks/useTheme";
-import { Spacing, BorderRadius } from "@/constants/theme";
+import { Spacing, BorderRadius, Shadows, SpringConfigs } from "@/constants/theme";
 
 interface CardProps {
   elevation?: number;
@@ -18,14 +18,14 @@ interface CardProps {
   children?: React.ReactNode;
   onPress?: () => void;
   style?: ViewStyle;
+  variant?: 'default' | 'elevated' | 'outlined';
 }
 
 const springConfig: WithSpringConfig = {
-  damping: 15,
-  mass: 0.3,
-  stiffness: 150,
+  damping: SpringConfigs.responsive.damping,
+  mass: SpringConfigs.responsive.mass,
+  stiffness: SpringConfigs.responsive.stiffness,
   overshootClamping: true,
-  energyThreshold: 0.001,
 };
 
 const getBackgroundColorForElevation = (
@@ -44,6 +44,17 @@ const getBackgroundColorForElevation = (
   }
 };
 
+const getShadowForVariant = (variant: string) => {
+  switch (variant) {
+    case 'elevated':
+      return Shadows.cardElevated;
+    case 'outlined':
+      return Shadows.none;
+    default:
+      return Shadows.card;
+  }
+};
+
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export function Card({
@@ -53,11 +64,13 @@ export function Card({
   children,
   onPress,
   style,
+  variant = 'default',
 }: CardProps) {
   const { theme } = useTheme();
   const scale = useSharedValue(1);
 
   const cardBackgroundColor = getBackgroundColorForElevation(elevation, theme);
+  const shadow = getShadowForVariant(variant);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -80,7 +93,10 @@ export function Card({
         styles.card,
         {
           backgroundColor: cardBackgroundColor,
+          borderColor: variant === 'outlined' ? theme.border : 'transparent',
+          borderWidth: variant === 'outlined' ? 1.5 : 0,
         },
+        shadow,
         animatedStyle,
         style,
       ]}
@@ -102,7 +118,7 @@ export function Card({
 
 const styles = StyleSheet.create({
   card: {
-    padding: Spacing.xl,
+    padding: Spacing.cardPadding,
     borderRadius: BorderRadius["2xl"],
   },
   cardTitle: {

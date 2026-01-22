@@ -1,18 +1,17 @@
 import React, { ReactNode } from 'react';
-import { StyleSheet, Pressable, ViewStyle, StyleProp, ActivityIndicator } from 'react-native';
+import { StyleSheet, Pressable, ViewStyle, StyleProp, ActivityIndicator, Platform } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
-  WithSpringConfig,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/ThemedText';
-import { BrandColors, BorderRadius, Spacing } from '@/constants/theme';
+import { BrandColors, BorderRadius, Spacing, Shadows, SpringConfigs } from '@/constants/theme';
 
-type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'success' | 'warning' | 'outline';
+type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'success' | 'warning' | 'outline' | 'ghost';
 
 interface BPButtonProps {
   onPress?: () => void;
@@ -27,28 +26,22 @@ interface BPButtonProps {
   size?: 'small' | 'medium' | 'large';
 }
 
-const springConfig: WithSpringConfig = {
-  damping: 15,
-  mass: 0.3,
-  stiffness: 150,
-  overshootClamping: true,
-};
-
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-const variantStyles: Record<ButtonVariant, { bg: string; text: string; border?: string }> = {
-  primary: { bg: BrandColors.azureBlue, text: '#FFFFFF' },
-  secondary: { bg: '#F5F5F5', text: BrandColors.azureBlue },
-  danger: { bg: BrandColors.danger, text: '#FFFFFF' },
-  success: { bg: BrandColors.emerald, text: '#FFFFFF' },
-  warning: { bg: BrandColors.vividTangerine, text: '#FFFFFF' },
+const variantStyles: Record<ButtonVariant, { bg: string; text: string; border?: string; shadow?: boolean }> = {
+  primary: { bg: BrandColors.azureBlue, text: '#FFFFFF', shadow: true },
+  secondary: { bg: '#F1F5F9', text: BrandColors.azureBlue },
+  danger: { bg: BrandColors.danger, text: '#FFFFFF', shadow: true },
+  success: { bg: BrandColors.emerald, text: '#FFFFFF', shadow: true },
+  warning: { bg: BrandColors.vividTangerine, text: '#FFFFFF', shadow: true },
   outline: { bg: 'transparent', text: BrandColors.azureBlue, border: BrandColors.azureBlue },
+  ghost: { bg: 'transparent', text: BrandColors.azureBlue },
 };
 
 const sizeStyles = {
-  small: { height: 36, paddingHorizontal: Spacing.md, fontSize: 13, iconSize: 16 },
-  medium: { height: 44, paddingHorizontal: Spacing.lg, fontSize: 15, iconSize: 18 },
-  large: { height: 52, paddingHorizontal: Spacing.xl, fontSize: 17, iconSize: 20 },
+  small: { height: 42, paddingHorizontal: Spacing.lg, fontSize: 14, iconSize: 18, borderRadius: BorderRadius.md },
+  medium: { height: Spacing.buttonHeight, paddingHorizontal: Spacing.xl, fontSize: 16, iconSize: 20, borderRadius: BorderRadius.lg },
+  large: { height: Spacing.buttonHeightLarge, paddingHorizontal: Spacing['2xl'], fontSize: 18, iconSize: 24, borderRadius: BorderRadius.xl },
 };
 
 export function BPButton({
@@ -73,19 +66,21 @@ export function BPButton({
 
   const handlePressIn = () => {
     if (!disabled && !loading) {
-      scale.value = withSpring(0.96, springConfig);
+      scale.value = withSpring(0.97, SpringConfigs.snappy);
     }
   };
 
   const handlePressOut = () => {
     if (!disabled && !loading) {
-      scale.value = withSpring(1, springConfig);
+      scale.value = withSpring(1, SpringConfigs.snappy);
     }
   };
 
   const handlePress = () => {
     if (!disabled && !loading && onPress) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      if (Platform.OS !== 'web') {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
       onPress();
     }
   };
@@ -132,10 +127,12 @@ export function BPButton({
           backgroundColor: colors.bg,
           height: sizeConfig.height,
           paddingHorizontal: sizeConfig.paddingHorizontal,
-          borderWidth: colors.border ? 1.5 : 0,
+          borderRadius: sizeConfig.borderRadius,
+          borderWidth: colors.border ? 2 : 0,
           borderColor: colors.border,
           opacity: disabled ? 0.5 : 1,
         },
+        colors.shadow && Shadows.button,
         fullWidth && styles.fullWidth,
         style,
         animatedStyle,
@@ -151,13 +148,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: BorderRadius.sm,
   },
   fullWidth: {
     width: '100%',
   },
   buttonText: {
     fontWeight: '600',
+    letterSpacing: 0.3,
   },
   iconLeft: {
     marginRight: Spacing.sm,

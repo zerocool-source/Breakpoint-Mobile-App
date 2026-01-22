@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Pressable, View } from 'react-native';
+import { StyleSheet, Pressable, View, Platform } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -10,7 +10,7 @@ import { Feather } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/ThemedText';
 import { useTheme } from '@/hooks/useTheme';
-import { BorderRadius, Spacing, Shadows } from '@/constants/theme';
+import { BorderRadius, Spacing, Shadows, SpringConfigs } from '@/constants/theme';
 
 interface MetricCardProps {
   icon: keyof typeof Feather.glyphMap;
@@ -18,28 +18,59 @@ interface MetricCardProps {
   value: number;
   color: string;
   onPress?: () => void;
+  size?: 'small' | 'medium' | 'large';
 }
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-export function MetricCard({ icon, label, value, color, onPress }: MetricCardProps) {
+const sizeConfigs = {
+  small: { 
+    iconContainer: 40, 
+    iconSize: 20, 
+    padding: Spacing.md, 
+    valueSize: 26, 
+    labelSize: 11,
+    borderRadius: BorderRadius.lg,
+  },
+  medium: { 
+    iconContainer: 48, 
+    iconSize: 24, 
+    padding: Spacing.lg, 
+    valueSize: 32, 
+    labelSize: 12,
+    borderRadius: BorderRadius.xl,
+  },
+  large: { 
+    iconContainer: 56, 
+    iconSize: 28, 
+    padding: Spacing.xl, 
+    valueSize: 40, 
+    labelSize: 14,
+    borderRadius: BorderRadius['2xl'],
+  },
+};
+
+export function MetricCard({ icon, label, value, color, onPress, size = 'medium' }: MetricCardProps) {
   const { theme } = useTheme();
   const scale = useSharedValue(1);
+  const config = sizeConfigs[size];
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
 
   const handlePressIn = () => {
-    scale.value = withSpring(0.96, { damping: 15, stiffness: 150 });
+    scale.value = withSpring(0.97, SpringConfigs.responsive);
   };
 
   const handlePressOut = () => {
-    scale.value = withSpring(1, { damping: 15, stiffness: 150 });
+    scale.value = withSpring(1, SpringConfigs.responsive);
   };
 
   const handlePress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
     onPress?.();
   };
 
@@ -50,15 +81,49 @@ export function MetricCard({ icon, label, value, color, onPress }: MetricCardPro
       onPressOut={handlePressOut}
       style={[
         styles.container,
-        { backgroundColor: theme.surface },
+        { 
+          backgroundColor: theme.surface,
+          padding: config.padding,
+          borderRadius: config.borderRadius,
+        },
+        Shadows.card,
         animatedStyle,
       ]}
     >
-      <View style={[styles.iconContainer, { backgroundColor: color + '15' }]}>
-        <Feather name={icon} size={20} color={color} />
+      <View 
+        style={[
+          styles.iconContainer, 
+          { 
+            backgroundColor: color + '12',
+            width: config.iconContainer,
+            height: config.iconContainer,
+            borderRadius: config.iconContainer / 2.5,
+          }
+        ]}
+      >
+        <Feather name={icon} size={config.iconSize} color={color} />
       </View>
-      <ThemedText style={[styles.value, { color }]}>{value}</ThemedText>
-      <ThemedText style={[styles.label, { color: theme.textSecondary }]} numberOfLines={2}>
+      <ThemedText 
+        style={[
+          styles.value, 
+          { 
+            color,
+            fontSize: config.valueSize,
+          }
+        ]}
+      >
+        {value}
+      </ThemedText>
+      <ThemedText 
+        style={[
+          styles.label, 
+          { 
+            color: theme.textSecondary,
+            fontSize: config.labelSize,
+          }
+        ]} 
+        numberOfLines={2}
+      >
         {label}
       </ThemedText>
     </AnimatedPressable>
@@ -68,28 +133,23 @@ export function MetricCard({ icon, label, value, color, onPress }: MetricCardPro
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.md,
     alignItems: 'center',
-    ...Shadows.card,
   },
   iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: BorderRadius.sm,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.sm,
   },
   value: {
-    fontSize: 24,
     fontWeight: '700',
-    marginBottom: 2,
+    marginBottom: 4,
+    fontVariant: ['tabular-nums'],
+    letterSpacing: -0.5,
   },
   label: {
-    fontSize: 11,
-    fontWeight: '500',
+    fontWeight: '600',
     textAlign: 'center',
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 });

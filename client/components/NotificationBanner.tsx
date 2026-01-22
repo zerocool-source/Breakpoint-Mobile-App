@@ -13,7 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 
 import { ThemedText } from '@/components/ThemedText';
-import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
+import { BrandColors, BorderRadius, Spacing, Shadows, SpringConfigs } from '@/constants/theme';
 
 interface NotificationBannerProps {
   visible: boolean;
@@ -60,9 +60,9 @@ export function NotificationBanner({
       if (Platform.OS !== 'web') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       }
-      translateY.value = withSpring(0, { damping: 15, stiffness: 150 });
+      translateY.value = withSpring(0, SpringConfigs.responsive);
       opacity.value = withTiming(1, { duration: 200 });
-      scale.value = withSpring(1, { damping: 15, stiffness: 150 });
+      scale.value = withSpring(1, SpringConfigs.responsive);
 
       const timer = setTimeout(() => {
         handleDismiss();
@@ -123,46 +123,48 @@ export function NotificationBanner({
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    left: Spacing.md,
-    right: Spacing.md,
+    left: Spacing.lg,
+    right: Spacing.lg,
     zIndex: 9999,
     elevation: 9999,
   },
   banner: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: Spacing.md,
-    borderRadius: BorderRadius.lg,
-    ...Shadows.card,
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.xl,
+    ...Shadows.cardElevated,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 12,
   },
   iconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: BorderRadius.md,
+    width: 52,
+    height: 52,
+    borderRadius: BorderRadius.lg,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: Spacing.md,
+    marginRight: Spacing.lg,
   },
   content: {
     flex: 1,
-    marginRight: Spacing.sm,
+    marginRight: Spacing.md,
   },
   title: {
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: '700',
-    marginBottom: 2,
+    marginBottom: 4,
+    letterSpacing: -0.2,
   },
   message: {
-    fontSize: 13,
-    opacity: 0.9,
-    lineHeight: 18,
+    fontSize: 14,
+    opacity: 0.95,
+    lineHeight: 20,
+    letterSpacing: 0.1,
   },
   closeButton: {
-    padding: Spacing.xs,
+    padding: Spacing.sm,
   },
 });

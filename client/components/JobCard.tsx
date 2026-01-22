@@ -10,7 +10,7 @@ import Animated, {
 import { ThemedText } from '@/components/ThemedText';
 import { Badge } from '@/components/Badge';
 import { useTheme } from '@/hooks/useTheme';
-import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
+import { BrandColors, BorderRadius, Spacing, Shadows, SpringConfigs } from '@/constants/theme';
 import type { Job } from '@/types';
 
 interface JobCardProps {
@@ -33,13 +33,13 @@ export function JobCard({ job, index, onPress, drag, isActive }: JobCardProps) {
 
   const handlePressIn = () => {
     if (!isActive) {
-      scale.value = withSpring(0.98, { damping: 15, stiffness: 150 });
+      scale.value = withSpring(0.98, SpringConfigs.responsive);
     }
   };
 
   const handlePressOut = () => {
     if (!isActive) {
-      scale.value = withSpring(1, { damping: 15, stiffness: 150 });
+      scale.value = withSpring(1, SpringConfigs.responsive);
     }
   };
 
@@ -57,11 +57,12 @@ export function JobCard({ job, index, onPress, drag, isActive }: JobCardProps) {
           borderColor: isActive ? BrandColors.azureBlue : 'transparent',
           borderWidth: isActive ? 2 : 0,
         },
+        Shadows.card,
         animatedStyle,
       ]}
     >
       <Pressable onPressIn={drag} style={styles.dragHandle}>
-        <Feather name="menu" size={20} color={BrandColors.dragHandle} />
+        <Feather name="menu" size={22} color={BrandColors.dragHandle} />
       </Pressable>
 
       <View style={styles.indexContainer}>
@@ -73,18 +74,18 @@ export function JobCard({ job, index, onPress, drag, isActive }: JobCardProps) {
           <ThemedText style={styles.title} numberOfLines={1}>
             {job.property.name}
           </ThemedText>
-          <Badge variant={job.priority} />
+          <Badge variant={job.priority} size="small" />
         </View>
 
         <View style={styles.details}>
           <View style={styles.detailRow}>
-            <Feather name="clock" size={14} color={theme.textSecondary} />
+            <Feather name="clock" size={15} color={theme.textSecondary} />
             <ThemedText style={[styles.detailText, { color: theme.textSecondary }]}>
               {job.scheduledTime}
             </ThemedText>
           </View>
           <View style={styles.detailRow}>
-            <Feather name="map-pin" size={14} color={theme.textSecondary} />
+            <Feather name="map-pin" size={15} color={theme.textSecondary} />
             <ThemedText style={[styles.detailText, { color: theme.textSecondary }]} numberOfLines={1}>
               {job.property.address}
             </ThemedText>
@@ -96,7 +97,9 @@ export function JobCard({ job, index, onPress, drag, isActive }: JobCardProps) {
             {job.title}
           </ThemedText>
           <View style={styles.poolCount}>
-            <Feather name="droplet" size={12} color={BrandColors.tropicalTeal} />
+            <View style={styles.poolIcon}>
+              <Feather name="droplet" size={14} color={BrandColors.tropicalTeal} />
+            </View>
             <ThemedText style={styles.poolCountText}>
               {job.property.poolCount}
             </ThemedText>
@@ -111,28 +114,28 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: BorderRadius.md,
-    padding: Spacing.md,
-    marginBottom: Spacing.sm,
-    ...Shadows.card,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
+    marginBottom: Spacing.md,
   },
   dragHandle: {
-    padding: Spacing.xs,
+    padding: Spacing.sm,
     marginRight: Spacing.sm,
   },
   indexContainer: {
-    width: 28,
-    height: 28,
+    width: 36,
+    height: 36,
     borderRadius: BorderRadius.full,
-    backgroundColor: BrandColors.azureBlue + '15',
+    backgroundColor: BrandColors.azureBlue + '12',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: Spacing.md,
+    marginRight: Spacing.lg,
   },
   indexText: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '700',
     color: BrandColors.azureBlue,
+    fontVariant: ['tabular-nums'],
   },
   content: {
     flex: 1,
@@ -141,26 +144,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: Spacing.xs,
+    marginBottom: Spacing.sm,
   },
   title: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
     flex: 1,
-    marginRight: Spacing.sm,
+    marginRight: Spacing.md,
+    letterSpacing: -0.2,
   },
   details: {
-    marginBottom: Spacing.xs,
+    marginBottom: Spacing.sm,
   },
   detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 2,
+    marginBottom: 4,
   },
   detailText: {
-    fontSize: 13,
-    marginLeft: Spacing.xs,
+    fontSize: 14,
+    marginLeft: Spacing.sm,
     flex: 1,
+    letterSpacing: 0.1,
   },
   footer: {
     flexDirection: 'row',
@@ -168,19 +173,29 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   jobTitle: {
-    fontSize: 13,
+    fontSize: 14,
     color: BrandColors.azureBlue,
-    fontWeight: '500',
+    fontWeight: '600',
     flex: 1,
+    letterSpacing: 0.1,
   },
   poolCount: {
     flexDirection: 'row',
     alignItems: 'center',
   },
+  poolIcon: {
+    width: 26,
+    height: 26,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: BrandColors.tropicalTeal + '12',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: Spacing.xs,
+  },
   poolCountText: {
-    fontSize: 12,
-    marginLeft: 4,
+    fontSize: 14,
     color: BrandColors.tropicalTeal,
-    fontWeight: '600',
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
   },
 });

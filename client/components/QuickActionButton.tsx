@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Pressable, View } from 'react-native';
+import { StyleSheet, Pressable, View, Platform } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -9,50 +9,82 @@ import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/ThemedText';
-import { BorderRadius, Spacing } from '@/constants/theme';
+import { BorderRadius, Spacing, Shadows, SpringConfigs } from '@/constants/theme';
 
 interface QuickActionButtonProps {
   icon: keyof typeof Feather.glyphMap;
   label: string;
   color: string;
   onPress: () => void;
+  size?: 'small' | 'medium' | 'large';
 }
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-export function QuickActionButton({ icon, label, color, onPress }: QuickActionButtonProps) {
+const sizeConfigs = {
+  small: { iconContainer: 44, iconSize: 22, padding: Spacing.md, labelSize: 11, borderRadius: BorderRadius.lg },
+  medium: { iconContainer: 52, iconSize: 26, padding: Spacing.lg, labelSize: 13, borderRadius: BorderRadius.xl },
+  large: { iconContainer: 60, iconSize: 30, padding: Spacing.xl, labelSize: 14, borderRadius: BorderRadius['2xl'] },
+};
+
+export function QuickActionButton({ icon, label, color, onPress, size = 'medium' }: QuickActionButtonProps) {
   const scale = useSharedValue(1);
+  const config = sizeConfigs[size];
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
 
   const handlePressIn = () => {
-    scale.value = withSpring(0.95, { damping: 15, stiffness: 150 });
+    scale.value = withSpring(0.95, SpringConfigs.responsive);
   };
 
   const handlePressOut = () => {
-    scale.value = withSpring(1, { damping: 15, stiffness: 150 });
+    scale.value = withSpring(1, SpringConfigs.responsive);
   };
 
   const handlePress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
     onPress();
   };
 
-  const bgColor = color + '15';
+  const bgColor = color + '12';
 
   return (
     <AnimatedPressable
       onPress={handlePress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
-      style={[styles.container, { backgroundColor: bgColor }, animatedStyle]}
+      style={[
+        styles.container, 
+        { 
+          backgroundColor: bgColor,
+          padding: config.padding,
+          borderRadius: config.borderRadius,
+        }, 
+        animatedStyle
+      ]}
     >
-      <View style={[styles.iconContainer, { backgroundColor: color }]}>
-        <Feather name={icon} size={24} color="#FFFFFF" />
+      <View 
+        style={[
+          styles.iconContainer, 
+          { 
+            backgroundColor: color,
+            width: config.iconContainer,
+            height: config.iconContainer,
+            borderRadius: config.iconContainer / 2.5,
+          },
+          Shadows.card,
+        ]}
+      >
+        <Feather name={icon} size={config.iconSize} color="#FFFFFF" />
       </View>
-      <ThemedText style={styles.label} numberOfLines={2}>
+      <ThemedText 
+        style={[styles.label, { fontSize: config.labelSize }]} 
+        numberOfLines={2}
+      >
         {label}
       </ThemedText>
     </AnimatedPressable>
@@ -63,22 +95,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     aspectRatio: 1,
-    borderRadius: BorderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: Spacing.md,
   },
   iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: BorderRadius.sm,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.sm,
   },
   label: {
-    fontSize: 12,
     fontWeight: '600',
     textAlign: 'center',
+    letterSpacing: 0.2,
   },
 });

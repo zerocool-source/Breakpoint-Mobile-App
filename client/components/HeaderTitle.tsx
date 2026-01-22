@@ -13,7 +13,7 @@ export function HeaderTitle({ title }: HeaderTitleProps) {
   return (
     <View style={styles.container}>
       <Image
-        source={require('../../assets/images/breakpoint-logo.png')}
+        source={require('../../assets/images/breakpoint-logo-clean.png')}
         style={styles.icon}
         contentFit="contain"
       />

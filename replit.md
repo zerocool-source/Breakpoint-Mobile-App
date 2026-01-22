@@ -74,6 +74,7 @@ client/
 - **Home Screen**: Team dashboard with Activity Ticker, weekly metrics, Team Tracker, QC inspections
   - Team Tracker: View all technicians with status (Active/Running Behind/Offline) and progress
   - Click technician to see Assignment Breakdown modal with route details
+  - Quick Actions for: Repairs Needed, Chemical Order, Chemicals Drop-Off, Windy Day Clean Up, Service Repairs, Report Issue, Add Notes, Emergency, Who's On, Truck Inspection, Supportive Actions
 - **Activity**: Team activity feed with live updates
 - **Assign**: Assignment management with CreateAssignmentModal
 - **QC Inspections**: Commercial pool inspection checklists (63 items, 10 categories)
@@ -82,19 +83,42 @@ client/
   - Progress tracking with completion percentage
   - Expandable/collapsible category sections
   - Property selection required before starting new inspection
+- **Who's On Screen**: Real-time view of active technicians in the field
+  - Live indicator with last update time
+  - Stats row showing Active, On Break, Offline counts
+  - Filter buttons: All, Active, Break, Offline
+  - Technician cards with status dot, role, current location, progress bar
+  - Pull-to-refresh functionality
+- **Truck Inspection Screen**: Vehicle condition reports
+  - Start new inspection modal with full form
+  - Truck number, date, technician, mileage, fuel level, condition
+  - Touch-based damage marking on truck images (Front, Rear, Driver Side, Cargo views)
+  - Damage types: Dent (red), Scratch (orange), Crack (blue), Missing (purple), Rust (gray), Other (yellow)
+  - 16-item vehicle inspection checklist
+  - Notes field and submission
+  - List of recent inspections with status badges
+- **Supportive Actions Screen**: Performance coaching documentation
+  - Stats row showing Total, Active, Completed counts
+  - Filter buttons: All, Active, Completed
+  - Supportive action cards with technician, category, severity, dates
+  - New Supportive Action modal with: Technician dropdown, Date picker, Category (Performance, Behavior, Safety, Attendance, Quality), Severity (Low, Medium, High), Issue Description, Action Plan, Follow-Up Date, Photo attachment
 - **Team Tracker Modal Features**:
   - Summary stats: Total, Completed, Not Done, Need Help
   - Today's Route: Property stops with status badges (Done, Current, Upcoming)
   - Create Assignment button opens CreateAssignmentModal
   - Send Message button opens chat with technician
 - **Profile**: User info, settings, sign out
-- **Bottom Tabs**: Overview, Activity, Assign, QC, Profile
+- **Bottom Tabs**: Overview, Activity, Assign, QC, Chat, Profile
+- **Stack Screens**: InspectionDetail, ChatConversation, TruckInspection, SupportiveActions, WhosOn
 
 ## Running the App
 - **Frontend**: `npm run expo:dev` (port 8081)
 - **Backend**: `npm run server:dev` (port 5000)
 
 ## Recent Changes
+- January 22, 2026: Added Supervisor management features - Who's On (active tech tracking), Truck Inspection (touch damage marking), Supportive Actions (performance coaching)
+- January 22, 2026: Added 30 customers to mock data for Supervisor dropdown (AVELINA HOA through Horsethief Canyon Ranch MA)
+- January 22, 2026: Added navigation from Supervisor Quick Actions to new screens
 - January 22, 2026: System check and optimization - updated number fonts with tabular-nums, fixed deprecated pointerEvents prop, fixed LSP error in voice recorder, fixed hardcoded progress counters
 - January 22, 2026: Fixed modal sizing - all bottom sheet modals now have `minHeight: '70%'` to properly display form content on mobile
 - January 22, 2026: Added `keyboardShouldPersistTaps="handled"` to ALL ScrollViews and FlatLists across the entire app for proper mobile keyboard handling

@@ -8,7 +8,7 @@ Mobile-first field service management app for commercial pool maintenance techni
 - **User Roles**: 
   - Service Technician (implemented) - Route-based daily service
   - Repair Technician (implemented) - Repairs, estimates, jobs
-  - Supervisor (planned)
+  - Supervisor (implemented) - Team oversight, QC inspections
   - Repair Foreman (planned)
 
 ## Project Architecture
@@ -69,6 +69,18 @@ client/
 - **Jobs**: List view with priority badges
 - **Profile**: User info, settings, sign out
 - **Bottom Tabs**: Home, Queue, Estimates, Jobs, Profile
+
+## Supervisor Features
+- **Overview**: Team dashboard, assignments overview
+- **Activity**: Team activity feed
+- **Assign**: Assignment management
+- **QC Inspections**: Commercial pool inspection checklists (63 items, 10 categories)
+  - Categories: Access, Water Quality, Enclosure & Fencing, Shell & Components, Restrooms, Recirculation Equipment, Circulation Control, Safety Equipment & Signage, Employees & Incident Response, Closure Conditions
+  - View all inspections with inspector name, role, property, date, status
+  - Progress tracking with completion percentage
+  - Expandable/collapsible category sections
+- **Profile**: User info, settings, sign out
+- **Bottom Tabs**: Overview, Activity, Assign, QC, Profile
 
 ## Running the App
 - **Frontend**: `npm run expo:dev` (port 8081)

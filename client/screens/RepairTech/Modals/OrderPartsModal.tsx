@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
   container: {
     borderTopLeftRadius: BorderRadius.xl,
     borderTopRightRadius: BorderRadius.xl,
-    ...Shadows.large,
+    ...Shadows.card,
   },
   header: {
     flexDirection: 'row',

@@ -1,6 +1,11 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Platform } from 'react-native';
-import { Audio } from 'expo-av';
+import { 
+  useAudioRecorder, 
+  AudioModule, 
+  RecordingPresets,
+  useAudioPlayer,
+} from 'expo-audio';
 import * as Haptics from 'expo-haptics';
 
 export type RecordingStatus = 'idle' | 'recording' | 'stopped' | 'error';
@@ -24,30 +29,38 @@ interface UseVoiceRecorderReturn {
 }
 
 export function useVoiceRecorder(options: UseVoiceRecorderOptions = {}): UseVoiceRecorderReturn {
-  const [isRecording, setIsRecording] = useState(false);
   const [status, setStatus] = useState<RecordingStatus>('idle');
   const [duration, setDuration] = useState(0);
   const [recordingUri, setRecordingUri] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  const recordingRef = useRef<Audio.Recording | null>(null);
-  const soundRef = useRef<Audio.Sound | null>(null);
+  const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const player = useAudioPlayer(recordingUri || undefined);
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const isRecording = audioRecorder.isRecording;
 
   useEffect(() => {
     return () => {
       if (durationIntervalRef.current) {
         clearInterval(durationIntervalRef.current);
       }
-      if (recordingRef.current) {
-        recordingRef.current.stopAndUnloadAsync().catch(() => {});
-      }
-      if (soundRef.current) {
-        soundRef.current.unloadAsync().catch(() => {});
-      }
     };
   }, []);
+
+  useEffect(() => {
+    if (player) {
+      const handlePlaybackStatus = () => {
+        if (player.currentTime >= player.duration && player.duration > 0) {
+          setIsPlaying(false);
+        }
+      };
+      
+      const interval = setInterval(handlePlaybackStatus, 100);
+      return () => clearInterval(interval);
+    }
+  }, [player]);
 
   const startRecording = useCallback(async () => {
     try {
@@ -57,24 +70,14 @@ export function useVoiceRecorder(options: UseVoiceRecorderOptions = {}): UseVoic
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       }
 
-      const { status: permissionStatus } = await Audio.requestPermissionsAsync();
-      if (permissionStatus !== 'granted') {
+      const permissionStatus = await AudioModule.requestRecordingPermissionsAsync();
+      if (!permissionStatus.granted) {
         setErrorMessage('Microphone permission is required for voice notes');
         setStatus('error');
         return;
       }
 
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-      });
-
-      const recording = new Audio.Recording();
-      await recording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
-      await recording.startAsync();
-
-      recordingRef.current = recording;
-      setIsRecording(true);
+      audioRecorder.record();
       setStatus('recording');
       setDuration(0);
 
@@ -86,14 +89,10 @@ export function useVoiceRecorder(options: UseVoiceRecorderOptions = {}): UseVoic
       setErrorMessage('Failed to start recording. Please try again.');
       setStatus('error');
     }
-  }, []);
+  }, [audioRecorder]);
 
   const stopRecording = useCallback(async (): Promise<string | null> => {
     try {
-      if (!recordingRef.current) {
-        return null;
-      }
-
       if (Platform.OS !== 'web') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
@@ -103,14 +102,9 @@ export function useVoiceRecorder(options: UseVoiceRecorderOptions = {}): UseVoic
         durationIntervalRef.current = null;
       }
 
-      await recordingRef.current.stopAndUnloadAsync();
-      const uri = recordingRef.current.getURI();
+      await audioRecorder.stop();
+      const uri = audioRecorder.uri;
       
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: false,
-      });
-
-      setIsRecording(false);
       setStatus('stopped');
       
       if (uri) {
@@ -124,12 +118,9 @@ export function useVoiceRecorder(options: UseVoiceRecorderOptions = {}): UseVoic
       console.error('Failed to stop recording:', error);
       setErrorMessage('Failed to save recording. Please try again.');
       setStatus('error');
-      setIsRecording(false);
       return null;
-    } finally {
-      recordingRef.current = null;
     }
-  }, [duration, options]);
+  }, [audioRecorder, duration, options]);
 
   const cancelRecording = useCallback(async () => {
     try {
@@ -138,52 +129,31 @@ export function useVoiceRecorder(options: UseVoiceRecorderOptions = {}): UseVoic
         durationIntervalRef.current = null;
       }
 
-      if (recordingRef.current) {
-        await recordingRef.current.stopAndUnloadAsync();
-        recordingRef.current = null;
+      if (audioRecorder.isRecording) {
+        await audioRecorder.stop();
       }
 
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: false,
-      });
-
-      setIsRecording(false);
       setStatus('idle');
       setDuration(0);
       setRecordingUri(null);
     } catch (error) {
       console.error('Failed to cancel recording:', error);
     }
-  }, []);
+  }, [audioRecorder]);
 
   const playRecording = useCallback(async () => {
     try {
-      if (!recordingUri) {
+      if (!recordingUri || !player) {
         return;
       }
 
-      if (soundRef.current) {
-        await soundRef.current.unloadAsync();
-      }
-
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: recordingUri },
-        { shouldPlay: true }
-      );
-      
-      soundRef.current = sound;
+      player.play();
       setIsPlaying(true);
-
-      sound.setOnPlaybackStatusUpdate((playbackStatus) => {
-        if ('isLoaded' in playbackStatus && playbackStatus.isLoaded && playbackStatus.didJustFinish) {
-          setIsPlaying(false);
-        }
-      });
     } catch (error) {
       console.error('Failed to play recording:', error);
       setIsPlaying(false);
     }
-  }, [recordingUri]);
+  }, [recordingUri, player]);
 
   return {
     isRecording,

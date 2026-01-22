@@ -66,7 +66,13 @@ client/
   - Stats showing Active, Resolved, Total emergency reports
   - History of recent emergency reports with status badges
 - **Truck Screen**: Inventory management (+/- controls), performance maintenance tracking
-- **Chat Screen**: Office communication
+- **Chat Screen**: Office communication with Property Channels
+  - Direct Messages: Office and Supervisor channels
+  - Urgent Alerts: Clickable notifications with detail modal
+  - Property Channels: Subscribe to specific properties for communication
+    - "Manage" button to open PropertyChannelsScreen
+    - Toggle switches to add/remove properties from channels
+    - Selected properties appear in the Chat screen Property Channels section
 - **Profile Screen**: Settings, sign out
 - **Bottom Tabs**: Home, Emergency, Chat, Profile, Truck
 
@@ -152,6 +158,12 @@ Automatic battery management for extended field time:
 - `client/components/BatterySaverBanner.tsx` - Battery saver UI components
 
 ## Recent Changes
+- January 22, 2026: Added Property Channels feature for Service Technicians:
+  - PropertyChannelsContext for managing subscribed property channels
+  - PropertyChannelsScreen with toggle switches to add/remove properties
+  - ChatChannelsScreen now shows real property channels from database
+  - API endpoints: GET/POST/DELETE /api/property-channels
+  - Added 5 sample properties to database for testing
 - January 22, 2026: Full Expo Go system check and optimization completed:
   - All 17/17 expo-doctor checks passing
   - TypeScript compiles with zero errors

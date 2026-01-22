@@ -75,30 +75,34 @@ function CategorySection({
 
       {isExpanded ? (
         <View style={[styles.categoryItems, { borderTopColor: theme.border }]}>
-          {category.items.map((item, index) => (
-            <Pressable 
-              key={item.id}
-              style={[
-                styles.checklistItem,
-                index < category.items.length - 1 && { borderBottomColor: theme.border, borderBottomWidth: 1 }
-              ]}
-              onPress={() => onToggleItem(item.id)}
-            >
-              <Checkbox
-                value={checkedItems.has(item.id)}
-                onValueChange={() => onToggleItem(item.id)}
-                color={checkedItems.has(item.id) ? BrandColors.emerald : undefined}
-                style={styles.checkbox}
-              />
-              <ThemedText style={[
-                styles.itemLabel,
-                checkedItems.has(item.id) && styles.itemLabelChecked,
-                checkedItems.has(item.id) && { color: theme.textSecondary }
-              ]}>
-                {item.label}
-              </ThemedText>
-            </Pressable>
-          ))}
+          {category.items.map((item, index) => {
+            const isChecked = checkedItems.has(item.id);
+            return (
+              <Pressable 
+                key={item.id}
+                style={[
+                  styles.checklistItem,
+                  index < category.items.length - 1 && { borderBottomColor: theme.border, borderBottomWidth: 1 }
+                ]}
+                onPress={() => onToggleItem(item.id)}
+              >
+                <View style={styles.checkboxContainer} pointerEvents="none">
+                  <Checkbox
+                    value={isChecked}
+                    color={isChecked ? BrandColors.emerald : undefined}
+                    style={styles.checkbox}
+                  />
+                </View>
+                <ThemedText style={[
+                  styles.itemLabel,
+                  isChecked && styles.itemLabelChecked,
+                  isChecked && { color: theme.textSecondary }
+                ]}>
+                  {item.label}
+                </ThemedText>
+              </Pressable>
+            );
+          })}
         </View>
       ) : null}
     </View>
@@ -424,6 +428,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: Spacing.md,
     gap: Spacing.md,
+  },
+  checkboxContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   checkbox: {
     width: 22,

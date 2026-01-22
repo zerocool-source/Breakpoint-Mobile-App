@@ -34,7 +34,15 @@ export default function ProfileScreen() {
 
   const roleName = selectedRole ? roleNames[selectedRole] : 'Technician';
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // On web, Alert.alert doesn't work properly, so just logout directly
+    if (Platform.OS === 'web') {
+      setIsLoggingOut(true);
+      await logout();
+      setIsLoggingOut(false);
+      return;
+    }
+    
     Alert.alert(
       'Sign Out',
       'Are you sure you want to sign out?',
@@ -44,9 +52,7 @@ export default function ProfileScreen() {
           text: 'Sign Out', 
           style: 'destructive', 
           onPress: async () => {
-            if (Platform.OS !== 'web') {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            }
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             setIsLoggingOut(true);
             await logout();
             setIsLoggingOut(false);

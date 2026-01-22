@@ -252,9 +252,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   taglineLogo: {
-    width: 180,
-    height: 60,
-    marginTop: Spacing.lg,
+    width: 200,
+    height: 70,
+    marginTop: Spacing['2xl'],
   },
   rolesContainer: {
     flex: 1,

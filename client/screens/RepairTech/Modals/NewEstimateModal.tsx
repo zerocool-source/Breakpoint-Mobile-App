@@ -17,10 +17,158 @@ import { ThemedText } from '@/components/ThemedText';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
 
+interface LineItem {
+  id: string;
+  sku: string;
+  name: string;
+  quantity: number;
+  rate: number;
+}
+
+interface Product {
+  sku: string;
+  name: string;
+  category: string;
+  rate: number;
+}
+
+const PRODUCT_CATALOG: Product[] = [
+  { sku: 'PUMP-001', name: 'Hayward Super Pump 1.5HP', category: 'Pumps', rate: 549.00 },
+  { sku: 'PUMP-002', name: 'Pentair IntelliFlo VSF', category: 'Pumps', rate: 1549.00 },
+  { sku: 'PUMP-003', name: 'Jandy FloPro Pump', category: 'Pumps', rate: 425.00 },
+  { sku: 'FILT-001', name: 'Hayward SwimClear Cartridge Filter', category: 'Filters', rate: 899.00 },
+  { sku: 'FILT-002', name: 'Pentair Clean & Clear Plus', category: 'Filters', rate: 749.00 },
+  { sku: 'FILT-003', name: 'Hayward Pro-Grid DE Filter', category: 'Filters', rate: 1249.00 },
+  { sku: 'HEAT-001', name: 'Hayward H400FD Gas Heater', category: 'Heaters', rate: 3299.00 },
+  { sku: 'HEAT-002', name: 'Pentair MasterTemp 400', category: 'Heaters', rate: 3599.00 },
+  { sku: 'CHEM-001', name: 'Chemical Controller System', category: 'Automation', rate: 1899.00 },
+  { sku: 'AUTO-001', name: 'Pentair IntelliChem Controller', category: 'Automation', rate: 2199.00 },
+  { sku: 'VALV-001', name: 'Jandy 2-Way Valve 2"', category: 'Valves', rate: 89.00 },
+  { sku: 'VALV-002', name: 'Pentair 3-Way Valve', category: 'Valves', rate: 129.00 },
+  { sku: 'LABOR-001', name: 'Standard Labor (per hour)', category: 'Labor', rate: 95.00 },
+  { sku: 'LABOR-002', name: 'Emergency Labor (per hour)', category: 'Labor', rate: 145.00 },
+  { sku: 'LABOR-003', name: 'Pump Installation Labor', category: 'Labor', rate: 350.00 },
+  { sku: 'LABOR-004', name: 'Filter Installation Labor', category: 'Labor', rate: 275.00 },
+  { sku: 'LABOR-005', name: 'Heater Installation Labor', category: 'Labor', rate: 650.00 },
+];
+
 interface NewEstimateModalProps {
   visible: boolean;
   onClose: () => void;
   onSubmit: (data: any) => void;
+}
+
+interface ProductPickerProps {
+  visible: boolean;
+  onClose: () => void;
+  onSelect: (product: Product) => void;
+}
+
+function ProductPicker({ visible, onClose, onSelect }: ProductPickerProps) {
+  const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
+  const [search, setSearch] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  const categories = [...new Set(PRODUCT_CATALOG.map(p => p.category))];
+
+  const filteredProducts = PRODUCT_CATALOG.filter(p => {
+    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) ||
+      p.sku.toLowerCase().includes(search.toLowerCase());
+    const matchesCategory = !selectedCategory || p.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <View style={pickerStyles.overlay}>
+        <View style={[pickerStyles.container, { backgroundColor: theme.surface }]}>
+          <View style={pickerStyles.header}>
+            <Pressable onPress={onClose}>
+              <Feather name="x" size={24} color={theme.text} />
+            </Pressable>
+            <ThemedText style={pickerStyles.title}>Product Catalog</ThemedText>
+            <View style={{ width: 24 }} />
+          </View>
+
+          <View style={[pickerStyles.searchContainer, { backgroundColor: theme.backgroundRoot, borderColor: theme.border }]}>
+            <Feather name="search" size={18} color={theme.textSecondary} />
+            <TextInput
+              style={[pickerStyles.searchInput, { color: theme.text }]}
+              placeholder="Search products or SKU..."
+              placeholderTextColor={theme.textSecondary}
+              value={search}
+              onChangeText={setSearch}
+            />
+          </View>
+
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false} 
+            style={pickerStyles.categoriesContainer}
+            contentContainerStyle={pickerStyles.categoriesContent}
+          >
+            <Pressable
+              style={[
+                pickerStyles.categoryPill,
+                !selectedCategory && { backgroundColor: BrandColors.azureBlue }
+              ]}
+              onPress={() => setSelectedCategory(null)}
+            >
+              <ThemedText style={[
+                pickerStyles.categoryText,
+                !selectedCategory && { color: '#FFFFFF' }
+              ]}>All</ThemedText>
+            </Pressable>
+            {categories.map(cat => (
+              <Pressable
+                key={cat}
+                style={[
+                  pickerStyles.categoryPill,
+                  selectedCategory === cat && { backgroundColor: BrandColors.azureBlue }
+                ]}
+                onPress={() => setSelectedCategory(cat)}
+              >
+                <ThemedText style={[
+                  pickerStyles.categoryText,
+                  selectedCategory === cat && { color: '#FFFFFF' }
+                ]}>{cat}</ThemedText>
+              </Pressable>
+            ))}
+          </ScrollView>
+
+          <ScrollView 
+            style={pickerStyles.productList}
+            contentContainerStyle={{ paddingBottom: insets.bottom + Spacing.lg }}
+          >
+            {filteredProducts.map(product => (
+              <Pressable
+                key={product.sku}
+                style={[pickerStyles.productItem, { borderBottomColor: theme.border }]}
+                onPress={() => {
+                  if (Platform.OS !== 'web') {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }
+                  onSelect(product);
+                }}
+              >
+                <View style={pickerStyles.productInfo}>
+                  <ThemedText style={pickerStyles.productName}>{product.name}</ThemedText>
+                  <ThemedText style={[pickerStyles.productSku, { color: theme.textSecondary }]}>{product.sku}</ThemedText>
+                </View>
+                <View style={pickerStyles.productPrice}>
+                  <ThemedText style={[pickerStyles.priceText, { color: BrandColors.emerald }]}>
+                    ${product.rate.toFixed(2)}
+                  </ThemedText>
+                  <Feather name="plus-circle" size={20} color={BrandColors.azureBlue} />
+                </View>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
 }
 
 export function NewEstimateModal({ visible, onClose, onSubmit }: NewEstimateModalProps) {
@@ -32,14 +180,58 @@ export function NewEstimateModal({ visible, onClose, onSubmit }: NewEstimateModa
   const [location, setLocation] = useState('');
   const [description, setDescription] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
+  const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  const [showProductPicker, setShowProductPicker] = useState(false);
 
   const estimateNumber = `EST-${new Date().getFullYear().toString().slice(-2)}${String(new Date().getMonth() + 1).padStart(2, '0')}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+  const subtotal = lineItems.reduce((sum, item) => sum + (item.quantity * item.rate), 0);
+  const tax = subtotal * 0.0825;
+  const total = subtotal + tax;
+
+  const handleAddProduct = (product: Product) => {
+    const existingIndex = lineItems.findIndex(item => item.sku === product.sku);
+    if (existingIndex >= 0) {
+      setLineItems(prev => prev.map((item, i) => 
+        i === existingIndex ? { ...item, quantity: item.quantity + 1 } : item
+      ));
+    } else {
+      setLineItems(prev => [...prev, {
+        id: `${Date.now()}`,
+        sku: product.sku,
+        name: product.name,
+        quantity: 1,
+        rate: product.rate,
+      }]);
+    }
+    setShowProductPicker(false);
+  };
+
+  const handleUpdateQuantity = (id: string, delta: number) => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    setLineItems(prev => prev.map(item => {
+      if (item.id === id) {
+        const newQty = Math.max(0, item.quantity + delta);
+        return { ...item, quantity: newQty };
+      }
+      return item;
+    }).filter(item => item.quantity > 0));
+  };
+
+  const handleRemoveItem = (id: string) => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+    setLineItems(prev => prev.filter(item => item.id !== id));
+  };
 
   const handleSubmit = () => {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
-    onSubmit({ estimateNumber, status, location, description, photos });
+    onSubmit({ estimateNumber, status, location, description, photos, lineItems, subtotal, tax, total });
     onClose();
   };
 
@@ -47,7 +239,7 @@ export function NewEstimateModal({ visible, onClose, onSubmit }: NewEstimateModa
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
-    onSubmit({ estimateNumber, status: 'Draft', location, description, photos });
+    onSubmit({ estimateNumber, status: 'Draft', location, description, photos, lineItems, subtotal, tax, total });
     onClose();
   };
 
@@ -155,7 +347,7 @@ export function NewEstimateModal({ visible, onClose, onSubmit }: NewEstimateModa
             <View style={styles.field}>
               <View style={styles.labelRow}>
                 <ThemedText style={styles.lineItemsTitle}>Product or Service</ThemedText>
-                <Pressable>
+                <Pressable onPress={() => setShowProductPicker(true)}>
                   <ThemedText style={[styles.addLineText, { color: BrandColors.azureBlue }]}>+ Add Line</ThemedText>
                 </Pressable>
               </View>
@@ -166,7 +358,63 @@ export function NewEstimateModal({ visible, onClose, onSubmit }: NewEstimateModa
                 <ThemedText style={[styles.lineItemCol, { color: theme.textSecondary, flex: 1 }]}>RATE</ThemedText>
                 <ThemedText style={[styles.lineItemCol, { color: theme.textSecondary, flex: 1 }]}>AMOUNT</ThemedText>
               </View>
+
+              {lineItems.length === 0 ? (
+                <View style={[styles.emptyLineItems, { backgroundColor: theme.backgroundRoot, borderColor: theme.border }]}>
+                  <Feather name="package" size={24} color={theme.textSecondary} />
+                  <ThemedText style={[styles.emptyLineItemsText, { color: theme.textSecondary }]}>
+                    No items added yet. Tap "+ Add Line" to select products.
+                  </ThemedText>
+                </View>
+              ) : (
+                <View style={styles.lineItemsList}>
+                  {lineItems.map((item, index) => (
+                    <View key={item.id} style={[styles.lineItemRow, { borderBottomColor: theme.border }]}>
+                      <ThemedText style={[styles.lineItemCol, { flex: 0.5 }]}>{index + 1}</ThemedText>
+                      <View style={{ flex: 2 }}>
+                        <ThemedText style={styles.lineItemName} numberOfLines={1}>{item.name}</ThemedText>
+                        <ThemedText style={[styles.lineItemSku, { color: theme.textSecondary }]}>{item.sku}</ThemedText>
+                      </View>
+                      <View style={[styles.qtyControls, { flex: 1 }]}>
+                        <Pressable onPress={() => handleUpdateQuantity(item.id, -1)} style={styles.qtyButton}>
+                          <Feather name="minus" size={14} color={BrandColors.danger} />
+                        </Pressable>
+                        <ThemedText style={styles.qtyText}>{item.quantity}</ThemedText>
+                        <Pressable onPress={() => handleUpdateQuantity(item.id, 1)} style={styles.qtyButton}>
+                          <Feather name="plus" size={14} color={BrandColors.emerald} />
+                        </Pressable>
+                      </View>
+                      <ThemedText style={[styles.lineItemCol, { flex: 1 }]}>${item.rate.toFixed(0)}</ThemedText>
+                      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <ThemedText style={[styles.lineItemAmount, { color: BrandColors.emerald }]}>
+                          ${(item.quantity * item.rate).toFixed(0)}
+                        </ThemedText>
+                        <Pressable onPress={() => handleRemoveItem(item.id)}>
+                          <Feather name="trash-2" size={14} color={BrandColors.danger} />
+                        </Pressable>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              )}
             </View>
+
+            {lineItems.length > 0 ? (
+              <View style={[styles.totalsSection, { backgroundColor: theme.backgroundRoot, borderColor: theme.border }]}>
+                <View style={styles.totalRow}>
+                  <ThemedText style={[styles.totalLabel, { color: theme.textSecondary }]}>Subtotal</ThemedText>
+                  <ThemedText style={styles.totalValue}>${subtotal.toFixed(2)}</ThemedText>
+                </View>
+                <View style={styles.totalRow}>
+                  <ThemedText style={[styles.totalLabel, { color: theme.textSecondary }]}>Tax (8.25%)</ThemedText>
+                  <ThemedText style={styles.totalValue}>${tax.toFixed(2)}</ThemedText>
+                </View>
+                <View style={[styles.totalRow, styles.grandTotalRow]}>
+                  <ThemedText style={styles.grandTotalLabel}>TOTAL</ThemedText>
+                  <ThemedText style={[styles.grandTotalValue, { color: BrandColors.emerald }]}>${total.toFixed(2)}</ThemedText>
+                </View>
+              </View>
+            ) : null}
           </ScrollView>
 
           <View style={[styles.footer, { paddingBottom: insets.bottom + Spacing.md, backgroundColor: theme.surface }]}>
@@ -186,9 +434,104 @@ export function NewEstimateModal({ visible, onClose, onSubmit }: NewEstimateModa
           </View>
         </View>
       </View>
+
+      <ProductPicker
+        visible={showProductPicker}
+        onClose={() => setShowProductPicker(false)}
+        onSelect={handleAddProduct}
+      />
     </Modal>
   );
 }
+
+const pickerStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  container: {
+    height: '80%',
+    borderTopLeftRadius: BorderRadius.xl,
+    borderTopRightRadius: BorderRadius.xl,
+    ...Shadows.card,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: Spacing.lg,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    gap: Spacing.sm,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+  },
+  categoriesContainer: {
+    maxHeight: 48,
+    marginTop: Spacing.md,
+  },
+  categoriesContent: {
+    paddingHorizontal: Spacing.lg,
+    gap: Spacing.sm,
+  },
+  categoryPill: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.full,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+  },
+  categoryText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  productList: {
+    flex: 1,
+    marginTop: Spacing.md,
+  },
+  productItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderBottomWidth: 1,
+  },
+  productInfo: {
+    flex: 1,
+  },
+  productName: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  productSku: {
+    fontSize: 12,
+  },
+  productPrice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  priceText: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+});
 
 const styles = StyleSheet.create({
   overlay: {
@@ -253,10 +596,10 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   label: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
-    marginBottom: Spacing.xs,
     letterSpacing: 0.5,
+    marginBottom: Spacing.xs,
   },
   labelRow: {
     flexDirection: 'row',
@@ -269,29 +612,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.sm,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.md,
     borderWidth: 1,
+    minHeight: 44,
   },
   input: {
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.sm,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.md,
     borderWidth: 1,
-    fontSize: 15,
+    fontSize: 16,
+    minHeight: 44,
   },
   textArea: {
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.sm,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.md,
     borderWidth: 1,
-    fontSize: 15,
+    fontSize: 16,
     minHeight: 100,
   },
   voiceButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: Spacing.xs,
   },
   voiceText: {
     fontSize: 14,
@@ -300,7 +645,7 @@ const styles = StyleSheet.create({
   addPhotoButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: Spacing.xs,
   },
   addPhotoText: {
     fontSize: 14,
@@ -309,18 +654,18 @@ const styles = StyleSheet.create({
   photoArea: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: Spacing['2xl'],
-    borderRadius: BorderRadius.sm,
+    paddingVertical: Spacing.xl,
+    borderRadius: BorderRadius.md,
     borderWidth: 1,
     borderStyle: 'dashed',
+    gap: Spacing.sm,
   },
   noPhotosText: {
-    marginTop: Spacing.sm,
     fontSize: 14,
   },
   lineItemsTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   addLineText: {
     fontSize: 14,
@@ -330,16 +675,101 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingVertical: Spacing.sm,
     borderBottomWidth: 1,
-    marginTop: Spacing.sm,
   },
   lineItemCol: {
     fontSize: 11,
     fontWeight: '600',
-    letterSpacing: 0.5,
+  },
+  emptyLineItems: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.xl,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    marginTop: Spacing.sm,
+    gap: Spacing.sm,
+  },
+  emptyLineItemsText: {
+    fontSize: 13,
+    textAlign: 'center',
+    paddingHorizontal: Spacing.lg,
+  },
+  lineItemsList: {
+    marginTop: Spacing.xs,
+  },
+  lineItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: Spacing.sm,
+    borderBottomWidth: 1,
+  },
+  lineItemName: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  lineItemSku: {
+    fontSize: 10,
+  },
+  qtyControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  qtyButton: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: BorderRadius.sm,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+  },
+  qtyText: {
+    fontSize: 14,
+    fontWeight: '600',
+    minWidth: 20,
+    textAlign: 'center',
+  },
+  lineItemAmount: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  totalsSection: {
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    marginBottom: Spacing.lg,
+  },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: Spacing.xs,
+  },
+  totalLabel: {
+    fontSize: 14,
+  },
+  totalValue: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  grandTotalRow: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.1)',
+    marginTop: Spacing.xs,
+    paddingTop: Spacing.sm,
+  },
+  grandTotalLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  grandTotalValue: {
+    fontSize: 20,
+    fontWeight: '700',
   },
   footer: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
+    padding: Spacing.lg,
+    gap: Spacing.md,
     borderTopWidth: 1,
     borderTopColor: 'rgba(0,0,0,0.1)',
   },
@@ -347,18 +777,17 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.md,
     alignItems: 'center',
-    marginBottom: Spacing.sm,
   },
   sendButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   draftButton: {
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
     alignItems: 'center',
+    paddingVertical: Spacing.sm,
     borderWidth: 1,
+    borderRadius: BorderRadius.md,
   },
   draftHandle: {
     width: 40,
@@ -367,7 +796,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xs,
   },
   draftButtonText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '500',
   },
 });

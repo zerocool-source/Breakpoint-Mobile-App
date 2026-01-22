@@ -13,6 +13,7 @@ import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 
 import { ThemedText } from '@/components/ThemedText';
+import { VoiceRecorderButton } from '@/components/VoiceRecorderButton';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing } from '@/constants/theme';
 
@@ -46,10 +47,8 @@ export function RepairsNeededModal({
     onClose();
   };
 
-  const handleVoiceInput = () => {
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
+  const handleVoiceRecordingComplete = (uri: string, duration: number) => {
+    console.log('Voice recording saved:', uri, 'duration:', duration);
   };
 
   const handleTakePhoto = () => {
@@ -145,10 +144,10 @@ export function RepairsNeededModal({
             <View style={styles.inputSection}>
               <View style={styles.labelRow}>
                 <ThemedText style={styles.inputLabel}>Describe the Issue *</ThemedText>
-                <Pressable style={styles.voiceButton} onPress={handleVoiceInput}>
-                  <Feather name="mic" size={16} color="#FFFFFF" />
-                  <ThemedText style={styles.voiceButtonText}>Voice</ThemedText>
-                </Pressable>
+                <VoiceRecorderButton 
+                  compact 
+                  onRecordingComplete={handleVoiceRecordingComplete}
+                />
               </View>
               <View style={[styles.textAreaContainer, { borderColor: theme.border }]}>
                 <TextInput

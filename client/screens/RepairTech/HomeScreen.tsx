@@ -253,12 +253,12 @@ export default function HomeScreen() {
           <View style={styles.sectionHeader}>
             <ThemedText style={styles.sectionTitle}>Today's Progress</ThemedText>
             <ThemedText style={[styles.sectionSubtitle, { color: BrandColors.vividTangerine }]}>
-              0/{jobs.length} repairs
+              {jobs.filter(j => j.status === 'completed').length}/{jobs.length} repairs
             </ThemedText>
           </View>
           
           <View style={styles.progressRow}>
-            <ProgressCard value={0} label="COMPLETED" color={BrandColors.azureBlue} />
+            <ProgressCard value={jobs.filter(j => j.status === 'completed').length} label="COMPLETED" color={BrandColors.azureBlue} />
             <ProgressCard value={mockQueueMetrics.myEstimates} label="ESTIMATES IN PROGRESS" color={BrandColors.vividTangerine} />
             <ProgressCard value={mockQueueMetrics.partsOrdered} label="PARTS ORDERED" color={BrandColors.tropicalTeal} />
           </View>

@@ -174,8 +174,8 @@ export function useVoiceRecorder(options: UseVoiceRecorderOptions = {}): UseVoic
       soundRef.current = sound;
       setIsPlaying(true);
 
-      sound.setOnPlaybackStatusUpdate((playbackStatus: Audio.AVPlaybackStatus) => {
-        if (playbackStatus.isLoaded && playbackStatus.didJustFinish) {
+      sound.setOnPlaybackStatusUpdate((playbackStatus) => {
+        if ('isLoaded' in playbackStatus && playbackStatus.isLoaded && playbackStatus.didJustFinish) {
           setIsPlaying(false);
         }
       });

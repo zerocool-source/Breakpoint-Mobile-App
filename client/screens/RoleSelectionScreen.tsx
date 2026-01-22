@@ -364,6 +364,7 @@ const styles = StyleSheet.create({
   taglineLogo: {
     width: 140,
     height: 50,
+    marginTop: Spacing['2xl'],
     marginBottom: Spacing.sm,
   },
   rolesContainer: {

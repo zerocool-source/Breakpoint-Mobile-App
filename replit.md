@@ -135,6 +135,20 @@ The app includes comprehensive offline support for field technicians:
 - `client/context/NetworkContext.tsx` - Network state management
 - `client/components/OfflineBanner.tsx` - Offline status banner
 
+## Battery Saver Mode
+Automatic battery management for extended field time:
+- **Auto-Enable at 50%**: Battery saver automatically activates when battery drops to 50%
+- **Battery Monitoring**: Real-time battery level and charging status via `expo-battery`
+- **Reduced Animations**: Disables non-essential animations when saver is active
+- **Reduced Sync Frequency**: Decreases background sync to conserve power
+- **Low Power Mode**: Critical mode at 20% with additional restrictions
+- **Manual Toggle**: Users can manually enable/disable in Profile settings
+- **Visual Indicators**: Orange banner shows when battery saver is active with current percentage
+
+### Key Files
+- `client/context/BatteryContext.tsx` - Battery state management
+- `client/components/BatterySaverBanner.tsx` - Battery saver UI components
+
 ## Recent Changes
 - January 22, 2026: Added comprehensive offline mode with action queue, data caching, and auto-sync
 - January 22, 2026: Optimized all images with Lanczos resampling for HD mobile displays

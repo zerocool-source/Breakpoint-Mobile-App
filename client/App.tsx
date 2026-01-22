@@ -12,6 +12,7 @@ import { queryClient } from '@/lib/query-client';
 import AuthNavigator from '@/navigation/AuthNavigator';
 import { AuthProvider } from '@/context/AuthContext';
 import { NetworkProvider } from '@/context/NetworkContext';
+import { BatteryProvider } from '@/context/BatteryContext';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 export default function App() {
@@ -22,11 +23,13 @@ export default function App() {
           <GestureHandlerRootView style={styles.root}>
             <KeyboardProvider>
               <NetworkProvider>
-                <AuthProvider>
-                  <NavigationContainer>
-                    <AuthNavigator />
-                  </NavigationContainer>
-                </AuthProvider>
+                <BatteryProvider>
+                  <AuthProvider>
+                    <NavigationContainer>
+                      <AuthNavigator />
+                    </NavigationContainer>
+                  </AuthProvider>
+                </BatteryProvider>
               </NetworkProvider>
               <StatusBar style="auto" />
             </KeyboardProvider>

@@ -17,8 +17,10 @@ import { BubbleBackground } from '@/components/BubbleBackground';
 import { ChatFAB } from '@/components/ChatFAB';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { NotificationBanner } from '@/components/NotificationBanner';
+import { BatterySaverBanner } from '@/components/BatterySaverBanner';
 import { useAuth } from '@/context/AuthContext';
 import { useNetwork } from '@/context/NetworkContext';
+import { useBattery } from '@/context/BatteryContext';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
 import { mockJobs, mockRouteStops, mockQueueMetrics } from '@/lib/mockData';
@@ -185,6 +187,7 @@ export default function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { user } = useAuth();
   const { isConnected } = useNetwork();
+  const { isBatterySaverEnabled } = useBattery();
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
@@ -256,6 +259,7 @@ export default function HomeScreen() {
       </LinearGradient>
 
       {!isConnected ? <OfflineBanner /> : null}
+      {isBatterySaverEnabled ? <BatterySaverBanner /> : null}
 
       <View style={styles.content}>
         <Animated.View entering={FadeInDown.delay(100).springify()}>

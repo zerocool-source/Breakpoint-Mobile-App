@@ -9,7 +9,9 @@ import { ThemedText } from '@/components/ThemedText';
 import { Avatar } from '@/components/Avatar';
 import { SettingsRow } from '@/components/SettingsRow';
 import { BPButton } from '@/components/BPButton';
+import { BatteryStatusRow } from '@/components/BatterySaverBanner';
 import { useAuth, UserRole } from '@/context/AuthContext';
+import { useBattery } from '@/context/BatteryContext';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
 
@@ -26,9 +28,15 @@ export default function ServiceTechProfileScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const insets = useSafeAreaInsets();
 
+  const { 
+    batteryLevel, 
+    isBatterySaverEnabled, 
+    isAutoBatterySaver,
+    toggleBatterySaver 
+  } = useBattery();
+  
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [offlineMode, setOfflineMode] = useState(false);
-  const [batterySaver, setBatterySaver] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const roleName = selectedRole ? roleNames[selectedRole] : 'Service Technician';
@@ -91,12 +99,13 @@ export default function ServiceTechProfileScreen() {
         <View style={[styles.divider, { backgroundColor: theme.border }]} />
         <SettingsRow
           icon="battery-charging"
-          label="Save Battery 50%"
+          label={isAutoBatterySaver ? "Battery Saver (Auto)" : "Battery Saver at 50%"}
           isSwitch
-          switchValue={batterySaver}
-          onSwitchChange={setBatterySaver}
+          switchValue={isBatterySaverEnabled}
+          onSwitchChange={toggleBatterySaver}
           color={BrandColors.emerald}
         />
+        <BatteryStatusRow />
       </View>
 
       <View style={[styles.settingsCard, { backgroundColor: theme.surface }]}>

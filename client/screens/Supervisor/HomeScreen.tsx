@@ -18,8 +18,10 @@ import { QuickActionButton } from '@/components/QuickActionButton';
 import { ActivityTicker } from '@/components/ActivityTicker';
 import { NotificationBanner } from '@/components/NotificationBanner';
 import { OfflineBanner } from '@/components/OfflineBanner';
+import { BatterySaverBanner } from '@/components/BatterySaverBanner';
 import { useAuth } from '@/context/AuthContext';
 import { useNetwork } from '@/context/NetworkContext';
+import { useBattery } from '@/context/BatteryContext';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
 import {
@@ -442,6 +444,7 @@ export default function SupervisorHomeScreen() {
   const { user } = useAuth();
   const { theme } = useTheme();
   const { isConnected } = useNetwork();
+  const { isBatterySaverEnabled } = useBattery();
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const [quickActionsExpanded, setQuickActionsExpanded] = useState(true);
   const [selectedTechnician, setSelectedTechnician] = useState<Technician | null>(null);
@@ -529,6 +532,7 @@ export default function SupervisorHomeScreen() {
         onDismiss={() => setShowNotification(false)}
       />
       {!isConnected ? <OfflineBanner /> : null}
+      {isBatterySaverEnabled ? <BatterySaverBanner /> : null}
       <View
         style={[styles.header, { paddingTop: insets.top + Spacing.md }]}
       >

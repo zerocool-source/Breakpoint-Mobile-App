@@ -6,14 +6,16 @@ import { HeaderButton } from '@react-navigation/elements';
 import ServiceTechTabNavigator from '@/navigation/ServiceTechTabNavigator';
 import PropertyDetailScreen from '@/screens/ServiceTech/PropertyDetailScreen';
 import BodyOfWaterDetailScreen from '@/screens/ServiceTech/BodyOfWaterDetailScreen';
+import AssignmentDetailScreen from '@/screens/ServiceTech/AssignmentDetailScreen';
 import { useScreenOptions } from '@/hooks/useScreenOptions';
 import { useTheme } from '@/hooks/useTheme';
-import type { RouteStop, BodyOfWater } from '@/lib/serviceTechMockData';
+import type { RouteStop, BodyOfWater, Assignment } from '@/lib/serviceTechMockData';
 
 export type ServiceTechStackParamList = {
   Main: undefined;
   PropertyDetail: { stop: RouteStop };
   BodyOfWaterDetail: { body: BodyOfWater; propertyName: string };
+  AssignmentDetail: { assignment: Assignment };
 };
 
 const Stack = createNativeStackNavigator<ServiceTechStackParamList>();
@@ -37,6 +39,11 @@ export default function ServiceTechStackNavigator() {
       <Stack.Screen
         name="BodyOfWaterDetail"
         component={BodyOfWaterDetailScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="AssignmentDetail"
+        component={AssignmentDetailScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>

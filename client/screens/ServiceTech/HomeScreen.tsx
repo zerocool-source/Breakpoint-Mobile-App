@@ -24,6 +24,7 @@ import {
 
 type RootStackParamList = {
   PropertyDetail: { stop: RouteStop };
+  AssignmentDetail: { assignment: Assignment };
 };
 
 function getGreeting(): string {
@@ -121,6 +122,13 @@ export default function ServiceTechHomeScreen() {
     navigation.navigate('PropertyDetail', { stop });
   }, [navigation]);
 
+  const handleAssignmentPress = useCallback((assignment: Assignment) => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+    navigation.navigate('AssignmentDetail', { assignment });
+  }, [navigation]);
+
   return (
     <BubbleBackground bubbleCount={18}>
       <View
@@ -184,7 +192,7 @@ export default function ServiceTechHomeScreen() {
                   <AssignmentCard
                     key={assignment.id}
                     assignment={assignment}
-                    onPress={() => {}}
+                    onPress={() => handleAssignmentPress(assignment)}
                   />
                 ))}
               </View>

@@ -1,0 +1,71 @@
+HOW TRUCK INSPECTION WORKS
+The truck inspection feature allows supervisors to visually mark damage on different views of a truck by tapping/clicking on the actual truck images. It's a touch-based, interactive inspection system.
+
+Key Features:
+Touch-based damage marking - Tap on truck images to mark damages
+
+Multiple truck views - Front, Back, Driver Side, Passenger Side
+
+Damage type classification - Different colors for different damage types:
+
+🔴 D (Dented) - Red
+🟠 S (Scratched) - Orange
+🔵 C (Cracked Glass) - Cyan/Blue
+🟣 M (Missing Parts) - Purple
+⚫ R (Rusty) - Gray
+🟡 O (Other) - Yellow
+Tire condition tracking - Record tire status for all 4 wheels
+
+Checklist items - Standard inspection checklist
+
+PDF generation - Generate inspection reports as PDFs
+
+Email/sharing - Send reports via email
+
+ALL FILES & ASSETS
+HTML Templates:
+File	Purpose
+templates/supervisor/truck_inspection.html	Main truck inspection form (963 lines)
+templates/supervisor/truck_inspection_new.html	Updated version
+templates/supervisor/truck_inspection_form.html	Simplified form version
+templates/supervisor/truck_inspection_list.html	List of completed inspections
+templates/supervisor/standalone_truck_inspection.html	Standalone version (no login required)
+templates/supervisor/inspection_success.html	Success page after submission
+CSS Stylesheets:
+File	Purpose
+static/css/truck_inspection.css	Main styling for truck inspection (241 lines)
+JavaScript Files:
+File	Purpose
+static/js/inspection.js	Main damage marking logic (225 lines)
+static/js/simple_inspection.js	Simplified version
+static/js/grid_inspection.js	Grid-based marking
+static/js/direct_touch_inspection.js	Direct touch handling
+static/js/truck_svg.js	SVG-based truck diagrams
+Backend Routes (in supervisor_routes.py):
+Route	Function
+/truck-inspection-form	Display the inspection form
+/truck-inspection/save	Save touch-based inspection
+/truck-inspection	Legacy inspection view
+/truck-inspection-standalone	No-auth inspection
+/truck-inspection/submit	Submit inspection form
+Truck Images (Original Assets):
+File	View
+attached_assets/TRUCK INSPECTION-01.png	Front view
+attached_assets/TRUCK INSPECTION-02 (1).png	Side view
+attached_assets/TRUCK INSPECTION-03.png	Rear view
+attached_assets/TRUCK INSPECTION-04.png	Overhead view
+Static Truck Images:
+Location	Files
+static/images/	truck_front.png, truck_back.png, truck_driver_side.png, truck_passenger_side.png, truck_front_new.png, truck_rear_new.png, truck_driver_side_new.png, truck_back_new.png, truck_passenger_side_new.png
+static/img/trucks/	front_truck.png, back_truck.png, driver_side.png, passenger_side.png
+static/truck_inspections/	front_view.png, front_view_alt.png, side_view.png, rear_view.png, overhead_view.png, overhead_view_alt.png
+static/assets/	Copies of the original TRUCK INSPECTION images
+SVG Diagrams:
+File	Description
+static/svg/truck_front_back.svg	Front/back vector diagram
+static/svg/truck_driver_side.svg	Driver side vector
+static/svg/truck_passenger_side.svg	Passenger side vector
+Database/Storage:
+File	Purpose
+instance/truck_inspections.db	SQLite database for inspections
+db.json	TinyDB storage (includes truck inspections table)

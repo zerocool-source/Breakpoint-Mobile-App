@@ -207,3 +207,160 @@ export function generateEstimateNumber(): string {
   const seq = String(Math.floor(Math.random() * 9999) + 1).padStart(4, '0');
   return `EST-${year}${month}-${seq}`;
 }
+
+// Customer data for Supervisor role
+export const mockCustomers = [
+  { id: '1', name: 'AVELINA HOA', email: 'pro.invoices@associa.us', pools: 4, status: 'Active' },
+  { id: '2', name: 'Altis Master Association', email: 'jason.kratz@seabreezemgmt.com', pools: 7, status: 'Active' },
+  { id: '3', name: 'Amberwalk HOA', email: 'hoavendor@wsr.net', pools: 3, status: 'Active' },
+  { id: '4', name: 'Amelia Square HOA', email: 'jwilliams@prescottmgt.com', pools: 3, status: 'Active' },
+  { id: '5', name: 'Antelope Ridge Apartments', email: 'anteloperidges@sentinelcorp.com', pools: 1, status: 'Active' },
+  { id: '6', name: 'Antigua - Repairs', email: 'caterina.mares@fsresidential.com', pools: 2, status: 'Active' },
+  { id: '7', name: 'Arrow Station HOA', email: 'seabreezeinvoices@payableslockbox.com', pools: 2, status: 'Active' },
+  { id: '8', name: 'Aspen Hills - Repair', email: 'LKridle@5starmgmt.com', pools: 2, status: 'Active' },
+  { id: '9', name: 'Atwell Community Association PA-22', email: 'stephanie.schumann@seabreezemgmt.com', pools: 3, status: 'Active' },
+  { id: '10', name: 'Audie Murphy Ranch HOA', email: 'AccountsPayable@Keystonepacific.com', pools: 6, status: 'Active' },
+  { id: '11', name: 'Bear Creek MA', email: 'ap@avalonweb.com', phone: '(800) 400-2284', pools: 5, status: 'Active' },
+  { id: '12', name: 'Bedford Master Association', email: 'deanna.casillas@fsresidential.com', pools: 5, status: 'Active' },
+  { id: '13', name: 'Bella Vista HOA', email: 'reina@cmsmgmt.com', pools: 4, status: 'Active' },
+  { id: '14', name: 'Bottaia Winery', email: 'jhilton@pontewinery.com', phone: '(951) 397-1300', pools: 1, status: 'Active' },
+  { id: '15', name: 'Breakpoint Commercial Pools (Test)', email: 'breakpointcpsinc@gmail.com', phone: '(951) 653-3333', pools: 4, status: 'Active' },
+  { id: '16', name: 'Bridlevale HOA', email: 'blake@avalonweb.com', pools: 4, status: 'Active' },
+  { id: '17', name: 'Brookfield Ontario Ranch MA', email: 'proinvoices@associa.us', pools: 11, status: 'Active' },
+  { id: '18', name: 'Carter Estates Winery & Resort', email: 'cibarra@wineresort.com', phone: '(858) 248-7185', pools: 2, status: 'Active' },
+  { id: '19', name: 'Cornerstone HOA', email: 'anyssa.sanchez@fsresidential.com', pools: 3, status: 'Active' },
+  { id: '20', name: 'Cottonwood Canyon Hills HOA', email: 'ccastro@actionlife.com', phone: '(951) 246-2397', pools: 8, status: 'Active' },
+  { id: '21', name: 'Dakota Apartments', email: 'manager@rent-dakota.com', phone: '(951) 926-8200', pools: 3, status: 'Active' },
+  { id: '22', name: 'EOS Fitness Moreno Valley', email: 'Hannibalmartinez12@gmail.com', pools: 1, status: 'Active' },
+  { id: '23', name: 'Esperanza HOA', email: 'dharle@keystonepacific.com', pools: 4, status: 'Active' },
+  { id: '24', name: 'Fairway Canyon HOA', email: 'Brittany.Bishop@fsresidential.com', pools: 5, status: 'Active' },
+  { id: '25', name: 'Four Seasons at Hemet HOA', email: 'FSResidentialAPCA@avidbill.com', pools: 8, status: 'Active' },
+  { id: '26', name: 'Grand Park Community Association', email: 'jscott@powerstonepm.com', pools: 4, status: 'Active' },
+  { id: '27', name: 'Green River HOA', email: 'marc.m@avalon.web', pools: 5, status: 'Active' },
+  { id: '28', name: 'Heritage Lake HOA', email: 'FSResidentialAPCA@avidbill.com', pools: 5, status: 'Active' },
+  { id: '29', name: 'Horse Creek Ridge HOA', email: 'jeff@vintagegroupre.com', phone: '(760) 363-4811', pools: 4, status: 'Active' },
+  { id: '30', name: 'Horsethief Canyon Ranch MA', email: 'seabreezeinvoices@payableslockbox.com', pools: 6, status: 'Active' },
+];
+
+// Supportive Actions data
+export interface SupportiveAction {
+  id: string;
+  technicianId: string;
+  technicianName: string;
+  date: string;
+  category: 'performance' | 'behavior' | 'safety' | 'attendance' | 'quality';
+  severity: 'low' | 'medium' | 'high';
+  issueDescription: string;
+  actionPlan: string;
+  followUpDate: string;
+  status: 'pending' | 'in_progress' | 'completed';
+  createdAt: string;
+  photos?: string[];
+}
+
+export const mockSupportiveActions: SupportiveAction[] = [
+  {
+    id: '1',
+    technicianId: '1',
+    technicianName: 'Marcus Chen',
+    date: '2026-01-21',
+    category: 'performance',
+    severity: 'medium',
+    issueDescription: 'Missed chemical readings at two properties',
+    actionPlan: 'Review proper testing procedures and shadow senior tech for 3 days',
+    followUpDate: '2026-01-28',
+    status: 'in_progress',
+    createdAt: new Date(Date.now() - 86400000).toISOString(),
+  },
+  {
+    id: '2',
+    technicianId: '2',
+    technicianName: 'Sarah Wilson',
+    date: '2026-01-18',
+    category: 'attendance',
+    severity: 'low',
+    issueDescription: 'Late arrival to first property twice this week',
+    actionPlan: 'Discussed importance of punctuality, tech acknowledged and committed to improvement',
+    followUpDate: '2026-01-25',
+    status: 'completed',
+    createdAt: new Date(Date.now() - 86400000 * 4).toISOString(),
+  },
+];
+
+// Truck Inspection data
+export interface TruckInspection {
+  id: string;
+  truckNumber: string;
+  inspectionDate: string;
+  technicianId: string;
+  technicianName: string;
+  mileage: number;
+  fuelLevel: 'empty' | 'quarter' | 'half' | 'three_quarter' | 'full';
+  overallCondition: 'excellent' | 'good' | 'fair' | 'poor';
+  damageMarks: DamageMark[];
+  checklist: TruckChecklistItem[];
+  notes: string;
+  status: 'pending' | 'completed';
+  createdAt: string;
+}
+
+export interface DamageMark {
+  id: string;
+  view: 'front' | 'rear' | 'driver_side' | 'cargo';
+  x: number;
+  y: number;
+  type: 'dent' | 'scratch' | 'crack' | 'missing' | 'rust' | 'other';
+  notes?: string;
+}
+
+export interface TruckChecklistItem {
+  id: string;
+  label: string;
+  checked: boolean;
+}
+
+export const truckChecklistItems: TruckChecklistItem[] = [
+  { id: '1', label: 'Headlights working', checked: false },
+  { id: '2', label: 'Tail lights working', checked: false },
+  { id: '3', label: 'Turn signals working', checked: false },
+  { id: '4', label: 'Brake lights working', checked: false },
+  { id: '5', label: 'Windshield clean/undamaged', checked: false },
+  { id: '6', label: 'Mirrors adjusted and clean', checked: false },
+  { id: '7', label: 'Tires in good condition', checked: false },
+  { id: '8', label: 'Tire pressure checked', checked: false },
+  { id: '9', label: 'Oil level checked', checked: false },
+  { id: '10', label: 'Coolant level checked', checked: false },
+  { id: '11', label: 'Washer fluid filled', checked: false },
+  { id: '12', label: 'Brakes functioning properly', checked: false },
+  { id: '13', label: 'Horn working', checked: false },
+  { id: '14', label: 'Safety equipment present', checked: false },
+  { id: '15', label: 'First aid kit present', checked: false },
+  { id: '16', label: 'Fire extinguisher present', checked: false },
+];
+
+export const mockTruckInspections: TruckInspection[] = [
+  {
+    id: '1',
+    truckNumber: 'T-101',
+    inspectionDate: '2026-01-21',
+    technicianId: '1',
+    technicianName: 'Marcus Chen',
+    mileage: 45230,
+    fuelLevel: 'three_quarter',
+    overallCondition: 'good',
+    damageMarks: [],
+    checklist: truckChecklistItems.map(item => ({ ...item, checked: true })),
+    notes: 'Minor scratches on rear bumper from previous week',
+    status: 'completed',
+    createdAt: new Date(Date.now() - 86400000).toISOString(),
+  },
+];
+
+// Active technicians (who's on)
+export const mockActiveTechnicians = [
+  { id: '1', name: 'Marcus Chen', role: 'service', status: 'active', location: 'Sunset Valley Resort', lastUpdate: new Date(Date.now() - 300000).toISOString() },
+  { id: '2', name: 'Sarah Wilson', role: 'service', status: 'active', location: 'Desert Springs HOA', lastUpdate: new Date(Date.now() - 600000).toISOString() },
+  { id: '3', name: 'James Rodriguez', role: 'repair', status: 'active', location: 'En Route', lastUpdate: new Date(Date.now() - 120000).toISOString() },
+  { id: '4', name: 'Emily Davis', role: 'service', status: 'break', location: 'Aqua Fitness Center', lastUpdate: new Date(Date.now() - 900000).toISOString() },
+  { id: '5', name: 'Michael Thompson', role: 'repair', status: 'offline', location: 'Last: City Municipal Pool', lastUpdate: new Date(Date.now() - 3600000).toISOString() },
+];

@@ -7,6 +7,7 @@ import SupervisorHomeScreen from '@/screens/Supervisor/HomeScreen';
 import SupervisorActivityScreen from '@/screens/Supervisor/ActivityScreen';
 import SupervisorAssignScreen from '@/screens/Supervisor/AssignScreen';
 import QCInspectionsScreen from '@/screens/Supervisor/QCInspectionsScreen';
+import SupervisorChatChannelsWrapper from '@/screens/Supervisor/ChatChannelsWrapper';
 import SupervisorProfileScreen from '@/screens/Supervisor/ProfileScreen';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, Spacing } from '@/constants/theme';
@@ -73,6 +74,15 @@ export default function SupervisorTabNavigator() {
         options={{
           tabBarIcon: ({ color, size }) => (
             <Feather name="check-square" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Chat"
+        component={SupervisorChatChannelsWrapper}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="message-square" size={size} color={color} />
           ),
         }}
       />

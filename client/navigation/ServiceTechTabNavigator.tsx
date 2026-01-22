@@ -4,7 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import { Platform } from 'react-native';
 
 import ServiceTechHomeScreen from '@/screens/ServiceTech/HomeScreen';
-import ChatScreen from '@/screens/ServiceTech/ChatScreen';
+import ServiceTechChatChannelsWrapper from '@/screens/ServiceTech/ChatChannelsWrapper';
 import ProfileScreen from '@/screens/ServiceTech/ProfileScreen';
 import TruckScreen from '@/screens/ServiceTech/TruckScreen';
 import { useTheme } from '@/hooks/useTheme';
@@ -50,7 +50,7 @@ export default function ServiceTechTabNavigator() {
       />
       <Tab.Screen
         name="Chat"
-        component={ChatScreen}
+        component={ServiceTechChatChannelsWrapper}
         options={{
           tabBarIcon: ({ color, size }) => (
             <Feather name="message-square" size={size} color={color} />

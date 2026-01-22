@@ -57,10 +57,16 @@ client/
 ## Service Technician Features
 - **Home Screen**: Blue gradient header, assignments card (orange), next stop, today's progress, route list
 - **Property Detail Screen**: On-site timer, pump room checklist, quick actions, bodies of water
+- **Emergency Screen**: Report emergencies with admin notification
+  - Emergency types: Major Water Leak, Electrical Hazard, Chemical Spill, Injury on Site, Equipment Failure, Other
+  - Property selection required
+  - Description field for details
+  - Stats showing Active, Resolved, Total emergency reports
+  - History of recent emergency reports with status badges
 - **Truck Screen**: Inventory management (+/- controls), performance maintenance tracking
 - **Chat Screen**: Office communication
 - **Profile Screen**: Settings, sign out
-- **Bottom Tabs**: Home, Chat, Profile, Truck
+- **Bottom Tabs**: Home, Emergency, Chat, Profile, Truck
 
 ## Repair Technician Features
 - **Home**: Greeting, next stop card, quick actions grid, draggable jobs list
@@ -116,6 +122,7 @@ client/
 - **Backend**: `npm run server:dev` (port 5000)
 
 ## Recent Changes
+- January 22, 2026: Added Emergency tab for Service Technicians with dedicated emergency reporting screen
 - January 22, 2026: Added Supervisor management features - Who's On (active tech tracking), Truck Inspection (touch damage marking), Supportive Actions (performance coaching)
 - January 22, 2026: Added 30 customers to mock data for Supervisor dropdown (AVELINA HOA through Horsethief Canyon Ranch MA)
 - January 22, 2026: Added navigation from Supervisor Quick Actions to new screens

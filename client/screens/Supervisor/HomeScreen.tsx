@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Pressable, ScrollView, Platform, Modal, useWindowDimensions } from 'react-native';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
@@ -10,6 +11,8 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { ThemedText } from '@/components/ThemedText';
 import { Avatar } from '@/components/Avatar';
+
+import supervisorAvatarImage from '../../../assets/images/supervisor-avatar.png';
 import { BubbleBackground } from '@/components/BubbleBackground';
 import { QuickActionButton } from '@/components/QuickActionButton';
 import { ActivityTicker } from '@/components/ActivityTicker';
@@ -528,7 +531,11 @@ export default function SupervisorHomeScreen() {
       >
         <View style={styles.headerContent}>
           <View style={styles.headerLeft}>
-            <Avatar name={user?.name || supervisorInfo.name} size="medium" />
+            <Image 
+              source={supervisorAvatarImage}
+              style={styles.supervisorAvatar}
+              contentFit="cover"
+            />
             <View style={styles.headerText}>
               <ThemedText style={styles.greeting}>{getGreeting()},</ThemedText>
               <ThemedText style={styles.userName}>
@@ -796,6 +803,13 @@ const styles = StyleSheet.create({
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  supervisorAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.3)',
   },
   headerText: {
     marginLeft: Spacing.md,

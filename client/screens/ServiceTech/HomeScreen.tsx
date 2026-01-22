@@ -129,7 +129,7 @@ export default function ServiceTechHomeScreen() {
       >
         <View style={styles.headerContent}>
           <View style={styles.headerLeft}>
-            <Avatar name={user?.name} size="medium" backgroundColor={BrandColors.emerald} />
+            <Avatar name={user?.name} size="medium" />
             <View style={styles.headerText}>
               <ThemedText style={styles.greeting}>{getGreeting()}</ThemedText>
               <ThemedText style={styles.userName}>{user?.name?.split(' ')[0] || 'Demo'}</ThemedText>

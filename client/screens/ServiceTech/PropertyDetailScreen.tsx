@@ -188,7 +188,7 @@ export default function PropertyDetailScreen() {
                 onPress={() => handleQuickAction('windy')}
               />
               <QuickAction
-                icon="wrench"
+                icon="settings"
                 label="Service Repairs"
                 color={BrandColors.vividTangerine}
                 onPress={() => handleQuickAction('service')}

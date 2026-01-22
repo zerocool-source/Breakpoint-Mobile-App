@@ -4,8 +4,12 @@
 Mobile-first field service management app for commercial pool maintenance technicians. Built with Expo (React Native) and Express.js backend.
 
 ## Current State
-- **MVP Phase**: Repair Tech flow complete with splash, login, 5-tab navigation, and core features
-- **User Roles**: Repair Technician (implemented), Service Technician (planned)
+- **MVP Phase**: Repair Tech and Service Tech flows complete
+- **User Roles**: 
+  - Service Technician (implemented) - Route-based daily service
+  - Repair Technician (implemented) - Repairs, estimates, jobs
+  - Supervisor (planned)
+  - Repair Foreman (planned)
 
 ## Project Architecture
 
@@ -32,6 +36,7 @@ client/
 ├── navigation/      # Navigation structure
 ├── screens/         # Screen components
 │   ├── RepairTech/  # Repair tech screens
+│   ├── ServiceTech/ # Service tech screens
 │   └── Modals/      # Modal screens
 └── types/           # TypeScript interfaces
 ```
@@ -43,32 +48,41 @@ client/
 - **Emerald**: #22D69A (success)
 - **Danger**: #FF3B30
 
-## Features Implemented
-- Splash screen with animated logo (2 seconds)
-- Login screen with email/password
-- Repair Tech bottom tabs: Home, Queue, Estimates, Jobs, Profile
-- Home: Greeting, next stop card, quick actions grid, draggable jobs list
-- Queue: Metrics cards (2x2), priority filter, grouped job sections
-- Estimates: List view with status badges
-- Jobs: List view with priority badges
-- Profile: User info, settings, sign out
-- Report Issue modal: Property picker, issue type, description, priority, photos
-- Chat modal: Support conversation interface
-- Create Estimate modal: Line items, totals calculation
-- Offline banner (appears when disconnected)
-- Chat FAB (floating action button)
+## Auth Flow
+1. Splash Screen (2 seconds)
+2. Role Selection Screen (4 roles with distinct icons)
+3. Role-specific Login Screen
+4. Role-specific App
+
+## Service Technician Features
+- **Home Screen**: Blue gradient header, assignments card (orange), next stop, today's progress, route list
+- **Property Detail Screen**: On-site timer, pump room checklist, quick actions, bodies of water
+- **Truck Screen**: Inventory management (+/- controls), performance maintenance tracking
+- **Chat Screen**: Office communication
+- **Profile Screen**: Settings, sign out
+- **Bottom Tabs**: Home, Chat, Profile, Truck
+
+## Repair Technician Features
+- **Home**: Greeting, next stop card, quick actions grid, draggable jobs list
+- **Queue**: Metrics cards (2x2), priority filter, grouped job sections
+- **Estimates**: List view with status badges
+- **Jobs**: List view with priority badges
+- **Profile**: User info, settings, sign out
+- **Bottom Tabs**: Home, Queue, Estimates, Jobs, Profile
 
 ## Running the App
 - **Frontend**: `npm run expo:dev` (port 8081)
 - **Backend**: `npm run server:dev` (port 5000)
 
 ## Recent Changes
-- January 2026: Initial MVP build with Repair Tech flow
+- January 2026: Added Service Technician app with complete flow
+- January 2026: Updated logo to official Breakpoint "Keeping People Safe" branding
+- Role selection as landing page with 4 distinct role cards
 - Custom components: Badge, BPButton, JobCard, NextStopCard, MetricCard, EstimateCard
-- Image assets generated for app icon, splash, and empty states
 
 ## User Preferences
 - Mobile-first design matching iOS Human Interface Guidelines
 - Azure Blue as primary action color
 - Large touch targets for field use
 - Drag-to-reorder for job prioritization
+- Dark gradient background for auth screens

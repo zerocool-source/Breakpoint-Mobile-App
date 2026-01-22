@@ -57,7 +57,7 @@ export default function ServiceTechProfileScreen() {
       scrollIndicatorInsets={{ bottom: insets.bottom }}
     >
       <View style={[styles.profileCard, { backgroundColor: theme.surface }]}>
-        <Avatar name={user?.name} size="large" backgroundColor={BrandColors.emerald} />
+        <Avatar name={user?.name} size="large" />
         <View style={styles.profileInfo}>
           <ThemedText style={styles.name}>{user?.name || 'Service Technician'}</ThemedText>
           <ThemedText style={[styles.email, { color: theme.textSecondary }]}>

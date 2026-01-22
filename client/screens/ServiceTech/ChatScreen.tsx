@@ -80,7 +80,7 @@ export default function ChatScreen() {
     return (
       <View style={[styles.messageContainer, isUser && styles.messageContainerUser]}>
         {!isUser && (
-          <Avatar name={item.senderName} size="small" backgroundColor={BrandColors.azureBlue} />
+          <Avatar name={item.senderName} size="small" />
         )}
         <View style={[
           styles.messageBubble,
@@ -98,7 +98,7 @@ export default function ChatScreen() {
           </ThemedText>
         </View>
         {isUser && (
-          <Avatar name={user?.name} size="small" backgroundColor={BrandColors.emerald} />
+          <Avatar name={user?.name} size="small" />
         )}
       </View>
     );

@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { View, StyleSheet, Pressable, ScrollView, Platform, Modal } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -24,6 +26,7 @@ import {
   type Technician,
 } from '@/lib/supervisorMockData';
 import { RepairsNeededModal, ChemicalOrderModal } from '@/screens/ServiceTech/Modals';
+import type { ChatChannel } from '@/screens/shared/ChatChannelsScreen';
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -150,6 +153,98 @@ function TechnicianCard({ technician, onPress }: TechnicianCardProps) {
         <Feather name="chevron-down" size={20} color={theme.textSecondary} />
       </View>
     </Pressable>
+  );
+}
+
+interface TeamChatModalProps {
+  visible: boolean;
+  onClose: () => void;
+  onSelectOfficeChat: () => void;
+  onSelectTechChat: (tech: Technician) => void;
+  technicians: Technician[];
+}
+
+function TeamChatModal({ 
+  visible, 
+  onClose, 
+  onSelectOfficeChat,
+  onSelectTechChat,
+  technicians 
+}: TeamChatModalProps) {
+  const { theme } = useTheme();
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+    >
+      <Pressable style={styles.modalOverlay} onPress={onClose}>
+        <View style={[styles.chatModalContent, { backgroundColor: theme.surface }]}>
+          <View style={styles.modalHeader}>
+            <View>
+              <ThemedText style={styles.modalTitle}>Messages</ThemedText>
+              <ThemedText style={[styles.modalSubtitle, { color: theme.textSecondary }]}>
+                Select a conversation
+              </ThemedText>
+            </View>
+            <Pressable onPress={onClose} style={styles.closeButton}>
+              <Feather name="x" size={24} color={theme.text} />
+            </Pressable>
+          </View>
+
+          <ThemedText style={styles.chatSectionLabel}>OFFICE</ThemedText>
+          <Pressable 
+            style={[styles.chatOptionCard, { backgroundColor: theme.backgroundRoot }]}
+            onPress={onSelectOfficeChat}
+          >
+            <View style={[styles.chatOptionIcon, { backgroundColor: BrandColors.azureBlue + '20' }]}>
+              <Feather name="home" size={20} color={BrandColors.azureBlue} />
+            </View>
+            <View style={styles.chatOptionContent}>
+              <ThemedText style={styles.chatOptionName}>Office</ThemedText>
+              <ThemedText style={[styles.chatOptionDesc, { color: theme.textSecondary }]}>
+                Dispatch & Admin
+              </ThemedText>
+            </View>
+            <Feather name="chevron-right" size={20} color={theme.textSecondary} />
+          </Pressable>
+
+          <ThemedText style={styles.chatSectionLabel}>SERVICE TECHS</ThemedText>
+          <ScrollView style={styles.techChatList} showsVerticalScrollIndicator={false}>
+            {technicians.filter(t => t.role === 'service_tech').map((tech) => {
+              const statusColor = tech.status === 'active' ? BrandColors.emerald : 
+                                  tech.status === 'running_behind' ? BrandColors.vividTangerine : 
+                                  theme.textSecondary;
+              return (
+                <Pressable 
+                  key={tech.id}
+                  style={[styles.chatOptionCard, { backgroundColor: theme.backgroundRoot }]}
+                  onPress={() => onSelectTechChat(tech)}
+                >
+                  <View style={[styles.chatOptionIcon, { backgroundColor: BrandColors.vividTangerine + '20' }]}>
+                    <Feather name="user" size={20} color={BrandColors.vividTangerine} />
+                  </View>
+                  <View style={styles.chatOptionContent}>
+                    <ThemedText style={styles.chatOptionName}>{tech.name}</ThemedText>
+                    <View style={styles.techStatusRow}>
+                      <View style={[styles.techStatusDot, { backgroundColor: statusColor }]} />
+                      <ThemedText style={[styles.chatOptionDesc, { color: theme.textSecondary }]}>
+                        {tech.status === 'active' ? 'Active' : 
+                         tech.status === 'running_behind' ? 'Running Behind' : 
+                         tech.status === 'on_break' ? 'On Break' : 'Offline'}
+                      </ThemedText>
+                    </View>
+                  </View>
+                  <Feather name="chevron-right" size={20} color={theme.textSecondary} />
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+      </Pressable>
+    </Modal>
   );
 }
 
@@ -286,11 +381,13 @@ export default function SupervisorHomeScreen() {
   const { user } = useAuth();
   const { theme } = useTheme();
   
+  const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const [quickActionsExpanded, setQuickActionsExpanded] = useState(true);
   const [selectedTechnician, setSelectedTechnician] = useState<Technician | null>(null);
   const [showBreakdownModal, setShowBreakdownModal] = useState(false);
   const [showRepairsModal, setShowRepairsModal] = useState(false);
   const [showChemicalModal, setShowChemicalModal] = useState(false);
+  const [showChatModal, setShowChatModal] = useState(false);
   
   const metrics = mockWeeklyMetrics;
   const inspections = mockQCInspections.slice(0, 4);
@@ -301,6 +398,35 @@ export default function SupervisorHomeScreen() {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
+    setShowChatModal(true);
+  };
+
+  const handleSelectOfficeChat = () => {
+    setShowChatModal(false);
+    const officeChannel: ChatChannel = {
+      id: 'office',
+      name: 'Office',
+      type: 'office',
+      icon: 'home',
+      lastMessage: 'Chat with dispatch and admin',
+      lastMessageTime: 'Now',
+      unreadCount: 0,
+    };
+    navigation.navigate('ChatConversation', { channel: officeChannel });
+  };
+
+  const handleSelectTechChat = (tech: Technician) => {
+    setShowChatModal(false);
+    const techChannel: ChatChannel = {
+      id: `tech_${tech.id}`,
+      name: tech.name,
+      type: 'supervisor',
+      icon: 'user',
+      lastMessage: `Chat with ${tech.name}`,
+      lastMessageTime: 'Now',
+      unreadCount: 0,
+    };
+    navigation.navigate('ChatConversation', { channel: techChannel });
   };
 
   const handleQuickAction = (action: string) => {
@@ -526,6 +652,14 @@ export default function SupervisorHomeScreen() {
         onClose={() => setShowChemicalModal(false)}
         propertyName={defaultProperty.name}
         propertyAddress={defaultProperty.address}
+      />
+
+      <TeamChatModal
+        visible={showChatModal}
+        onClose={() => setShowChatModal(false)}
+        onSelectOfficeChat={handleSelectOfficeChat}
+        onSelectTechChat={handleSelectTechChat}
+        technicians={technicians}
       />
     </BubbleBackground>
   );
@@ -896,5 +1030,59 @@ const styles = StyleSheet.create({
   sendMessageText: {
     fontSize: 14,
     fontWeight: '600',
+  },
+  chatModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: BorderRadius.xl,
+    borderTopRightRadius: BorderRadius.xl,
+    padding: Spacing.xl,
+    maxHeight: '80%',
+  },
+  chatSectionLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    marginBottom: Spacing.md,
+    marginTop: Spacing.lg,
+  },
+  chatOptionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    marginBottom: Spacing.sm,
+    gap: Spacing.md,
+  },
+  chatOptionIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: BorderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chatOptionContent: {
+    flex: 1,
+  },
+  chatOptionName: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  chatOptionDesc: {
+    fontSize: 13,
+    marginTop: 2,
+  },
+  techChatList: {
+    maxHeight: 300,
+  },
+  techStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    marginTop: 2,
+  },
+  techStatusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
 });

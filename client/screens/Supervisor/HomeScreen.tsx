@@ -679,6 +679,26 @@ export default function SupervisorHomeScreen() {
                   color={BrandColors.danger}
                   onPress={() => handleQuickAction('emergency')}
                 />
+                <QuickActionButton
+                  icon="users"
+                  label="Who's On"
+                  color={BrandColors.emerald}
+                  onPress={() => navigation.navigate('WhosOn')}
+                />
+              </View>
+              <View style={styles.quickActionsRow}>
+                <QuickActionButton
+                  icon="truck"
+                  label="Truck Inspection"
+                  color={BrandColors.vividTangerine}
+                  onPress={() => navigation.navigate('TruckInspection')}
+                />
+                <QuickActionButton
+                  icon="heart"
+                  label="Supportive Actions"
+                  color="#9C27B0"
+                  onPress={() => navigation.navigate('SupportiveActions')}
+                />
                 <View style={styles.quickActionPlaceholder} />
               </View>
             </View>

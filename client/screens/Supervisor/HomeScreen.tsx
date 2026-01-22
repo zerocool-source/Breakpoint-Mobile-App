@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Pressable, ScrollView, Platform, Modal, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
@@ -13,6 +13,7 @@ import { Avatar } from '@/components/Avatar';
 import { BubbleBackground } from '@/components/BubbleBackground';
 import { QuickActionButton } from '@/components/QuickActionButton';
 import { ActivityTicker } from '@/components/ActivityTicker';
+import { NotificationBanner } from '@/components/NotificationBanner';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
@@ -444,6 +445,14 @@ export default function SupervisorHomeScreen() {
   const [showChemicalModal, setShowChemicalModal] = useState(false);
   const [showChatModal, setShowChatModal] = useState(false);
   const [showCreateAssignmentModal, setShowCreateAssignmentModal] = useState(false);
+  const [showNotification, setShowNotification] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowNotification(true);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
   
   const metrics = mockWeeklyMetrics;
   const inspections = mockQCInspections.slice(0, 4);
@@ -506,6 +515,14 @@ export default function SupervisorHomeScreen() {
 
   return (
     <BubbleBackground bubbleCount={18}>
+      <NotificationBanner
+        visible={showNotification}
+        title="Health Department Alert"
+        message="Desert Springs HOA pool has been closed by the health department. Chlorine levels are below standard."
+        type="urgent"
+        icon="alert-triangle"
+        onDismiss={() => setShowNotification(false)}
+      />
       <View
         style={[styles.header, { paddingTop: insets.top + Spacing.md }]}
       >

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, StyleSheet, Pressable, ScrollView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -10,6 +10,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ThemedText } from '@/components/ThemedText';
 import { Avatar } from '@/components/Avatar';
 import { BubbleBackground } from '@/components/BubbleBackground';
+import { NotificationBanner } from '@/components/NotificationBanner';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
@@ -145,6 +146,14 @@ export default function ServiceTechHomeScreen() {
   const [assignmentsExpanded, setAssignmentsExpanded] = useState(true);
   const [currentTime] = useState(getCurrentTime());
   const [routeStops, setRouteStops] = useState(mockRouteStops);
+  const [showNotification, setShowNotification] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowNotification(true);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
   
   const nextStop = routeStops.find(stop => !stop.completed) || routeStops[0];
   const progress = mockDailyProgress;
@@ -186,6 +195,14 @@ export default function ServiceTechHomeScreen() {
 
   return (
     <BubbleBackground bubbleCount={18}>
+      <NotificationBanner
+        visible={showNotification}
+        title="Urgent Pool Service Required"
+        message="Sunset Valley Resort needs immediate attention - pool water is cloudy and guests are complaining."
+        type="urgent"
+        icon="alert-circle"
+        onDismiss={() => setShowNotification(false)}
+      />
       <View
         style={[styles.header, { paddingTop: insets.top + Spacing.md }]}
       >

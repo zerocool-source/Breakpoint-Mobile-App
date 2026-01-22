@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View, StyleSheet, Pressable, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -16,6 +16,7 @@ import { Avatar } from '@/components/Avatar';
 import { BubbleBackground } from '@/components/BubbleBackground';
 import { ChatFAB } from '@/components/ChatFAB';
 import { OfflineBanner } from '@/components/OfflineBanner';
+import { NotificationBanner } from '@/components/NotificationBanner';
 import { useAuth } from '@/context/AuthContext';
 import { useNetwork } from '@/context/NetworkContext';
 import { useTheme } from '@/hooks/useTheme';
@@ -193,6 +194,14 @@ export default function HomeScreen() {
   const [showOrderPartsModal, setShowOrderPartsModal] = useState(false);
   const [showReportIssueModal, setShowReportIssueModal] = useState(false);
   const [showEmergencyModal, setShowEmergencyModal] = useState(false);
+  const [showNotification, setShowNotification] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowNotification(true);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
 
   const nextStop = mockRouteStops.find(stop => !stop.completed);
   const truckId = 'RT-007';
@@ -379,6 +388,14 @@ export default function HomeScreen() {
 
   return (
     <BubbleBackground bubbleCount={15}>
+      <NotificationBanner
+        visible={showNotification}
+        title="Emergency: Power Outage"
+        message="Aqua Fitness Center - all pool equipment is offline due to power outage. Generator backup needed."
+        type="urgent"
+        icon="zap-off"
+        onDismiss={() => setShowNotification(false)}
+      />
       <DraggableFlatList
         data={jobs}
         keyExtractor={(item) => item.id}

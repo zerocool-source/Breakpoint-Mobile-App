@@ -24,13 +24,18 @@ export default function ServiceTechTabNavigator() {
         tabBarStyle: {
           backgroundColor: theme.surface,
           borderTopColor: theme.border,
+          borderTopWidth: 1,
           paddingTop: Spacing.sm,
-          paddingBottom: Platform.OS === 'ios' ? Spacing.lg : Spacing.md,
-          height: Platform.OS === 'ios' ? 88 : 64,
+          paddingBottom: Platform.OS === 'web' ? Spacing.md : Platform.OS === 'ios' ? Spacing.lg : Spacing.md,
+          height: Platform.OS === 'web' ? 70 : Platform.OS === 'ios' ? 88 : 64,
         },
         tabBarLabelStyle: {
-          fontSize: 12,
+          fontSize: 11,
           fontWeight: '500',
+          marginTop: 2,
+        },
+        tabBarIconStyle: {
+          marginTop: 4,
         },
       }}
     >

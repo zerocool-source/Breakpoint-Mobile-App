@@ -95,6 +95,7 @@ client/
 - **Backend**: `npm run server:dev` (port 5000)
 
 ## Recent Changes
+- January 22, 2026: Fixed RepairTech HomeScreen scrolling by adding `pointerEvents="none"` to BubbleBackground bubbles container
 - January 22, 2026: Fixed keyboard input bug in ALL modals by adding `keyboardShouldPersistTaps="handled"` to ScrollViews (CreateAssignment, OrderParts, ReportIssue, NewEstimate, ChemicalOrder, WindyDayCleanup, ServiceRepair, RepairsNeeded, NewInspection, EmergencyReport)
 - January 22, 2026: Enhanced RepairTech with swipeable job cards (left swipe: Navigate, right swipe: Details/Complete)
 - January 22, 2026: Changed RepairTech to dark blue BubbleBackground with rising bubbles (matching Supervisor theme)

@@ -201,3 +201,37 @@ export const mockDailyProgress: DailyProgress = {
   repairs: 0,
   dropOffs: 0,
 };
+
+export interface CommissionItem {
+  id: string;
+  name: string;
+  type: 'product' | 'part' | 'service';
+  quantity: number;
+  unitPrice: number;
+  commissionRate: number;
+  date: string;
+}
+
+export interface CommissionTracker {
+  weeklyTotal: number;
+  monthlyTotal: number;
+  yearlyTotal: number;
+  weeklyGoal: number;
+  monthlyGoal: number;
+  recentItems: CommissionItem[];
+}
+
+export const mockCommissionTracker: CommissionTracker = {
+  weeklyTotal: 347.50,
+  monthlyTotal: 1285.00,
+  yearlyTotal: 8420.75,
+  weeklyGoal: 500,
+  monthlyGoal: 2000,
+  recentItems: [
+    { id: 'c1', name: 'Hayward Pool Pump', type: 'product', quantity: 1, unitPrice: 485.00, commissionRate: 0.08, date: 'Jan 21' },
+    { id: 'c2', name: 'Filter Cartridge', type: 'part', quantity: 2, unitPrice: 65.00, commissionRate: 0.10, date: 'Jan 20' },
+    { id: 'c3', name: 'Salt Cell', type: 'part', quantity: 1, unitPrice: 350.00, commissionRate: 0.08, date: 'Jan 19' },
+    { id: 'c4', name: 'Pool Light LED', type: 'product', quantity: 1, unitPrice: 225.00, commissionRate: 0.10, date: 'Jan 18' },
+    { id: 'c5', name: 'Pump Motor', type: 'part', quantity: 1, unitPrice: 280.00, commissionRate: 0.08, date: 'Jan 17' },
+  ],
+};

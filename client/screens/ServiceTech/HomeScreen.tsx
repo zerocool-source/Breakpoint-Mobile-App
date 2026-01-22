@@ -18,6 +18,7 @@ import {
   mockRouteStops,
   mockDailyProgress,
   mockTruckInfo,
+  mockCommissionTracker,
   type Assignment,
   type RouteStop,
 } from '@/lib/serviceTechMockData';
@@ -271,7 +272,95 @@ export default function ServiceTechHomeScreen() {
           </View>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(400).springify()}>
+        <Animated.View entering={FadeInDown.delay(350).springify()}>
+          <View style={[styles.commissionSection, { backgroundColor: theme.surface }]}>
+            <View style={styles.commissionHeader}>
+              <View style={styles.commissionHeaderLeft}>
+                <Feather name="dollar-sign" size={20} color={BrandColors.emerald} />
+                <ThemedText style={styles.commissionTitle}>Commission Tracker</ThemedText>
+              </View>
+              <View style={[styles.commissionBadge, { backgroundColor: BrandColors.emerald + '20' }]}>
+                <ThemedText style={[styles.commissionBadgeText, { color: BrandColors.emerald }]}>
+                  Service Repairs
+                </ThemedText>
+              </View>
+            </View>
+            
+            <View style={styles.commissionTotals}>
+              <View style={styles.commissionTotalCard}>
+                <ThemedText style={[styles.commissionAmount, { color: BrandColors.emerald }]}>
+                  ${mockCommissionTracker.weeklyTotal.toFixed(2)}
+                </ThemedText>
+                <ThemedText style={[styles.commissionLabel, { color: theme.textSecondary }]}>This Week</ThemedText>
+                <View style={styles.commissionProgressBar}>
+                  <View 
+                    style={[
+                      styles.commissionProgressFill, 
+                      { 
+                        width: `${Math.min((mockCommissionTracker.weeklyTotal / mockCommissionTracker.weeklyGoal) * 100, 100)}%`,
+                        backgroundColor: BrandColors.emerald 
+                      }
+                    ]} 
+                  />
+                </View>
+                <ThemedText style={[styles.commissionGoal, { color: theme.textSecondary }]}>
+                  Goal: ${mockCommissionTracker.weeklyGoal}
+                </ThemedText>
+              </View>
+              
+              <View style={styles.commissionTotalCard}>
+                <ThemedText style={[styles.commissionAmount, { color: BrandColors.azureBlue }]}>
+                  ${mockCommissionTracker.monthlyTotal.toFixed(2)}
+                </ThemedText>
+                <ThemedText style={[styles.commissionLabel, { color: theme.textSecondary }]}>This Month</ThemedText>
+                <View style={styles.commissionProgressBar}>
+                  <View 
+                    style={[
+                      styles.commissionProgressFill, 
+                      { 
+                        width: `${Math.min((mockCommissionTracker.monthlyTotal / mockCommissionTracker.monthlyGoal) * 100, 100)}%`,
+                        backgroundColor: BrandColors.azureBlue 
+                      }
+                    ]} 
+                  />
+                </View>
+                <ThemedText style={[styles.commissionGoal, { color: theme.textSecondary }]}>
+                  Goal: ${mockCommissionTracker.monthlyGoal}
+                </ThemedText>
+              </View>
+            </View>
+
+            <View style={styles.recentCommissions}>
+              <ThemedText style={[styles.recentCommissionsTitle, { color: theme.textSecondary }]}>
+                Recent Installs
+              </ThemedText>
+              {mockCommissionTracker.recentItems.slice(0, 3).map((item) => (
+                <View key={item.id} style={[styles.commissionItem, { borderBottomColor: theme.border }]}>
+                  <View style={styles.commissionItemLeft}>
+                    <View style={[styles.commissionTypeIcon, { backgroundColor: item.type === 'product' ? BrandColors.azureBlue + '20' : BrandColors.vividTangerine + '20' }]}>
+                      <Feather 
+                        name={item.type === 'product' ? 'box' : 'tool'} 
+                        size={14} 
+                        color={item.type === 'product' ? BrandColors.azureBlue : BrandColors.vividTangerine} 
+                      />
+                    </View>
+                    <View>
+                      <ThemedText style={styles.commissionItemName}>{item.name}</ThemedText>
+                      <ThemedText style={[styles.commissionItemDate, { color: theme.textSecondary }]}>
+                        {item.date} - {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
+                      </ThemedText>
+                    </View>
+                  </View>
+                  <ThemedText style={[styles.commissionItemAmount, { color: BrandColors.emerald }]}>
+                    +${(item.unitPrice * item.quantity * item.commissionRate).toFixed(2)}
+                  </ThemedText>
+                </View>
+              ))}
+            </View>
+          </View>
+        </Animated.View>
+
+        <Animated.View entering={FadeInDown.delay(450).springify()}>
           <View style={styles.routeSection}>
             <View style={styles.routeDateRow}>
               <ThemedText style={styles.routeDate}>
@@ -561,6 +650,109 @@ const styles = StyleSheet.create({
   progressCardLabel: {
     fontSize: 13,
     marginTop: Spacing.xs,
+  },
+  commissionSection: {
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+    marginBottom: Spacing.lg,
+    ...Shadows.card,
+  },
+  commissionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+  },
+  commissionHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  commissionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  commissionBadge: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.full,
+  },
+  commissionBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  commissionTotals: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    marginBottom: Spacing.lg,
+  },
+  commissionTotalCard: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  commissionAmount: {
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  commissionLabel: {
+    fontSize: 12,
+    marginTop: Spacing.xs,
+  },
+  commissionProgressBar: {
+    width: '100%',
+    height: 4,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    borderRadius: 2,
+    marginTop: Spacing.sm,
+    overflow: 'hidden',
+  },
+  commissionProgressFill: {
+    height: '100%',
+    borderRadius: 2,
+  },
+  commissionGoal: {
+    fontSize: 10,
+    marginTop: Spacing.xs,
+  },
+  recentCommissions: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.05)',
+    paddingTop: Spacing.md,
+  },
+  recentCommissionsTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: Spacing.sm,
+  },
+  commissionItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: Spacing.sm,
+    borderBottomWidth: 1,
+  },
+  commissionItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  commissionTypeIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: BorderRadius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  commissionItemName: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  commissionItemDate: {
+    fontSize: 11,
+  },
+  commissionItemAmount: {
+    fontSize: 14,
+    fontWeight: '700',
   },
   routeSection: {
     marginBottom: Spacing.lg,

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Pressable, ScrollView, Platform } from 'react-native';
+import { View, StyleSheet, Pressable, ScrollView, Platform, TextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -12,6 +12,12 @@ import { BPButton } from '@/components/BPButton';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
 import type { RouteStop, BodyOfWater } from '@/lib/serviceTechMockData';
+import {
+  RepairsNeededModal,
+  ChemicalOrderModal,
+  WindyDayCleanupModal,
+  ServiceRepairModal,
+} from './Modals';
 
 type ServiceTechStackParamList = {
   PropertyDetail: { stop: RouteStop };
@@ -111,6 +117,14 @@ const poolAreaChecklistItems = [
   'Deck Brushed Pool',
 ];
 
+const pumpRoomChecklistItems = [
+  'Clean Basket',
+  'Backwashed',
+  'Balance Chemicals',
+  'Recalibrate Controller',
+  'Clean Pump Room',
+];
+
 export default function PropertyDetailScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<ServiceTechStackParamList>>();
@@ -123,7 +137,16 @@ export default function PropertyDetailScreen() {
   const [propertyInfoExpanded, setPropertyInfoExpanded] = useState(false);
   const [poolAreaExpanded, setPoolAreaExpanded] = useState(false);
   const [poolAreaChecklist, setPoolAreaChecklist] = useState<Record<string, boolean>>({});
+  const [pumpRoomExpanded, setPumpRoomExpanded] = useState(false);
+  const [pumpRoomChecklist, setPumpRoomChecklist] = useState<Record<string, boolean>>({});
+  const [newPumpRoomTask, setNewPumpRoomTask] = useState('');
+  const [customPumpRoomTasks, setCustomPumpRoomTasks] = useState<string[]>([]);
   const [quickActionsExpanded, setQuickActionsExpanded] = useState(true);
+  
+  const [repairsModalVisible, setRepairsModalVisible] = useState(false);
+  const [chemicalModalVisible, setChemicalModalVisible] = useState(false);
+  const [windyModalVisible, setWindyModalVisible] = useState(false);
+  const [serviceRepairModalVisible, setServiceRepairModalVisible] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -141,6 +164,34 @@ export default function PropertyDetailScreen() {
   const handleQuickAction = (action: string) => {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    switch (action) {
+      case 'repairs':
+        setRepairsModalVisible(true);
+        break;
+      case 'chemical':
+        setChemicalModalVisible(true);
+        break;
+      case 'windy':
+        setWindyModalVisible(true);
+        break;
+      case 'service':
+        setServiceRepairModalVisible(true);
+        break;
+    }
+  };
+
+  const handleTogglePumpRoomItem = (item: string) => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    setPumpRoomChecklist(prev => ({ ...prev, [item]: !prev[item] }));
+  };
+
+  const handleAddPumpRoomTask = () => {
+    if (newPumpRoomTask.trim()) {
+      setCustomPumpRoomTasks(prev => [...prev, newPumpRoomTask.trim()]);
+      setNewPumpRoomTask('');
     }
   };
 
@@ -284,13 +335,62 @@ export default function PropertyDetailScreen() {
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(350).springify()}>
-          <Pressable style={[styles.expandableCard, { backgroundColor: theme.surface }]}>
+          <Pressable 
+            style={[styles.expandableCard, { backgroundColor: theme.surface }]}
+            onPress={() => setPumpRoomExpanded(!pumpRoomExpanded)}
+          >
             <View style={styles.expandableCardLeft}>
               <Feather name="settings" size={20} color={BrandColors.azureBlue} />
               <ThemedText style={styles.expandableCardText}>Pump Room Checklist</ThemedText>
             </View>
-            <Feather name="chevron-right" size={20} color={BrandColors.textSecondary} />
+            <Feather 
+              name={pumpRoomExpanded ? 'chevron-down' : 'chevron-right'} 
+              size={20} 
+              color={BrandColors.textSecondary} 
+            />
           </Pressable>
+          {pumpRoomExpanded && (
+            <View style={[styles.expandedContent, { backgroundColor: theme.surface }]}>
+              {pumpRoomChecklistItems.map((item) => (
+                <ChecklistItem
+                  key={item}
+                  label={item}
+                  checked={pumpRoomChecklist[item] || false}
+                  onToggle={() => handleTogglePumpRoomItem(item)}
+                />
+              ))}
+              {customPumpRoomTasks.map((item) => (
+                <ChecklistItem
+                  key={item}
+                  label={item}
+                  checked={pumpRoomChecklist[item] || false}
+                  onToggle={() => handleTogglePumpRoomItem(item)}
+                />
+              ))}
+              <View style={styles.addTaskRow}>
+                <TextInput
+                  style={[styles.addTaskInput, { 
+                    backgroundColor: theme.backgroundSecondary,
+                    borderColor: theme.border,
+                    color: theme.text,
+                  }]}
+                  placeholder="Enter task name..."
+                  placeholderTextColor={theme.textSecondary}
+                  value={newPumpRoomTask}
+                  onChangeText={setNewPumpRoomTask}
+                />
+                <Pressable 
+                  style={[styles.addTaskButton, { backgroundColor: BrandColors.azureBlue }]} 
+                  onPress={handleAddPumpRoomTask}
+                >
+                  <ThemedText style={styles.addTaskButtonText}>Add</ThemedText>
+                </Pressable>
+                <Pressable style={styles.cancelTaskButton} onPress={() => setNewPumpRoomTask('')}>
+                  <Feather name="x" size={18} color={theme.textSecondary} />
+                </Pressable>
+              </View>
+            </View>
+          )}
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(400).springify()}>
@@ -374,6 +474,31 @@ export default function PropertyDetailScreen() {
           Complete Property
         </BPButton>
       </View>
+
+      <RepairsNeededModal
+        visible={repairsModalVisible}
+        onClose={() => setRepairsModalVisible(false)}
+        propertyName={stop.propertyName}
+        propertyAddress={stop.address}
+      />
+      <ChemicalOrderModal
+        visible={chemicalModalVisible}
+        onClose={() => setChemicalModalVisible(false)}
+        propertyName={stop.propertyName}
+        propertyAddress={stop.address}
+      />
+      <WindyDayCleanupModal
+        visible={windyModalVisible}
+        onClose={() => setWindyModalVisible(false)}
+        propertyName={stop.propertyName}
+        propertyAddress={stop.address}
+      />
+      <ServiceRepairModal
+        visible={serviceRepairModalVisible}
+        onClose={() => setServiceRepairModalVisible(false)}
+        propertyName={stop.propertyName}
+        propertyAddress={stop.address}
+      />
     </View>
   );
 }
@@ -675,5 +800,35 @@ const styles = StyleSheet.create({
     right: 0,
     padding: Spacing.screenPadding,
     backgroundColor: 'rgba(255,255,255,0.95)',
+  },
+  addTaskRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginTop: Spacing.sm,
+  },
+  addTaskInput: {
+    flex: 1,
+    height: 40,
+    borderRadius: BorderRadius.sm,
+    borderWidth: 1,
+    paddingHorizontal: Spacing.md,
+    fontSize: 14,
+  },
+  addTaskButton: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.sm,
+  },
+  addTaskButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  cancelTaskButton: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

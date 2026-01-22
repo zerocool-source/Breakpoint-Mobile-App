@@ -17,7 +17,7 @@ import Animated, { FadeInDown, ZoomIn } from 'react-native-reanimated';
 
 import { ThemedText } from '@/components/ThemedText';
 import { BPButton } from '@/components/BPButton';
-import { LightBubbleBackground } from '@/components/LightBubbleBackground';
+import { BubbleBackground } from '@/components/BubbleBackground';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
 import { mockProperties } from '@/lib/mockData';
@@ -175,7 +175,7 @@ export default function EmergencyScreen() {
   const resolvedCount = emergencyHistory.filter(e => e.status === 'resolved').length;
 
   return (
-    <LightBubbleBackground bubbleCount={12}>
+    <BubbleBackground bubbleCount={12}>
       <View style={[styles.header, { paddingTop: insets.top + Spacing.md }]}>
         <View style={styles.headerContent}>
           <View>
@@ -382,7 +382,7 @@ export default function EmergencyScreen() {
           </Animated.View>
         </View>
       </Modal>
-    </LightBubbleBackground>
+    </BubbleBackground>
   );
 }
 

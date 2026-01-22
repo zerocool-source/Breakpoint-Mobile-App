@@ -71,14 +71,22 @@ client/
 - **Bottom Tabs**: Home, Queue, Estimates, Jobs, Profile
 
 ## Supervisor Features
-- **Overview**: Team dashboard, assignments overview
-- **Activity**: Team activity feed
-- **Assign**: Assignment management
+- **Home Screen**: Team dashboard with Activity Ticker, weekly metrics, Team Tracker, QC inspections
+  - Team Tracker: View all technicians with status (Active/Running Behind/Offline) and progress
+  - Click technician to see Assignment Breakdown modal with route details
+- **Activity**: Team activity feed with live updates
+- **Assign**: Assignment management with CreateAssignmentModal
 - **QC Inspections**: Commercial pool inspection checklists (63 items, 10 categories)
   - Categories: Access, Water Quality, Enclosure & Fencing, Shell & Components, Restrooms, Recirculation Equipment, Circulation Control, Safety Equipment & Signage, Employees & Incident Response, Closure Conditions
   - View all inspections with inspector name, role, property, date, status
   - Progress tracking with completion percentage
   - Expandable/collapsible category sections
+  - Property selection required before starting new inspection
+- **Team Tracker Modal Features**:
+  - Summary stats: Total, Completed, Not Done, Need Help
+  - Today's Route: Property stops with status badges (Done, Current, Upcoming)
+  - Create Assignment button opens CreateAssignmentModal
+  - Send Message button opens chat with technician
 - **Profile**: User info, settings, sign out
 - **Bottom Tabs**: Overview, Activity, Assign, QC, Profile
 
@@ -87,6 +95,11 @@ client/
 - **Backend**: `npm run server:dev` (port 5000)
 
 ## Recent Changes
+- January 22, 2026: Fixed Team Tracker - Assignment Breakdown modal now expands properly with ScrollView
+- January 22, 2026: Added Today's Route section showing technician property stops with status
+- January 22, 2026: Connected Create Assignment button to CreateAssignmentModal
+- January 22, 2026: Updated Expo packages to latest compatible versions
+- January 22, 2026: Fixed modal scrolling and safe area handling across all roles
 - January 2026: Added Service Technician app with complete flow
 - January 2026: Updated logo to official Breakpoint "Keeping People Safe" branding
 - Role selection as landing page with 4 distinct role cards

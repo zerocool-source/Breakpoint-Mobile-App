@@ -322,8 +322,8 @@ function AssignmentBreakdownModal({
       animationType="slide"
       onRequestClose={onClose}
     >
-      <View style={styles.modalOverlay}>
-        <View style={[styles.modalContent, { backgroundColor: theme.surface, maxHeight: windowHeight * 0.9 }]}>
+      <Pressable style={styles.modalOverlay} onPress={onClose}>
+        <Pressable style={[styles.modalContent, { backgroundColor: theme.surface, minHeight: '70%', maxHeight: windowHeight * 0.9 }]} onPress={(e) => e.stopPropagation()}>
           <View style={styles.modalHeader}>
             <View style={styles.modalHeaderLeft}>
               <View style={[styles.techAvatarLarge, { backgroundColor: BrandColors.azureBlue }]}>
@@ -432,8 +432,8 @@ function AssignmentBreakdownModal({
               </Pressable>
             </View>
           </ScrollView>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }

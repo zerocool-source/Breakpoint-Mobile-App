@@ -284,6 +284,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 2,
+    color: '#000000',
   },
   roleSubtitle: {
     fontSize: 13,

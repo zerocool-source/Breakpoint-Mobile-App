@@ -2,13 +2,13 @@ import React, { useState } from 'react';
 import { View, StyleSheet, Pressable, ScrollView, Platform, Modal } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { ThemedText } from '@/components/ThemedText';
 import { Avatar } from '@/components/Avatar';
+import { BubbleBackground } from '@/components/BubbleBackground';
 import { QuickActionButton } from '@/components/QuickActionButton';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/hooks/useTheme';
@@ -323,9 +323,8 @@ export default function SupervisorHomeScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.backgroundRoot }]}>
-      <LinearGradient
-        colors={['#1a237e', '#283593', '#3949ab']}
+    <BubbleBackground bubbleCount={18}>
+      <View
         style={[styles.header, { paddingTop: insets.top + Spacing.md }]}
       >
         <View style={styles.headerContent}>
@@ -347,7 +346,7 @@ export default function SupervisorHomeScreen() {
           <Feather name="map-pin" size={14} color="#FFFFFF" />
           <ThemedText style={styles.regionText}>{supervisorInfo.region}</ThemedText>
         </View>
-      </LinearGradient>
+      </View>
 
       <ScrollView
         style={styles.scrollView}
@@ -528,7 +527,7 @@ export default function SupervisorHomeScreen() {
         propertyName={defaultProperty.name}
         propertyAddress={defaultProperty.address}
       />
-    </View>
+    </BubbleBackground>
   );
 }
 

@@ -14,6 +14,7 @@ import { Feather } from '@expo/vector-icons';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 import { ThemedText } from '@/components/ThemedText';
 import { BPButton } from '@/components/BPButton';
+import { BubbleBackground } from '@/components/BubbleBackground';
 import { useAuth, UserRole } from '@/context/AuthContext';
 import { BrandColors, BorderRadius, Spacing } from '@/constants/theme';
 
@@ -90,7 +91,7 @@ export default function LoginScreen({ onBack }: LoginScreenProps) {
   };
 
   return (
-    <View style={styles.container}>
+    <BubbleBackground bubbleCount={15}>
       <KeyboardAwareScrollViewCompat
         contentContainerStyle={[
           styles.content,
@@ -177,7 +178,7 @@ export default function LoginScreen({ onBack }: LoginScreenProps) {
           </ThemedText>
         </Animated.View>
       </KeyboardAwareScrollViewCompat>
-    </View>
+    </BubbleBackground>
   );
 }
 

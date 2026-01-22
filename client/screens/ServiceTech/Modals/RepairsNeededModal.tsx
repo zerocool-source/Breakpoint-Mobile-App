@@ -13,7 +13,7 @@ import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 
 import { ThemedText } from '@/components/ThemedText';
-import { VoiceRecorderButton } from '@/components/VoiceRecorderButton';
+import { DualVoiceInput } from '@/components/DualVoiceInput';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing } from '@/constants/theme';
 
@@ -47,7 +47,10 @@ export function RepairsNeededModal({
     onClose();
   };
 
+  const [audioRecording, setAudioRecording] = useState<{ uri: string; duration: number } | null>(null);
+
   const handleVoiceRecordingComplete = (uri: string, duration: number) => {
+    setAudioRecording({ uri, duration });
     console.log('Voice recording saved:', uri, 'duration:', duration);
   };
 
@@ -142,25 +145,13 @@ export function RepairsNeededModal({
             </Pressable>
 
             <View style={styles.inputSection}>
-              <View style={styles.labelRow}>
-                <ThemedText style={styles.inputLabel}>Describe the Issue *</ThemedText>
-                <VoiceRecorderButton 
-                  compact 
-                  onRecordingComplete={handleVoiceRecordingComplete}
-                />
-              </View>
-              <View style={[styles.textAreaContainer, { borderColor: theme.border }]}>
-                <TextInput
-                  style={[styles.textArea, { color: theme.text }]}
-                  placeholder="Tap the voice button or type the repair needed..."
-                  placeholderTextColor={theme.textSecondary}
-                  value={issueDescription}
-                  onChangeText={setIssueDescription}
-                  multiline
-                  numberOfLines={6}
-                  textAlignVertical="top"
-                />
-              </View>
+              <ThemedText style={styles.inputLabel}>Describe the Issue *</ThemedText>
+              <DualVoiceInput
+                value={issueDescription}
+                onTextChange={setIssueDescription}
+                onAudioRecorded={handleVoiceRecordingComplete}
+                placeholder="Describe the repair needed..."
+              />
             </View>
 
             <View style={styles.photosSection}>
@@ -193,10 +184,10 @@ export function RepairsNeededModal({
               style={[
                 styles.submitButton,
                 { backgroundColor: BrandColors.azureBlue },
-                !issueDescription.trim() && styles.submitButtonDisabled,
+                (!issueDescription.trim() && !audioRecording) && styles.submitButtonDisabled,
               ]}
               onPress={handleSubmit}
-              disabled={!issueDescription.trim()}
+              disabled={!issueDescription.trim() && !audioRecording}
             >
               <ThemedText style={styles.submitButtonText}>Submit Repair Request</ThemedText>
             </Pressable>

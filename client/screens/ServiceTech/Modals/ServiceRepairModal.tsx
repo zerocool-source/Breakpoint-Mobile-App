@@ -7,16 +7,13 @@ import {
   TextInput,
   ScrollView,
   Platform,
-  Switch,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { Picker } from '@react-native-picker/picker';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { ThemedText } from '@/components/ThemedText';
-import { BPButton } from '@/components/BPButton';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing } from '@/constants/theme';
 
@@ -27,19 +24,20 @@ interface ServiceRepairModalProps {
   propertyAddress: string;
 }
 
-const REPAIR_TYPES = [
-  'Replaced O-ring',
-  'Adjusted valve',
-  'Tightened fitting',
-  'Replaced gauge',
-  'Cleaned strainer',
-  'Minor plumbing',
-  'Other',
+interface Product {
+  id: string;
+  name: string;
+  sku: string;
+  added: boolean;
+}
+
+const AVAILABLE_PRODUCTS: Product[] = [
+  { id: '1', name: '1/2HP - 3HP Complete Hardware', sku: 'SWBSW21123', added: false },
+  { id: '2', name: '120W Chlorking Lamp/Bulb Amalgam Sentry', sku: 'CHKLA120W185SP', added: false },
+  { id: '3', name: '2 hp Single Speed Pentair Motor replacement Comment', sku: '', added: false },
+  { id: '4', name: 'Pool Filter Cartridge', sku: 'PFC-2400', added: false },
+  { id: '5', name: 'O-Ring Kit Assortment', sku: 'ORK-100', added: false },
 ];
-
-const PARTS_USED = ['O-rings', 'Gaskets', 'Fittings', 'Clips', 'Screws', 'None'];
-
-const PART_SOURCES = ['From truck', 'Property supply', 'None needed'];
 
 export function ServiceRepairModal({
   visible,
@@ -50,42 +48,15 @@ export function ServiceRepairModal({
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
 
-  const [repairType, setRepairType] = useState('');
-  const [selectedParts, setSelectedParts] = useState<string[]>([]);
-  const [partSource, setPartSource] = useState('From truck');
-  const [timeSpent, setTimeSpent] = useState(15);
   const [issueDescription, setIssueDescription] = useState('');
-  const [billable, setBillable] = useState(false);
-  const [beforePhotos, setBeforePhotos] = useState<string[]>([]);
-  const [afterPhotos, setAfterPhotos] = useState<string[]>([]);
-
-  const handleTogglePart = (part: string) => {
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-    if (part === 'None') {
-      setSelectedParts((prev) => (prev.includes('None') ? [] : ['None']));
-    } else {
-      setSelectedParts((prev) => {
-        const withoutNone = prev.filter((p) => p !== 'None');
-        return withoutNone.includes(part)
-          ? withoutNone.filter((p) => p !== part)
-          : [...withoutNone, part];
-      });
-    }
-  };
-
-  const handleTimeChange = (delta: number) => {
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-    setTimeSpent((prev) => Math.max(0, prev + delta));
-  };
+  const [products, setProducts] = useState(AVAILABLE_PRODUCTS);
 
   const handleSubmit = () => {
     if (Platform.OS !== 'web') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
+    setIssueDescription('');
+    setProducts(AVAILABLE_PRODUCTS);
     onClose();
   };
 
@@ -107,6 +78,21 @@ export function ServiceRepairModal({
     }
   };
 
+  const handleAddProduct = () => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+  };
+
+  const handleToggleProduct = (productId: string) => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    setProducts(products.map(p => 
+      p.id === productId ? { ...p, added: !p.added } : p
+    ));
+  };
+
   return (
     <Modal
       visible={visible}
@@ -115,30 +101,32 @@ export function ServiceRepairModal({
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
-        <LinearGradient
-          colors={['#FFFFFF', '#E3F2FD', '#FFF3E0', '#FFFFFF']}
-          locations={[0, 0.3, 0.7, 1]}
-          style={[styles.modalContainer, { paddingBottom: insets.bottom + Spacing.lg }]}
-        >
-          <View style={[styles.header, { backgroundColor: BrandColors.azureBlue }]}>
+        <View style={[styles.modalContainer, { backgroundColor: theme.surface, paddingBottom: insets.bottom + Spacing.lg }]}>
+          <LinearGradient
+            colors={['#4A90D9', '#5B9FE8', '#6BADE8']}
+            style={styles.header}
+          >
             <View style={styles.headerContent}>
               <View style={styles.headerIconContainer}>
                 <Feather name="tool" size={24} color="#FFFFFF" />
               </View>
-              <View style={styles.headerTextContainer}>
+              <View>
                 <ThemedText style={styles.headerTitle}>Service Repair</ThemedText>
-                <ThemedText style={styles.headerSubtitle} numberOfLines={1}>
-                  {propertyName}
-                </ThemedText>
-                <ThemedText style={styles.headerAddress} numberOfLines={1}>
-                  {propertyAddress}
-                </ThemedText>
+                <ThemedText style={styles.headerSubtitle}>Log repair needs</ThemedText>
               </View>
             </View>
             <Pressable style={styles.closeButton} onPress={onClose}>
               <Feather name="x" size={24} color="#FFFFFF" />
             </Pressable>
-          </View>
+          </LinearGradient>
+
+          <LinearGradient
+            colors={['#5B9FE8', '#6BADE8']}
+            style={styles.propertyHeader}
+          >
+            <ThemedText style={styles.propertyName}>{propertyName}</ThemedText>
+            <ThemedText style={styles.propertyAddress}>{propertyAddress}</ThemedText>
+          </LinearGradient>
 
           <ScrollView
             style={styles.scrollView}
@@ -146,171 +134,107 @@ export function ServiceRepairModal({
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.inputSection}>
-              <ThemedText style={styles.inputLabel}>Repair Type *</ThemedText>
-              <View style={[styles.pickerContainer, { borderColor: theme.border }]}>
-                <Picker
-                  selectedValue={repairType}
-                  onValueChange={(value: string) => setRepairType(value)}
-                  style={[styles.picker, { color: theme.text }]}
-                >
-                  <Picker.Item label="Select Repair Type" value="" color={theme.textSecondary} />
-                  {REPAIR_TYPES.map((type) => (
-                    <Picker.Item key={type} label={type} value={type} />
-                  ))}
-                </Picker>
-              </View>
-            </View>
-
-            <View style={styles.inputSection}>
-              <ThemedText style={styles.inputLabel}>Parts Used</ThemedText>
-              <View style={styles.checklistContainer}>
-                {PARTS_USED.map((part) => {
-                  const isSelected = selectedParts.includes(part);
-                  return (
-                    <Pressable
-                      key={part}
-                      style={styles.checklistItem}
-                      onPress={() => handleTogglePart(part)}
-                    >
-                      <View
-                        style={[
-                          styles.checkbox,
-                          { borderColor: isSelected ? BrandColors.azureBlue : theme.border },
-                          isSelected && { backgroundColor: BrandColors.azureBlue },
-                        ]}
-                      >
-                        {isSelected ? <Feather name="check" size={14} color="#FFFFFF" /> : null}
-                      </View>
-                      <ThemedText style={styles.checklistLabel}>{part}</ThemedText>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
-
-            <View style={styles.inputSection}>
-              <ThemedText style={styles.inputLabel}>Part Source</ThemedText>
-              <View style={[styles.pickerContainer, { borderColor: theme.border }]}>
-                <Picker
-                  selectedValue={partSource}
-                  onValueChange={(value: string) => setPartSource(value)}
-                  style={[styles.picker, { color: theme.text }]}
-                >
-                  {PART_SOURCES.map((source) => (
-                    <Picker.Item key={source} label={source} value={source} />
-                  ))}
-                </Picker>
-              </View>
-            </View>
-
-            <View style={styles.inputSection}>
-              <ThemedText style={styles.inputLabel}>Time Spent (minutes)</ThemedText>
-              <View style={styles.timeControls}>
-                <Pressable
-                  style={[styles.timeButton, { backgroundColor: theme.backgroundSecondary }]}
-                  onPress={() => handleTimeChange(-5)}
-                >
-                  <Feather name="minus" size={20} color={theme.text} />
-                </Pressable>
-                <ThemedText style={styles.timeValue}>{timeSpent}</ThemedText>
-                <Pressable
-                  style={[styles.timeButton, { backgroundColor: theme.backgroundSecondary }]}
-                  onPress={() => handleTimeChange(5)}
-                >
-                  <Feather name="plus" size={20} color={theme.text} />
+              <View style={styles.labelRow}>
+                <ThemedText style={styles.inputLabel}>ISSUE DESCRIPTION</ThemedText>
+                <Pressable style={styles.voiceButton} onPress={handleVoiceInput}>
+                  <Feather name="mic" size={16} color="#FFFFFF" />
+                  <ThemedText style={styles.voiceButtonText}>Voice</ThemedText>
                 </Pressable>
               </View>
-            </View>
-
-            <View style={styles.inputSection}>
-              <ThemedText style={styles.inputLabel}>Description</ThemedText>
               <View style={[styles.textAreaContainer, { borderColor: theme.border }]}>
                 <TextInput
                   style={[styles.textArea, { color: theme.text }]}
-                  placeholder="Describe the issue and repair work..."
+                  placeholder="Describe the issue found, what needs repair, observations from inspection..."
                   placeholderTextColor={theme.textSecondary}
                   value={issueDescription}
                   onChangeText={setIssueDescription}
                   multiline
-                  numberOfLines={4}
+                  numberOfLines={6}
                   textAlignVertical="top"
                 />
-                <Pressable style={styles.voiceButton} onPress={handleVoiceInput}>
-                  <Feather name="mic" size={20} color={BrandColors.azureBlue} />
+              </View>
+            </View>
+
+            <View style={styles.photosSection}>
+              <View style={styles.photoHeader}>
+                <ThemedText style={styles.photoLabel}>BEFORE PHOTOS</ThemedText>
+                <Pressable style={styles.addPhotoButton} onPress={handleAddBeforePhoto}>
+                  <Feather name="camera" size={16} color="#FFFFFF" />
+                  <ThemedText style={styles.addPhotoButtonText}>Add Before</ThemedText>
                 </Pressable>
               </View>
+              <View style={[styles.photoPlaceholder, { backgroundColor: BrandColors.vividTangerine + '15' }]}>
+                <Feather name="camera" size={24} color={BrandColors.vividTangerine + '60'} />
+                <ThemedText style={[styles.noPhotosText, { color: BrandColors.vividTangerine }]}>
+                  No before photos
+                </ThemedText>
+              </View>
             </View>
 
             <View style={styles.photosSection}>
-              <ThemedText style={styles.inputLabel}>Before Photos</ThemedText>
-              <View style={styles.photoPreviewRow}>
-                {beforePhotos.length === 0 ? (
-                  <ThemedText style={[styles.noPhotosText, { color: theme.textSecondary }]}>
-                    No photos added
-                  </ThemedText>
-                ) : null}
+              <View style={styles.photoHeader}>
+                <ThemedText style={styles.photoLabel}>AFTER PHOTOS</ThemedText>
+                <Pressable style={[styles.addPhotoButton, { backgroundColor: BrandColors.emerald }]} onPress={handleAddAfterPhoto}>
+                  <Feather name="camera" size={16} color="#FFFFFF" />
+                  <ThemedText style={styles.addPhotoButtonText}>Add After</ThemedText>
+                </Pressable>
               </View>
-              <Pressable
-                style={[styles.addPhotoButton, { backgroundColor: BrandColors.vividTangerine }]}
-                onPress={handleAddBeforePhoto}
-              >
-                <Feather name="camera" size={18} color="#FFFFFF" />
-                <ThemedText style={styles.addPhotoButtonText}>Add Before</ThemedText>
-              </Pressable>
+              <View style={[styles.photoPlaceholder, { backgroundColor: BrandColors.emerald + '15' }]}>
+                <Feather name="camera" size={24} color={BrandColors.emerald + '60'} />
+                <ThemedText style={[styles.noPhotosText, { color: BrandColors.emerald }]}>
+                  No after photos
+                </ThemedText>
+              </View>
             </View>
 
-            <View style={styles.photosSection}>
-              <ThemedText style={styles.inputLabel}>After Photos</ThemedText>
-              <View style={styles.photoPreviewRow}>
-                {afterPhotos.length === 0 ? (
-                  <ThemedText style={[styles.noPhotosText, { color: theme.textSecondary }]}>
-                    No photos added
-                  </ThemedText>
-                ) : null}
+            <View style={styles.productsSection}>
+              <View style={styles.productHeader}>
+                <ThemedText style={styles.productLabel}>PRODUCTS/PARTS NEEDED</ThemedText>
+                <Pressable style={[styles.addProductButton, { backgroundColor: BrandColors.azureBlue }]} onPress={handleAddProduct}>
+                  <Feather name="plus" size={16} color="#FFFFFF" />
+                  <ThemedText style={styles.addProductButtonText}>Add Product</ThemedText>
+                </Pressable>
               </View>
-              <Pressable
-                style={[styles.addPhotoButton, { backgroundColor: BrandColors.vividTangerine }]}
-                onPress={handleAddAfterPhoto}
-              >
-                <Feather name="camera" size={18} color="#FFFFFF" />
-                <ThemedText style={styles.addPhotoButtonText}>Add After</ThemedText>
-              </Pressable>
-            </View>
-
-            <View style={styles.billableSection}>
-              <View style={styles.billableRow}>
-                <ThemedText style={styles.inputLabel}>Billable</ThemedText>
-                <View style={styles.billableToggle}>
-                  <ThemedText style={[styles.billableLabel, { color: theme.textSecondary }]}>
-                    {billable ? 'Yes' : 'No'}
-                  </ThemedText>
-                  <Switch
-                    value={billable}
-                    onValueChange={(value) => {
-                      if (Platform.OS !== 'web') {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      }
-                      setBillable(value);
-                    }}
-                    trackColor={{ false: theme.border, true: BrandColors.success }}
-                    thumbColor="#FFFFFF"
-                  />
-                </View>
+              <View style={[styles.productsList, { borderColor: theme.border }]}>
+                {products.map((product) => (
+                  <Pressable
+                    key={product.id}
+                    style={[styles.productItem, { borderBottomColor: theme.border }]}
+                    onPress={() => handleToggleProduct(product.id)}
+                  >
+                    <View style={styles.productInfo}>
+                      <ThemedText style={styles.productName}>{product.name}</ThemedText>
+                      {product.sku ? (
+                        <ThemedText style={[styles.productSku, { color: BrandColors.azureBlue }]}>
+                          SKU: {product.sku}
+                        </ThemedText>
+                      ) : (
+                        <ThemedText style={[styles.productSku, { color: BrandColors.azureBlue }]}>
+                          SKU:
+                        </ThemedText>
+                      )}
+                    </View>
+                    <Feather 
+                      name={product.added ? "check" : "plus"} 
+                      size={20} 
+                      color={product.added ? BrandColors.emerald : BrandColors.azureBlue} 
+                    />
+                  </Pressable>
+                ))}
               </View>
             </View>
           </ScrollView>
 
           <View style={styles.footer}>
-            <BPButton
-              variant="primary"
+            <Pressable
+              style={[styles.submitButton, { backgroundColor: '#8E99A4' }]}
               onPress={handleSubmit}
-              fullWidth
-              disabled={!repairType}
             >
-              Submit Service Repair
-            </BPButton>
+              <Feather name="check" size={20} color="#FFFFFF" />
+              <ThemedText style={styles.submitButtonText}>Submit Service Repair</ThemedText>
+            </Pressable>
           </View>
-        </LinearGradient>
+        </View>
       </View>
     </Modal>
   );
@@ -325,34 +249,29 @@ const styles = StyleSheet.create({
   modalContainer: {
     borderTopLeftRadius: BorderRadius.xl,
     borderTopRightRadius: BorderRadius.xl,
-    maxHeight: '90%',
-    overflow: 'hidden',
+    maxHeight: '95%',
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: Spacing.lg,
+    paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.lg,
     borderTopLeftRadius: BorderRadius.xl,
     borderTopRightRadius: BorderRadius.xl,
   },
   headerContent: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    flex: 1,
-    gap: Spacing.sm,
+    alignItems: 'center',
+    gap: Spacing.md,
   },
   headerIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: BorderRadius.full,
+    width: 44,
+    height: 44,
+    borderRadius: BorderRadius.md,
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  headerTextContainer: {
-    flex: 1,
   },
   headerTitle: {
     fontSize: 18,
@@ -360,14 +279,8 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   headerSubtitle: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: 'rgba(255,255,255,0.9)',
-    marginTop: 2,
-  },
-  headerAddress: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.7)',
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.8)',
     marginTop: 2,
   },
   closeButton: {
@@ -376,6 +289,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  propertyHeader: {
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.lg,
+  },
+  propertyName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  propertyAddress: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.8)',
+  },
   scrollView: {
     flex: 1,
   },
@@ -383,119 +310,147 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
   },
   inputSection: {
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.xl,
   },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: '600',
+  labelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: Spacing.sm,
   },
-  pickerContainer: {
-    borderWidth: 1,
-    borderRadius: BorderRadius.md,
-    overflow: 'hidden',
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
-  picker: {
-    height: 50,
-  },
-  checklistContainer: {
-    gap: Spacing.sm,
-  },
-  checklistItem: {
+  voiceButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
-    paddingVertical: Spacing.xs,
+    backgroundColor: BrandColors.azureBlue,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.full,
+    gap: Spacing.xs,
   },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: BorderRadius.xs,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checklistLabel: {
-    fontSize: 15,
-  },
-  timeControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.lg,
-  },
-  timeButton: {
-    width: 44,
-    height: 44,
-    borderRadius: BorderRadius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  timeValue: {
-    fontSize: 24,
+  voiceButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
     fontWeight: '600',
-    minWidth: 60,
-    textAlign: 'center',
   },
   textAreaContainer: {
     borderWidth: 1,
     borderRadius: BorderRadius.md,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
   },
   textArea: {
-    flex: 1,
     padding: Spacing.md,
     fontSize: 15,
-    minHeight: 100,
-  },
-  voiceButton: {
-    padding: Spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
+    minHeight: 120,
   },
   photosSection: {
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.xl,
   },
-  photoPreviewRow: {
+  photoHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: Spacing.sm,
   },
-  noPhotosText: {
-    fontSize: 13,
-    fontStyle: 'italic',
+  photoLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   addPhotoButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
+    backgroundColor: BrandColors.vividTangerine,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.full,
+    gap: Spacing.xs,
   },
   addPhotoButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
     color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
   },
-  billableSection: {
+  photoPlaceholder: {
+    padding: Spacing.xl,
+    borderRadius: BorderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+  },
+  noPhotosText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  productsSection: {
     marginBottom: Spacing.lg,
   },
-  billableRow: {
+  productHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: Spacing.sm,
   },
-  billableToggle: {
+  productLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  addProductButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.full,
+    gap: Spacing.xs,
   },
-  billableLabel: {
+  addProductButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  productsList: {
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    overflow: 'hidden',
+  },
+  productItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: Spacing.md,
+    borderBottomWidth: 1,
+  },
+  productInfo: {
+    flex: 1,
+    marginRight: Spacing.md,
+  },
+  productName: {
     fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  productSku: {
+    fontSize: 12,
   },
   footer: {
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.1)',
+  },
+  submitButton: {
+    flexDirection: 'row',
+    paddingVertical: Spacing.lg,
+    borderRadius: BorderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+  },
+  submitButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

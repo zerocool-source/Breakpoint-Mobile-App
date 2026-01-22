@@ -10,12 +10,9 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { Picker } from '@react-native-picker/picker';
 import * as Haptics from 'expo-haptics';
-import { LinearGradient } from 'expo-linear-gradient';
 
 import { ThemedText } from '@/components/ThemedText';
-import { BPButton } from '@/components/BPButton';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing } from '@/constants/theme';
 
@@ -27,53 +24,23 @@ interface WindyDayCleanupModalProps {
   technicianName?: string;
 }
 
-const CLEANUP_TASKS = [
-  'Extra debris removal',
-  'Extended vacuuming',
-  'Filter cleaning',
-  'Surface skimming',
-  'Deck cleaning',
-  'Furniture reset',
-];
-
-const CONDITION_OPTIONS = ['Light wind', 'Moderate wind', 'Heavy wind', 'Storm debris'];
-
 export function WindyDayCleanupModal({
   visible,
   onClose,
   propertyName,
   propertyAddress,
-  technicianName = 'John Smith',
+  technicianName = 'Service Technician',
 }: WindyDayCleanupModalProps) {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
 
-  const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
-  const [timeSpent, setTimeSpent] = useState(15);
-  const [condition, setCondition] = useState('Moderate wind');
   const [notes, setNotes] = useState('');
-  const [photos, setPhotos] = useState<string[]>([]);
-
-  const handleToggleTask = (task: string) => {
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-    setSelectedTasks((prev) =>
-      prev.includes(task) ? prev.filter((t) => t !== task) : [...prev, task]
-    );
-  };
-
-  const handleTimeChange = (delta: number) => {
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-    setTimeSpent((prev) => Math.max(0, prev + delta));
-  };
 
   const handleSubmit = () => {
     if (Platform.OS !== 'web') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
+    setNotes('');
     onClose();
   };
 
@@ -109,20 +76,21 @@ export function WindyDayCleanupModal({
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
-        <LinearGradient
-          colors={['#FFFFFF', '#E3F2FD', '#FFF3E0', '#FFFFFF']}
-          locations={[0, 0.3, 0.7, 1]}
-          style={[styles.modalContainer, { paddingBottom: insets.bottom + Spacing.lg }]}
-        >
-          <View style={[styles.header, { backgroundColor: BrandColors.tropicalTeal }]}>
+        <View style={[styles.modalContainer, { backgroundColor: theme.surface, paddingBottom: insets.bottom + Spacing.lg }]}>
+          <View style={styles.header}>
             <View style={styles.headerContent}>
-              <View style={styles.headerIconContainer}>
-                <Feather name="wind" size={24} color="#FFFFFF" />
+              <View style={[styles.headerIconContainer, { backgroundColor: BrandColors.tropicalTeal + '15' }]}>
+                <Feather name="wind" size={24} color={BrandColors.tropicalTeal} />
               </View>
-              <ThemedText style={styles.headerTitle}>Windy Day Clean Up</ThemedText>
+              <View>
+                <ThemedText style={styles.headerTitle}>Windy Day Clean Up</ThemedText>
+                <ThemedText style={[styles.headerSubtitle, { color: theme.textSecondary }]}>
+                  Log debris removal work
+                </ThemedText>
+              </View>
             </View>
             <Pressable style={styles.closeButton} onPress={onClose}>
-              <Feather name="x" size={24} color="#FFFFFF" />
+              <Feather name="x" size={24} color={theme.text} />
             </Pressable>
           </View>
 
@@ -132,123 +100,55 @@ export function WindyDayCleanupModal({
             showsVerticalScrollIndicator={false}
           >
             <View style={[styles.propertyCard, { backgroundColor: theme.backgroundSecondary }]}>
+              <ThemedText style={[styles.propertyLabel, { color: BrandColors.azureBlue }]}>PROPERTY</ThemedText>
               <ThemedText style={styles.propertyName}>{propertyName}</ThemedText>
-              <View style={styles.propertyRow}>
-                <Feather name="map-pin" size={14} color={theme.textSecondary} />
-                <ThemedText style={[styles.propertyAddress, { color: theme.textSecondary }]}>
-                  {propertyAddress}
-                </ThemedText>
-              </View>
+              <ThemedText style={[styles.propertyAddress, { color: theme.textSecondary }]}>
+                {propertyAddress}
+              </ThemedText>
+              
               <View style={styles.propertyMetaRow}>
                 <View style={styles.propertyMetaItem}>
-                  <Feather name="user" size={14} color={theme.textSecondary} />
-                  <ThemedText style={[styles.propertyMetaText, { color: theme.textSecondary }]}>
-                    {technicianName}
-                  </ThemedText>
+                  <ThemedText style={[styles.metaLabel, { color: BrandColors.azureBlue }]}>Technician</ThemedText>
+                  <ThemedText style={styles.metaValue}>{technicianName}</ThemedText>
                 </View>
                 <View style={styles.propertyMetaItem}>
-                  <Feather name="clock" size={14} color={theme.textSecondary} />
-                  <ThemedText style={[styles.propertyMetaText, { color: theme.textSecondary }]}>
-                    {currentTime}
-                  </ThemedText>
+                  <ThemedText style={[styles.metaLabel, { color: BrandColors.azureBlue }]}>Time</ThemedText>
+                  <ThemedText style={styles.metaValue}>{currentTime}</ThemedText>
                 </View>
               </View>
             </View>
 
             <View style={styles.inputSection}>
-              <ThemedText style={styles.inputLabel}>Conditions</ThemedText>
-              <View style={[styles.pickerContainer, { borderColor: theme.border }]}>
-                <Picker
-                  selectedValue={condition}
-                  onValueChange={(value: string) => {
-                    if (Platform.OS !== 'web') {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    }
-                    setCondition(value);
-                  }}
-                  style={[styles.picker, { color: theme.text }]}
-                >
-                  {CONDITION_OPTIONS.map((option) => (
-                    <Picker.Item key={option} label={option} value={option} />
-                  ))}
-                </Picker>
-              </View>
-            </View>
-
-            <View style={styles.inputSection}>
-              <ThemedText style={styles.inputLabel}>Cleanup Tasks</ThemedText>
-              <View style={styles.checklistContainer}>
-                {CLEANUP_TASKS.map((task) => {
-                  const isSelected = selectedTasks.includes(task);
-                  return (
-                    <Pressable
-                      key={task}
-                      style={styles.checklistItem}
-                      onPress={() => handleToggleTask(task)}
-                    >
-                      <View
-                        style={[
-                          styles.checkbox,
-                          { borderColor: isSelected ? BrandColors.tropicalTeal : theme.border },
-                          isSelected && { backgroundColor: BrandColors.tropicalTeal },
-                        ]}
-                      >
-                        {isSelected ? <Feather name="check" size={14} color="#FFFFFF" /> : null}
-                      </View>
-                      <ThemedText style={styles.checklistLabel}>{task}</ThemedText>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
-
-            <View style={styles.inputSection}>
-              <ThemedText style={styles.inputLabel}>Time Spent (minutes)</ThemedText>
-              <View style={styles.timeControls}>
-                <Pressable
-                  style={[styles.timeButton, { backgroundColor: theme.backgroundSecondary }]}
-                  onPress={() => handleTimeChange(-5)}
-                >
-                  <Feather name="minus" size={20} color={theme.text} />
-                </Pressable>
-                <ThemedText style={styles.timeValue}>{timeSpent}</ThemedText>
-                <Pressable
-                  style={[styles.timeButton, { backgroundColor: theme.backgroundSecondary }]}
-                  onPress={() => handleTimeChange(5)}
-                >
-                  <Feather name="plus" size={20} color={theme.text} />
+              <View style={styles.labelRow}>
+                <ThemedText style={styles.inputLabel}>Notes (Optional)</ThemedText>
+                <Pressable style={styles.voiceButton} onPress={handleVoiceInput}>
+                  <Feather name="mic" size={16} color="#FFFFFF" />
+                  <ThemedText style={styles.voiceButtonText}>Voice</ThemedText>
                 </Pressable>
               </View>
-            </View>
-
-            <View style={styles.inputSection}>
-              <ThemedText style={styles.inputLabel}>Notes (Optional)</ThemedText>
               <View style={[styles.textAreaContainer, { borderColor: theme.border }]}>
                 <TextInput
                   style={[styles.textArea, { color: theme.text }]}
-                  placeholder="Add any notes about the cleanup..."
+                  placeholder="Describe the cleanup work done (e.g., leaves removed, debris cleared, skimmed pool)..."
                   placeholderTextColor={theme.textSecondary}
                   value={notes}
                   onChangeText={setNotes}
                   multiline
-                  numberOfLines={3}
+                  numberOfLines={6}
                   textAlignVertical="top"
                 />
-                <Pressable style={styles.voiceButton} onPress={handleVoiceInput}>
-                  <Feather name="mic" size={20} color={BrandColors.azureBlue} />
-                </Pressable>
               </View>
             </View>
 
             <View style={styles.photosSection}>
-              <ThemedText style={styles.inputLabel}>Photos</ThemedText>
+              <ThemedText style={styles.inputLabel}>Photos (Optional)</ThemedText>
               <View style={styles.photoButtons}>
                 <Pressable
-                  style={[styles.photoButton, { borderColor: theme.border }]}
+                  style={[styles.photoButton, { borderColor: BrandColors.azureBlue }]}
                   onPress={handleTakePhoto}
                 >
-                  <Feather name="camera" size={24} color={theme.textSecondary} />
-                  <ThemedText style={[styles.photoButtonText, { color: theme.textSecondary }]}>
+                  <Feather name="camera" size={24} color={BrandColors.azureBlue} />
+                  <ThemedText style={[styles.photoButtonText, { color: BrandColors.azureBlue }]}>
                     Take Photo
                   </ThemedText>
                 </Pressable>
@@ -266,15 +166,15 @@ export function WindyDayCleanupModal({
           </ScrollView>
 
           <View style={styles.footer}>
-            <BPButton
-              variant="primary"
+            <Pressable
+              style={[styles.submitButton, { backgroundColor: BrandColors.azureBlue }]}
               onPress={handleSubmit}
-              fullWidth
             >
-              Log Cleanup
-            </BPButton>
+              <Feather name="wind" size={20} color="#FFFFFF" />
+              <ThemedText style={styles.submitButtonText}>Log Cleanup</ThemedText>
+            </Pressable>
           </View>
-        </LinearGradient>
+        </View>
       </View>
     </Modal>
   );
@@ -289,35 +189,36 @@ const styles = StyleSheet.create({
   modalContainer: {
     borderTopLeftRadius: BorderRadius.xl,
     borderTopRightRadius: BorderRadius.xl,
-    maxHeight: '90%',
-    overflow: 'hidden',
+    maxHeight: '95%',
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     paddingVertical: Spacing.lg,
     paddingHorizontal: Spacing.lg,
-    borderTopLeftRadius: BorderRadius.xl,
-    borderTopRightRadius: BorderRadius.xl,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.05)',
   },
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
+    gap: Spacing.md,
   },
   headerIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: BorderRadius.full,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    width: 44,
+    height: 44,
+    borderRadius: BorderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#FFFFFF',
+  },
+  headerSubtitle: {
+    fontSize: 13,
+    marginTop: 2,
   },
   closeButton: {
     width: 32,
@@ -332,106 +233,78 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
   },
   propertyCard: {
-    padding: Spacing.md,
+    padding: Spacing.lg,
     borderRadius: BorderRadius.md,
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.xl,
+  },
+  propertyLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+    marginBottom: Spacing.xs,
   },
   propertyName: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     marginBottom: Spacing.xs,
-  },
-  propertyRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    marginBottom: Spacing.sm,
   },
   propertyAddress: {
     fontSize: 14,
+    marginBottom: Spacing.lg,
   },
   propertyMetaRow: {
     flexDirection: 'row',
-    gap: Spacing.lg,
+    justifyContent: 'space-between',
+    paddingTop: Spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.05)',
   },
-  propertyMetaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
+  propertyMetaItem: {},
+  metaLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+    marginBottom: 2,
   },
-  propertyMetaText: {
-    fontSize: 13,
+  metaValue: {
+    fontSize: 15,
+    fontWeight: '500',
   },
   inputSection: {
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.xl,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
   },
   inputLabel: {
     fontSize: 14,
     fontWeight: '600',
-    marginBottom: Spacing.sm,
   },
-  pickerContainer: {
-    borderWidth: 1,
-    borderRadius: BorderRadius.md,
-    overflow: 'hidden',
-  },
-  picker: {
-    height: 50,
-  },
-  checklistContainer: {
-    gap: Spacing.sm,
-  },
-  checklistItem: {
+  voiceButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
-    paddingVertical: Spacing.xs,
+    backgroundColor: BrandColors.vividTangerine,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.full,
+    gap: Spacing.xs,
   },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: BorderRadius.xs,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checklistLabel: {
-    fontSize: 15,
-  },
-  timeControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.lg,
-  },
-  timeButton: {
-    width: 44,
-    height: 44,
-    borderRadius: BorderRadius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  timeValue: {
-    fontSize: 24,
+  voiceButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
     fontWeight: '600',
-    minWidth: 60,
-    textAlign: 'center',
   },
   textAreaContainer: {
     borderWidth: 1,
     borderRadius: BorderRadius.md,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
   },
   textArea: {
-    flex: 1,
     padding: Spacing.md,
     fontSize: 15,
-    minHeight: 80,
-  },
-  voiceButton: {
-    padding: Spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
+    minHeight: 120,
   },
   photosSection: {
     marginBottom: Spacing.lg,
@@ -439,6 +312,7 @@ const styles = StyleSheet.create({
   photoButtons: {
     flexDirection: 'row',
     gap: Spacing.md,
+    marginTop: Spacing.sm,
   },
   photoButton: {
     flex: 1,
@@ -457,7 +331,18 @@ const styles = StyleSheet.create({
   footer: {
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.1)',
+  },
+  submitButton: {
+    flexDirection: 'row',
+    paddingVertical: Spacing.lg,
+    borderRadius: BorderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+  },
+  submitButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

@@ -15,7 +15,7 @@ import { ChatFAB } from '@/components/ChatFAB';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
-import { mockEstimates, mockJobs, mockQueueMetrics } from '@/lib/mockData';
+import { mockEstimates, mockJobs, mockQueueMetrics, mockQuickRepairs, QuickRepair } from '@/lib/mockData';
 
 interface MetricCardProps {
   icon: string;
@@ -168,6 +168,84 @@ function JobCard({ propertyName, jobType, amount, waitingDays, onPress }: JobCar
   );
 }
 
+interface QuickRepairCardProps {
+  repair: QuickRepair;
+  onClaim: (id: string) => void;
+}
+
+function QuickRepairCard({ repair, onClaim }: QuickRepairCardProps) {
+  const { theme } = useTheme();
+  
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'high': return '#FF3B30';
+      case 'medium': return '#D4A017';
+      case 'low': return BrandColors.emerald;
+      default: return theme.textSecondary;
+    }
+  };
+
+  const priorityColor = getPriorityColor(repair.priority);
+
+  const handleClaim = () => {
+    if (Platform.OS !== 'web') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+    onClaim(repair.id);
+  };
+
+  return (
+    <View style={[styles.quickRepairCard, { backgroundColor: theme.surface }]}>
+      <View style={[styles.quickRepairBorder, { backgroundColor: priorityColor }]} />
+      <View style={styles.quickRepairContent}>
+        <View style={styles.quickRepairHeader}>
+          <View style={styles.quickRepairLocation}>
+            <Feather name="map-pin" size={14} color={theme.textSecondary} />
+            <ThemedText style={styles.quickRepairPropertyName}>{repair.propertyName}</ThemedText>
+          </View>
+          <View style={[styles.priorityBadge, { backgroundColor: priorityColor }]}>
+            <ThemedText style={styles.priorityBadgeText}>
+              {repair.priority.charAt(0).toUpperCase() + repair.priority.slice(1)} Priority
+            </ThemedText>
+          </View>
+        </View>
+        
+        <View style={styles.quickRepairDescRow}>
+          <ThemedText style={styles.quickRepairDescription} numberOfLines={2}>
+            {repair.description}
+          </ThemedText>
+          <View style={styles.underBadge}>
+            <ThemedText style={styles.underBadgeText}>Under $500</ThemedText>
+          </View>
+        </View>
+        
+        <ThemedText style={[styles.quickRepairAddress, { color: theme.textSecondary }]}>
+          {repair.address}
+        </ThemedText>
+        
+        <View style={styles.quickRepairFooter}>
+          <View style={styles.quickRepairCostRow}>
+            <Feather name="credit-card" size={14} color={theme.textSecondary} />
+            <ThemedText style={[styles.quickRepairCost, { color: theme.text }]}>
+              ${repair.estimatedCost}
+            </ThemedText>
+            <View style={[styles.statusBadge, { backgroundColor: '#666' }]}>
+              <ThemedText style={styles.statusBadgeText}>Unassigned</ThemedText>
+            </View>
+          </View>
+          <Pressable
+            style={styles.claimButton}
+            onPress={handleClaim}
+          >
+            <Feather name="check-circle" size={16} color="#FFFFFF" />
+            <ThemedText style={styles.claimButtonText}>Claim This Job</ThemedText>
+          </Pressable>
+        </View>
+      </View>
+    </View>
+  );
+}
+
 export default function QueueScreen() {
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
@@ -178,6 +256,8 @@ export default function QueueScreen() {
   const [estimatesExpanded, setEstimatesExpanded] = useState(true);
   const [urgentExpanded, setUrgentExpanded] = useState(true);
   const [partsExpanded, setPartsExpanded] = useState(true);
+  const [quickRepairs, setQuickRepairs] = useState(mockQuickRepairs);
+  const [quickRepairsExpanded, setQuickRepairsExpanded] = useState(true);
 
   const handleChatPress = () => {
     if (Platform.OS !== 'web') {
@@ -186,8 +266,15 @@ export default function QueueScreen() {
     navigation.navigate('Chat');
   };
 
+  const handleClaimRepair = useCallback((id: string) => {
+    setQuickRepairs(prev => prev.map(r => 
+      r.id === id ? { ...r, status: 'claimed' as const, assignedTo: user?.name || 'You' } : r
+    ));
+  }, [user]);
+
   const estimates = mockEstimates.slice(0, 4);
   const urgentJobs = mockJobs.filter(j => j.priority === 'urgent' || j.priority === 'high');
+  const unassignedQuickRepairs = quickRepairs.filter(r => r.status === 'unassigned');
 
   return (
     <BubbleBackground bubbleCount={12}>
@@ -249,6 +336,25 @@ export default function QueueScreen() {
               />
             </View>
           </Animated.View>
+
+          {unassignedQuickRepairs.length > 0 ? (
+            <Animated.View entering={FadeInDown.delay(125).springify()} style={styles.quickRepairsSection}>
+              <View style={styles.quickRepairsHeader}>
+                <Feather name="zap" size={20} color="#FFD700" />
+                <ThemedText style={styles.quickRepairsTitle}>Quick Repairs (Under $500)</ThemedText>
+                <View style={styles.newBadge}>
+                  <ThemedText style={styles.newBadgeText}>New</ThemedText>
+                </View>
+              </View>
+              {unassignedQuickRepairs.map((repair) => (
+                <QuickRepairCard
+                  key={repair.id}
+                  repair={repair}
+                  onClaim={handleClaimRepair}
+                />
+              ))}
+            </Animated.View>
+          ) : null}
 
           <Animated.View entering={FadeInDown.delay(150).springify()}>
             <CollapsibleSection
@@ -488,5 +594,127 @@ const styles = StyleSheet.create({
   emptyStateText: {
     marginTop: Spacing.sm,
     fontSize: 14,
+  },
+  quickRepairsSection: {
+    marginBottom: Spacing.xl,
+  },
+  quickRepairsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+    gap: Spacing.sm,
+  },
+  quickRepairsTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    flex: 1,
+    color: '#FFFFFF',
+  },
+  newBadge: {
+    backgroundColor: BrandColors.tropicalTeal,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.sm,
+  },
+  newBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  quickRepairCard: {
+    flexDirection: 'row',
+    marginBottom: Spacing.md,
+    borderRadius: BorderRadius.md,
+    overflow: 'hidden',
+    ...Shadows.card,
+  },
+  quickRepairBorder: {
+    width: 4,
+  },
+  quickRepairContent: {
+    flex: 1,
+    padding: Spacing.md,
+  },
+  quickRepairHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.sm,
+  },
+  quickRepairLocation: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    flex: 1,
+  },
+  quickRepairPropertyName: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  priorityBadge: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.sm,
+  },
+  priorityBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  quickRepairDescRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
+    marginBottom: Spacing.xs,
+  },
+  quickRepairDescription: {
+    fontSize: 14,
+    fontWeight: '600',
+    flex: 1,
+    lineHeight: 20,
+  },
+  underBadge: {
+    backgroundColor: BrandColors.emerald,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.sm,
+  },
+  underBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  quickRepairAddress: {
+    fontSize: 13,
+    marginBottom: Spacing.sm,
+  },
+  quickRepairFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: Spacing.sm,
+  },
+  quickRepairCostRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  quickRepairCost: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  claimButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    backgroundColor: BrandColors.tropicalTeal,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.md,
+  },
+  claimButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
   },
 });

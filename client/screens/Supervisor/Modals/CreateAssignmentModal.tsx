@@ -34,6 +34,8 @@ export function CreateAssignmentModal({ visible, onClose }: CreateAssignmentModa
   const [selectedProperty, setSelectedProperty] = useState('');
   const [priority, setPriority] = useState<AssignmentPriority>('MEDIUM');
   const [notes, setNotes] = useState('');
+  const [isAssistAssignment, setIsAssistAssignment] = useState(false);
+  const [techNeedingHelp, setTechNeedingHelp] = useState('');
 
   const handleSubmit = () => {
     if (Platform.OS !== 'web') {
@@ -44,7 +46,19 @@ export function CreateAssignmentModal({ visible, onClose }: CreateAssignmentModa
     setSelectedProperty('');
     setPriority('MEDIUM');
     setNotes('');
+    setIsAssistAssignment(false);
+    setTechNeedingHelp('');
     onClose();
+  };
+
+  const handleAssistToggle = () => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    setIsAssistAssignment(!isAssistAssignment);
+    if (isAssistAssignment) {
+      setTechNeedingHelp('');
+    }
   };
 
   const handleTakePhoto = () => {
@@ -79,7 +93,12 @@ export function CreateAssignmentModal({ visible, onClose }: CreateAssignmentModa
     }
   };
 
-  const isFormValid = assignmentType.trim() && selectedTechnician && selectedProperty;
+  const isFormValid = assignmentType.trim() && selectedTechnician && selectedProperty && 
+    (!isAssistAssignment || (isAssistAssignment && techNeedingHelp && techNeedingHelp !== selectedTechnician));
+  
+  const availableTechsToHelp = mockTechnicians.filter(tech => tech.id !== selectedTechnician);
+  const selectedHelperName = mockTechnicians.find(t => t.id === selectedTechnician)?.name || '';
+  const selectedNeedingHelpName = mockTechnicians.find(t => t.id === techNeedingHelp)?.name || '';
 
   return (
     <Modal
@@ -121,11 +140,18 @@ export function CreateAssignmentModal({ visible, onClose }: CreateAssignmentModa
             </View>
 
             <View style={styles.inputSection}>
-              <ThemedText style={styles.inputLabel}>Technician *</ThemedText>
+              <ThemedText style={styles.inputLabel}>
+                {isAssistAssignment ? 'Helper Technician *' : 'Technician *'}
+              </ThemedText>
               <View style={[styles.pickerContainer, { borderColor: theme.border }]}>
                 <Picker
                   selectedValue={selectedTechnician}
-                  onValueChange={(value: string) => setSelectedTechnician(value)}
+                  onValueChange={(value: string) => {
+                    setSelectedTechnician(value);
+                    if (value === techNeedingHelp) {
+                      setTechNeedingHelp('');
+                    }
+                  }}
                   style={[styles.picker, { color: theme.text }]}
                 >
                   <Picker.Item label="Select technician..." value="" color={theme.textSecondary} />
@@ -135,6 +161,64 @@ export function CreateAssignmentModal({ visible, onClose }: CreateAssignmentModa
                 </Picker>
               </View>
             </View>
+
+            <Pressable
+              style={[
+                styles.assistToggle,
+                {
+                  backgroundColor: isAssistAssignment ? BrandColors.vividTangerine : theme.backgroundSecondary,
+                  borderColor: BrandColors.vividTangerine,
+                },
+              ]}
+              onPress={handleAssistToggle}
+            >
+              <Feather
+                name="users"
+                size={20}
+                color={isAssistAssignment ? '#FFFFFF' : BrandColors.vividTangerine}
+              />
+              <ThemedText
+                style={[
+                  styles.assistToggleText,
+                  { color: isAssistAssignment ? '#FFFFFF' : BrandColors.vividTangerine },
+                ]}
+              >
+                Assign to Help Another Tech
+              </ThemedText>
+              <Feather
+                name={isAssistAssignment ? 'check-circle' : 'circle'}
+                size={20}
+                color={isAssistAssignment ? '#FFFFFF' : BrandColors.vividTangerine}
+              />
+            </Pressable>
+
+            {isAssistAssignment ? (
+              <View style={styles.inputSection}>
+                <ThemedText style={styles.inputLabel}>Technician Needing Help *</ThemedText>
+                <View style={[styles.pickerContainer, { borderColor: BrandColors.vividTangerine }]}>
+                  <Picker
+                    selectedValue={techNeedingHelp}
+                    onValueChange={(value: string) => setTechNeedingHelp(value)}
+                    style={[styles.picker, { color: theme.text }]}
+                  >
+                    <Picker.Item label="Select technician to assist..." value="" color={theme.textSecondary} />
+                    {availableTechsToHelp.map((tech) => (
+                      <Picker.Item key={tech.id} label={tech.name} value={tech.id} />
+                    ))}
+                  </Picker>
+                </View>
+                {selectedTechnician && techNeedingHelp ? (
+                  <View style={[styles.assistSummary, { backgroundColor: `${BrandColors.vividTangerine}15` }]}>
+                    <Feather name="arrow-right" size={16} color={BrandColors.vividTangerine} />
+                    <ThemedText style={[styles.assistSummaryText, { color: theme.text }]}>
+                      <ThemedText style={{ fontWeight: '600' }}>{selectedHelperName}</ThemedText>
+                      {' will assist '}
+                      <ThemedText style={{ fontWeight: '600' }}>{selectedNeedingHelpName}</ThemedText>
+                    </ThemedText>
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
 
             <View style={styles.inputSection}>
               <ThemedText style={styles.inputLabel}>Property *</ThemedText>
@@ -342,5 +426,33 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.md,
     borderTopWidth: 1,
     borderTopColor: 'rgba(0,0,0,0.1)',
+  },
+  assistToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1.5,
+    marginBottom: Spacing.lg,
+  },
+  assistToggleText: {
+    fontSize: 14,
+    fontWeight: '600',
+    flex: 1,
+  },
+  assistSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    marginTop: Spacing.sm,
+  },
+  assistSummaryText: {
+    fontSize: 14,
+    flex: 1,
   },
 });

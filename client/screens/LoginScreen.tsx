@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { View, StyleSheet, TextInput, Dimensions, Alert, Platform, Pressable } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -52,12 +51,12 @@ export default function LoginScreen({ onBack }: LoginScreenProps) {
   const roleName = selectedRole ? roleNames[selectedRole] : 'User';
 
   const emailBorderStyle = useAnimatedStyle(() => ({
-    borderColor: emailFocus.value === 1 ? roleColor : 'rgba(255,255,255,0.2)',
+    borderColor: emailFocus.value === 1 ? roleColor : BrandColors.border,
     borderWidth: emailFocus.value === 1 ? 2 : 1,
   }));
 
   const passwordBorderStyle = useAnimatedStyle(() => ({
-    borderColor: passwordFocus.value === 1 ? roleColor : 'rgba(255,255,255,0.2)',
+    borderColor: passwordFocus.value === 1 ? roleColor : BrandColors.border,
     borderWidth: passwordFocus.value === 1 ? 2 : 1,
   }));
 
@@ -91,10 +90,7 @@ export default function LoginScreen({ onBack }: LoginScreenProps) {
   };
 
   return (
-    <LinearGradient
-      colors={['#1a1a2e', '#16213e', '#1a1a2e']}
-      style={styles.container}
-    >
+    <View style={styles.container}>
       <KeyboardAwareScrollViewCompat
         contentContainerStyle={[
           styles.content,
@@ -107,7 +103,7 @@ export default function LoginScreen({ onBack }: LoginScreenProps) {
         {onBack ? (
           <Animated.View entering={FadeInDown.delay(50).springify()}>
             <Pressable onPress={handleBack} style={styles.backButton}>
-              <Feather name="arrow-left" size={24} color="#FFFFFF" />
+              <Feather name="arrow-left" size={24} color={BrandColors.azureBlue} />
               <ThemedText style={styles.backText}>Change Role</ThemedText>
             </Pressable>
           </Animated.View>
@@ -134,7 +130,7 @@ export default function LoginScreen({ onBack }: LoginScreenProps) {
               <TextInput
                 style={styles.input}
                 placeholder="Enter your email"
-                placeholderTextColor="rgba(255,255,255,0.4)"
+                placeholderTextColor={BrandColors.textSecondary}
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -153,7 +149,7 @@ export default function LoginScreen({ onBack }: LoginScreenProps) {
               <TextInput
                 style={styles.input}
                 placeholder="Enter your password"
-                placeholderTextColor="rgba(255,255,255,0.4)"
+                placeholderTextColor={BrandColors.textSecondary}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
@@ -181,13 +177,14 @@ export default function LoginScreen({ onBack }: LoginScreenProps) {
           </ThemedText>
         </Animated.View>
       </KeyboardAwareScrollViewCompat>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: BrandColors.background,
   },
   content: {
     flexGrow: 1,
@@ -201,7 +198,7 @@ const styles = StyleSheet.create({
   },
   backText: {
     fontSize: 16,
-    color: '#FFFFFF',
+    color: BrandColors.azureBlue,
     marginLeft: Spacing.sm,
   },
   logoContainer: {
@@ -216,7 +213,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: BrandColors.textPrimary,
     marginBottom: Spacing.md,
   },
   roleBadge: {
@@ -238,17 +235,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginBottom: Spacing.sm,
-    color: 'rgba(255,255,255,0.8)',
+    color: BrandColors.textSecondary,
   },
   inputContainer: {
     borderRadius: BorderRadius.sm,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: BrandColors.border,
   },
   input: {
     height: Spacing.inputHeight,
     paddingHorizontal: Spacing.lg,
     fontSize: 16,
-    color: '#FFFFFF',
+    color: BrandColors.textPrimary,
   },
   loginButton: {
     marginTop: Spacing.lg,
@@ -258,6 +257,6 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 13,
-    color: 'rgba(255,255,255,0.4)',
+    color: BrandColors.textSecondary,
   },
 });

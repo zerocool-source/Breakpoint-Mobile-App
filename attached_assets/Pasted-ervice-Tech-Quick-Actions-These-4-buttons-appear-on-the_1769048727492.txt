@@ -1,0 +1,76 @@
+ervice Tech Quick Actions
+These 4 buttons appear on the Property screen and allow technicians to quickly report issues or request items while on-site.
+
+1. 🔧 Repairs Needed (Red Wrench)
+Purpose: Report equipment or property issues that need repair attention
+
+When tapped, opens a form with:
+
+Field	Type	Options/Details
+Issue Type	Dropdown	Pump problem, Filter issue, Heater malfunction, Leak detected, Electrical issue, Other
+Location	Auto-filled	Current property name
+Description	Text area	Describe what's wrong
+Priority	Dropdown	Low, Normal, High, Urgent
+Photos	Camera/Upload	Attach photos of the issue
+Equipment Tag	Text input	Equipment ID if visible
+What happens: Sends repair request to office/repair team for scheduling
+
+2. 💧 Chemical Order (Blue Droplet)
+Purpose: Request chemical delivery to a property
+
+When tapped, opens a form with:
+
+Field	Type	Options/Details
+Property	Auto-filled	Current property name
+Chemicals Needed	Checklist	Chlorine, Muriatic Acid, Shock, Algaecide, pH Up, pH Down, Stabilizer, Other
+Quantity	Number inputs	Amount for each selected chemical
+Urgency	Dropdown	Routine, Next Visit, ASAP
+Notes	Text area	Special instructions
+What happens: Sends order to warehouse/chemical delivery team
+
+3. 🌬️ Windy Cleanup (Teal Wind Icon)
+Purpose: Log extra cleanup work due to windy conditions
+
+When tapped, opens a form with:
+
+Field	Type	Options/Details
+Property	Auto-filled	Current property name
+Cleanup Tasks	Checklist	Extra debris removal, Extended vacuuming, Filter cleaning, Surface skimming, Deck cleaning, Furniture reset
+Time Spent	Number input	Additional minutes spent
+Conditions	Dropdown	Light wind, Moderate wind, Heavy wind, Storm debris
+Photos	Camera/Upload	Document the conditions
+Notes	Text area	Additional details
+What happens: Logs extra work for billing/time tracking, documents weather-related service
+
+4. 🔨 Service Repairs (Orange Hammer)
+Purpose: Log minor repairs completed during the service visit
+
+When tapped, opens a form with:
+
+Field	Type	Options/Details
+Repair Type	Dropdown	Replaced O-ring, Adjusted valve, Tightened fitting, Replaced gauge, Cleaned strainer, Minor plumbing, Other
+Parts Used	Checklist	O-rings, Gaskets, Fittings, Clips, Screws, None
+Part Source	Dropdown	From truck, Property supply, None needed
+Time Spent	Number input	Minutes spent on repair
+Description	Text area	What was done
+Photos	Camera/Upload	Before/after photos
+Billable	Toggle	Yes/No
+What happens: Logs completed repair work, tracks parts inventory, records for billing
+
+Visual Design
+Each button has:
+
+Colored circular icon background (light tint of the icon color)
+Icon in brand color
+Two-line label centered below
+White card with subtle shadow
+Equal width (flex: 1)
+16px padding
+16px border radius
+Workflow
+Tech arrives at property
+Services the pools
+Notices an issue → taps relevant Quick Action
+Fills out the form
+Submits → data syncs to office
+Office receives notification and can take action

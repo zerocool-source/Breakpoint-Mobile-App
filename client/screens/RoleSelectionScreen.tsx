@@ -2,7 +2,6 @@ import React from 'react';
 import { View, StyleSheet, Pressable, Dimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   FadeInDown,
   useAnimatedStyle,
@@ -176,10 +175,7 @@ export default function RoleSelectionScreen({ onSelectRole }: RoleSelectionScree
   const insets = useSafeAreaInsets();
 
   return (
-    <LinearGradient
-      colors={['#1a1a2e', '#16213e', '#1a1a2e']}
-      style={styles.container}
-    >
+    <View style={styles.container}>
       <View
         style={[
           styles.content,
@@ -216,13 +212,14 @@ export default function RoleSelectionScreen({ onSelectRole }: RoleSelectionScree
           </ThemedText>
         </Animated.View>
       </View>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: BrandColors.background,
   },
   content: {
     flex: 1,
@@ -240,13 +237,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: BrandColors.textPrimary,
     marginBottom: Spacing.xs,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 15,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: BrandColors.textSecondary,
     textAlign: 'center',
   },
   rolesContainer: {
@@ -296,6 +293,6 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.4)',
+    color: BrandColors.textSecondary,
   },
 });

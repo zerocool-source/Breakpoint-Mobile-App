@@ -4,7 +4,8 @@
 Mobile-first field service management app for commercial pool maintenance technicians. Built with Expo (React Native) and Express.js backend.
 
 ## Current State
-- **MVP Phase**: Repair Tech and Service Tech flows complete
+- **Production Beta**: Real authentication with PostgreSQL database
+- **Authentication**: JWT tokens with bcrypt password hashing, secure token storage
 - **User Roles**: 
   - Service Technician (implemented) - Route-based daily service
   - Repair Technician (implemented) - Repairs, estimates, jobs
@@ -23,7 +24,8 @@ Mobile-first field service management app for commercial pool maintenance techni
 ### Backend (Express.js)
 - **Entry**: `server/index.ts`
 - **Port**: 5000 (API only)
-- **Database**: PostgreSQL with Drizzle ORM (prepared, not yet used)
+- **Database**: PostgreSQL with Drizzle ORM (active)
+- **Auth**: JWT tokens with bcrypt, 7-day expiry, stored in sessions table
 
 ### Key Directories
 ```

@@ -24,8 +24,8 @@ export default function LoginScreen() {
   const { theme } = useTheme();
   const { login, isLoading } = useAuth();
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('demo@breakpoint.com');
+  const [password, setPassword] = useState('demo123');
 
   const emailFocus = useSharedValue(0);
   const passwordFocus = useSharedValue(0);
@@ -135,7 +135,7 @@ export default function LoginScreen() {
 
         <Animated.View entering={FadeInDown.delay(300).springify()} style={styles.footer}>
           <ThemedText style={[styles.footerText, { color: theme.textSecondary }]}>
-            Contact your administrator for access
+            Demo credentials pre-filled - just tap Sign In
           </ThemedText>
         </Animated.View>
       </KeyboardAwareScrollViewCompat>

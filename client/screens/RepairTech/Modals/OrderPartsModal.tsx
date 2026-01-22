@@ -162,6 +162,7 @@ const styles = StyleSheet.create({
   container: {
     borderTopLeftRadius: BorderRadius.xl,
     borderTopRightRadius: BorderRadius.xl,
+    minHeight: '70%',
     ...Shadows.card,
   },
   header: {

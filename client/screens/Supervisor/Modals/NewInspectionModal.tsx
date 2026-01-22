@@ -185,6 +185,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: BorderRadius.xl,
     borderTopRightRadius: BorderRadius.xl,
     overflow: 'hidden',
+    minHeight: '70%',
   },
   header: {
     flexDirection: 'row',

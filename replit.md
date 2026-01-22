@@ -95,6 +95,7 @@ client/
 - **Backend**: `npm run server:dev` (port 5000)
 
 ## Recent Changes
+- January 22, 2026: Fixed modal sizing - all bottom sheet modals now have `minHeight: '70%'` to properly display form content on mobile
 - January 22, 2026: Added `keyboardShouldPersistTaps="handled"` to ALL ScrollViews and FlatLists across the entire app for proper mobile keyboard handling
 - January 22, 2026: Fixed RepairTech HomeScreen scrolling by adding `pointerEvents="none"` to BubbleBackground bubbles container
 - January 22, 2026: Fixed keyboard input bug in ALL modals by adding `keyboardShouldPersistTaps="handled"` to ScrollViews (CreateAssignment, OrderParts, ReportIssue, NewEstimate, ChemicalOrder, WindyDayCleanup, ServiceRepair, RepairsNeeded, NewInspection, EmergencyReport)

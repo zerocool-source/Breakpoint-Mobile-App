@@ -239,6 +239,7 @@ const styles = StyleSheet.create({
   modalContainer: {
     borderTopLeftRadius: BorderRadius.xl,
     borderTopRightRadius: BorderRadius.xl,
+    minHeight: '70%',
   },
   header: {
     flexDirection: 'row',

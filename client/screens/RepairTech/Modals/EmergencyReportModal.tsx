@@ -277,6 +277,7 @@ const styles = StyleSheet.create({
     width: '100%',
     borderRadius: BorderRadius.xl,
     overflow: 'hidden',
+    minHeight: '60%',
     ...Shadows.card,
   },
   emergencyHeader: {

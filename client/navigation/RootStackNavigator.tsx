@@ -1,33 +1,80 @@
-import React from "react";
-import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import MainTabNavigator from "@/navigation/MainTabNavigator";
-import ModalScreen from "@/screens/ModalScreen";
-import { useScreenOptions } from "@/hooks/useScreenOptions";
+import React from 'react';
+import { Pressable } from 'react-native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { Feather } from '@expo/vector-icons';
+import { HeaderButton } from '@react-navigation/elements';
+
+import RepairTechTabNavigator from '@/navigation/RepairTechTabNavigator';
+import ReportIssueModal from '@/screens/Modals/ReportIssueModal';
+import ChatModal from '@/screens/Modals/ChatModal';
+import CreateEstimateModal from '@/screens/Modals/CreateEstimateModal';
+import { useScreenOptions } from '@/hooks/useScreenOptions';
+import { useTheme } from '@/hooks/useTheme';
+import { BrandColors } from '@/constants/theme';
 
 export type RootStackParamList = {
   Main: undefined;
-  Modal: undefined;
+  ReportIssue: undefined;
+  Chat: undefined;
+  CreateEstimate: undefined;
+  EstimateDetail: { estimateId: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function RootStackNavigator() {
-  const screenOptions = useScreenOptions();
+  const screenOptions = useScreenOptions({ transparent: false });
+  const { theme } = useTheme();
 
   return (
     <Stack.Navigator screenOptions={screenOptions}>
       <Stack.Screen
         name="Main"
-        component={MainTabNavigator}
+        component={RepairTechTabNavigator}
         options={{ headerShown: false }}
       />
       <Stack.Screen
-        name="Modal"
-        component={ModalScreen}
-        options={{
-          presentation: "modal",
-          headerTitle: "Modal",
-        }}
+        name="ReportIssue"
+        component={ReportIssueModal}
+        options={({ navigation }) => ({
+          presentation: 'modal',
+          headerTitle: 'Report Issue',
+          headerLeft: () => (
+            <HeaderButton onPress={() => navigation.goBack()}>
+              <Feather name="x" size={22} color={theme.text} />
+            </HeaderButton>
+          ),
+        })}
+      />
+      <Stack.Screen
+        name="Chat"
+        component={ChatModal}
+        options={({ navigation }) => ({
+          presentation: 'modal',
+          headerTitle: 'Support Chat',
+          headerStyle: {
+            backgroundColor: BrandColors.vividTangerine,
+          },
+          headerTintColor: '#FFFFFF',
+          headerLeft: () => (
+            <HeaderButton onPress={() => navigation.goBack()}>
+              <Feather name="x" size={22} color="#FFFFFF" />
+            </HeaderButton>
+          ),
+        })}
+      />
+      <Stack.Screen
+        name="CreateEstimate"
+        component={CreateEstimateModal}
+        options={({ navigation }) => ({
+          presentation: 'modal',
+          headerTitle: 'New Estimate',
+          headerLeft: () => (
+            <HeaderButton onPress={() => navigation.goBack()}>
+              <Feather name="x" size={22} color={theme.text} />
+            </HeaderButton>
+          ),
+        })}
       />
     </Stack.Navigator>
   );

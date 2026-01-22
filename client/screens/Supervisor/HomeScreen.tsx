@@ -12,6 +12,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { Avatar } from '@/components/Avatar';
 import { BubbleBackground } from '@/components/BubbleBackground';
 import { QuickActionButton } from '@/components/QuickActionButton';
+import { ActivityTicker } from '@/components/ActivityTicker';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
@@ -475,6 +476,8 @@ export default function SupervisorHomeScreen() {
         </View>
       </View>
 
+      <ActivityTicker />
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarHeight + Spacing.xl }]}
@@ -753,21 +756,26 @@ const styles = StyleSheet.create({
   },
   metricCard: {
     flex: 1,
-    padding: Spacing.lg,
+    padding: Spacing.md,
+    paddingVertical: Spacing.lg,
     borderRadius: BorderRadius.md,
     borderWidth: 2,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 90,
     ...Shadows.card,
   },
   metricValue: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '700',
-    marginBottom: Spacing.xs,
+    marginBottom: 4,
+    includeFontPadding: false,
   },
   metricLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '500',
     textAlign: 'center',
+    lineHeight: 14,
   },
   teamTrackerCard: {
     borderRadius: BorderRadius.lg,

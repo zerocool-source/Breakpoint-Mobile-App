@@ -364,3 +364,117 @@ export const mockActiveTechnicians = [
   { id: '4', name: 'Emily Davis', role: 'service', status: 'break', location: 'Aqua Fitness Center', lastUpdate: new Date(Date.now() - 900000).toISOString() },
   { id: '5', name: 'Michael Thompson', role: 'repair', status: 'offline', location: 'Last: City Municipal Pool', lastUpdate: new Date(Date.now() - 3600000).toISOString() },
 ];
+
+// Quick Repairs (Under $500) - Operations Manager assigned repairs
+export interface QuickRepair {
+  id: string;
+  propertyName: string;
+  address: string;
+  description: string;
+  estimatedCost: number;
+  priority: 'high' | 'medium' | 'low';
+  status: 'unassigned' | 'claimed' | 'in_progress' | 'completed';
+  assignedTo?: string;
+  dueDate: string;
+  createdAt: string;
+}
+
+export const mockQuickRepairs: QuickRepair[] = [
+  {
+    id: 'qr1',
+    propertyName: 'Ridgeview Apartments',
+    address: '789 Ridge Ave, Vista, CA',
+    description: 'Replace cracked skimmer baskets at community pool. All 4 skimmers need new baskets.',
+    estimatedCost: 95,
+    priority: 'low',
+    status: 'unassigned',
+    dueDate: new Date(Date.now() + 86400000 * 3).toISOString(),
+    createdAt: new Date(Date.now() - 86400000).toISOString(),
+  },
+  {
+    id: 'qr2',
+    propertyName: 'Ocean Breeze Resort',
+    address: '555 Pacific Dr, Carlsbad, CA',
+    description: 'Fix leak in backwash line at DE filter. Pipe is cracked at joint.',
+    estimatedCost: 175,
+    priority: 'medium',
+    status: 'unassigned',
+    dueDate: new Date(Date.now() + 86400000 * 2).toISOString(),
+    createdAt: new Date(Date.now() - 43200000).toISOString(),
+  },
+  {
+    id: 'qr3',
+    propertyName: 'Bayview Condos',
+    address: '321 Harbor Blvd, Oceanside, CA',
+    description: 'Replace broken automatic water leveler. Current unit is not maintaining proper water level.',
+    estimatedCost: 245,
+    priority: 'low',
+    status: 'unassigned',
+    dueDate: new Date(Date.now() + 86400000 * 5).toISOString(),
+    createdAt: new Date(Date.now() - 172800000).toISOString(),
+  },
+  {
+    id: 'qr4',
+    propertyName: 'Palm Gardens HOA',
+    address: '1200 Palm Canyon Dr, Rancho Mirage, CA',
+    description: 'Replace worn gasket on main drain cover. Cover is loose and needs immediate attention.',
+    estimatedCost: 85,
+    priority: 'high',
+    status: 'unassigned',
+    dueDate: new Date(Date.now() + 86400000).toISOString(),
+    createdAt: new Date(Date.now() - 14400000).toISOString(),
+  },
+  {
+    id: 'qr5',
+    propertyName: 'Sunset Valley Resort',
+    address: '1234 Sunset Blvd, Phoenix, AZ',
+    description: 'Replace pool light bulb in main pool. LED conversion recommended.',
+    estimatedCost: 320,
+    priority: 'medium',
+    status: 'claimed',
+    assignedTo: 'Mike Johnson',
+    dueDate: new Date(Date.now() + 86400000 * 4).toISOString(),
+    createdAt: new Date(Date.now() - 259200000).toISOString(),
+  },
+];
+
+// Demo notifications for each role
+export interface DemoNotification {
+  id: string;
+  role: 'service_tech' | 'supervisor' | 'repair_tech';
+  title: string;
+  message: string;
+  type: 'urgent' | 'warning' | 'info';
+  icon: string;
+  timestamp: string;
+}
+
+export const mockDemoNotifications: DemoNotification[] = [
+  {
+    id: 'dn1',
+    role: 'service_tech',
+    title: 'Urgent Pool Service Required',
+    message: 'Sunset Valley Resort needs immediate attention - pool water is cloudy and guests are complaining.',
+    type: 'urgent',
+    icon: 'alert-circle',
+    timestamp: new Date().toISOString(),
+  },
+  {
+    id: 'dn2',
+    role: 'supervisor',
+    title: 'Health Department Alert',
+    message: 'Desert Springs HOA pool has been closed by the health department. Chlorine levels are below standard.',
+    type: 'urgent',
+    icon: 'alert-triangle',
+    timestamp: new Date().toISOString(),
+  },
+  {
+    id: 'dn3',
+    role: 'repair_tech',
+    title: 'Emergency: Power Outage',
+    message: 'Aqua Fitness Center - all pool equipment is offline due to power outage. Generator backup needed.',
+    type: 'urgent',
+    icon: 'zap-off',
+    timestamp: new Date().toISOString(),
+  },
+];

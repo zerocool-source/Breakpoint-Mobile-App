@@ -13,7 +13,7 @@ export function HeaderTitle({ title }: HeaderTitleProps) {
   return (
     <View style={styles.container}>
       <Image
-        source={require('../../assets/images/icon.png')}
+        source={require('../../assets/images/breakpoint-logo.png')}
         style={styles.icon}
         contentFit="contain"
       />
@@ -32,7 +32,6 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     marginRight: Spacing.sm,
-    borderRadius: 6,
   },
   title: {
     fontSize: 17,

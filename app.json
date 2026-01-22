@@ -4,7 +4,7 @@
     "slug": "breakpoint-pool-systems",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/breakpoint-logo.png",
     "scheme": "breakpoint",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -14,8 +14,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#0078D4",
-        "foregroundImage": "./assets/images/icon.png"
+        "backgroundColor": "#1a1a2e",
+        "foregroundImage": "./assets/images/breakpoint-logo.png"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
@@ -23,18 +23,18 @@
     },
     "web": {
       "output": "single",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/breakpoint-logo.png"
     },
     "plugins": [
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/breakpoint-logo.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#0078D4",
+          "backgroundColor": "#1a1a2e",
           "dark": {
-            "backgroundColor": "#005A9E"
+            "backgroundColor": "#16213e"
           }
         }
       ],

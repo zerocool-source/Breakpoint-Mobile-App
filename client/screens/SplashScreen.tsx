@@ -12,7 +12,6 @@ import Animated, {
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { ThemedText } from '@/components/ThemedText';
-import { BrandColors } from '@/constants/theme';
 
 const { width } = Dimensions.get('window');
 
@@ -51,15 +50,13 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
 
   return (
     <LinearGradient
-      colors={[BrandColors.azureBlue, '#005A9E', BrandColors.tropicalTeal]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
+      colors={['#1a1a2e', '#16213e', '#1a1a2e']}
       style={styles.container}
     >
       <View style={styles.content}>
         <Animated.View style={[styles.logoContainer, logoAnimatedStyle]}>
           <Image
-            source={require('../../assets/images/splash-icon.png')}
+            source={require('../../assets/images/breakpoint-logo.png')}
             style={styles.logo}
             contentFit="contain"
           />
@@ -101,6 +98,6 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     fontWeight: '500',
-    color: 'rgba(255, 255, 255, 0.85)',
+    color: 'rgba(255, 255, 255, 0.7)',
   },
 });

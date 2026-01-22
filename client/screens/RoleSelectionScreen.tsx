@@ -59,7 +59,7 @@ function LogoShimmer() {
       <View style={styles.shimmerOverlay}>
         <Animated.View style={[styles.shimmerGradient, shimmerStyle]}>
           <LinearGradient
-            colors={['transparent', 'rgba(255,255,255,0.4)', 'transparent']}
+            colors={['transparent', 'rgba(255,255,255,0.15)', 'transparent']}
             start={{ x: 0, y: 0.5 }}
             end={{ x: 1, y: 0.5 }}
             style={StyleSheet.absoluteFill}

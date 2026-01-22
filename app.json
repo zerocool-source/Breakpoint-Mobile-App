@@ -40,7 +40,8 @@
       ],
       "expo-web-browser",
       "expo-image-picker",
-      "expo-secure-store"
+      "expo-secure-store",
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "reactCompiler": true

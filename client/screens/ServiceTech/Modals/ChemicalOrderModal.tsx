@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { ThemedText } from '@/components/ThemedText';
 import { BPButton } from '@/components/BPButton';
@@ -124,7 +125,11 @@ export function ChemicalOrderModal({
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
-        <View style={[styles.modalContainer, { paddingBottom: insets.bottom + Spacing.lg }]}>
+        <LinearGradient
+          colors={['#FFFFFF', '#E3F2FD', '#FFF3E0', '#FFFFFF']}
+          locations={[0, 0.3, 0.7, 1]}
+          style={[styles.modalContainer, { paddingBottom: insets.bottom + Spacing.lg }]}
+        >
           <View style={[styles.header, { backgroundColor: BrandColors.azureBlue }]}>
             <View style={styles.headerContent}>
               <View style={styles.headerIconContainer}>
@@ -249,7 +254,7 @@ export function ChemicalOrderModal({
               Submit Order
             </BPButton>
           </View>
-        </View>
+        </LinearGradient>
       </View>
     </Modal>
   );
@@ -262,10 +267,10 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContainer: {
-    backgroundColor: '#FFFFFF',
     borderTopLeftRadius: BorderRadius.xl,
     borderTopRightRadius: BorderRadius.xl,
     maxHeight: '90%',
+    overflow: 'hidden',
   },
   header: {
     flexDirection: 'row',

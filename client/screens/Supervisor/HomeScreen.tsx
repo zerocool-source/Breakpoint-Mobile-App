@@ -172,6 +172,7 @@ function TeamChatModal({
   onSelectTechChat,
   technicians 
 }: TeamChatModalProps) {
+  const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const { height: windowHeight } = useWindowDimensions();
 
@@ -183,7 +184,7 @@ function TeamChatModal({
       onRequestClose={onClose}
     >
       <Pressable style={styles.modalOverlay} onPress={onClose}>
-        <View style={[styles.chatModalContent, { backgroundColor: theme.surface, maxHeight: windowHeight * 0.8 }]}>
+        <View style={[styles.chatModalContent, { backgroundColor: theme.surface, maxHeight: windowHeight * 0.8, paddingBottom: insets.bottom + Spacing.lg }]}>
           <View style={styles.modalHeader}>
             <View>
               <ThemedText style={styles.modalTitle}>Messages</ThemedText>
@@ -265,7 +266,9 @@ function AssignmentBreakdownModal({
   onCreateAssignment,
   onSendMessage 
 }: AssignmentBreakdownModalProps) {
+  const insets = useSafeAreaInsets();
   const { theme } = useTheme();
+  const { height: windowHeight } = useWindowDimensions();
   const stats = technician ? mockTechnicianAssignmentStats[technician.id] : null;
 
   if (!technician || !stats) return null;
@@ -278,7 +281,7 @@ function AssignmentBreakdownModal({
       onRequestClose={onClose}
     >
       <View style={styles.modalOverlay}>
-        <View style={[styles.modalContent, { backgroundColor: theme.surface }]}>
+        <View style={[styles.modalContent, { backgroundColor: theme.surface, paddingBottom: insets.bottom + Spacing.lg, maxHeight: windowHeight * 0.85 }]}>
           <View style={styles.modalHeader}>
             <View>
               <ThemedText style={styles.modalTitle}>{technician.name}</ThemedText>
@@ -1041,10 +1044,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   chatModalContent: {
-    backgroundColor: '#FFFFFF',
     borderTopLeftRadius: BorderRadius.xl,
     borderTopRightRadius: BorderRadius.xl,
     padding: Spacing.xl,
+    paddingBottom: Spacing["2xl"],
   },
   chatSectionLabel: {
     fontSize: 12,
@@ -1080,7 +1083,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   techChatList: {
-    maxHeight: 300,
+    maxHeight: 280,
+    flexGrow: 0,
   },
   techStatusRow: {
     flexDirection: 'row',

@@ -273,11 +273,17 @@ export default function RoleSelectionScreen({ onSelectRole }: RoleSelectionScree
         style={[
           styles.content,
           {
-            paddingTop: insets.top + 60,
+            paddingTop: insets.top + 20,
             paddingBottom: insets.bottom + 40,
           },
         ]}
       >
+        <Animated.View entering={FadeInDown.delay(50).springify()} style={styles.alphaBanner}>
+          <ThemedText style={styles.alphaBannerText}>
+            Alpha Prime Version - For Demo Purposes Only
+          </ThemedText>
+        </Animated.View>
+
         <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.header}>
           <LogoShimmer />
           <ThemedText style={styles.title}>Breakpoint Commercial Pools</ThemedText>
@@ -318,6 +324,18 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: Spacing.xl,
+  },
+  alphaBanner: {
+    alignItems: 'center',
+    paddingVertical: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  alphaBannerText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: BrandColors.vividTangerine,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
   header: {
     alignItems: 'center',

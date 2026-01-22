@@ -123,6 +123,39 @@ export const mockTechnicianAssignmentStats: Record<string, TechnicianAssignmentS
   '4': { total: 5, completed: 2, notDone: 2, needHelp: 1 },
 };
 
+export interface TechnicianRouteStop {
+  id: string;
+  propertyName: string;
+  address: string;
+  status: 'completed' | 'in_progress' | 'pending' | 'skipped';
+  scheduledTime: string;
+}
+
+export const mockTechnicianRoutes: Record<string, TechnicianRouteStop[]> = {
+  '1': [
+    { id: 'r1-1', propertyName: 'RIVERSIDE PALMS HOA', address: '1234 Palm Ave, Riverside', status: 'completed', scheduledTime: '7:30 AM' },
+    { id: 'r1-2', propertyName: 'CORONA HILLS ESTATES', address: '5678 Hill Dr, Corona', status: 'completed', scheduledTime: '8:30 AM' },
+    { id: 'r1-3', propertyName: 'SUNNYMEAD RANCH PCA', address: '9012 Ranch Rd, Moreno Valley', status: 'in_progress', scheduledTime: '10:00 AM' },
+    { id: 'r1-4', propertyName: 'PARKVIEW APARTMENTS', address: '3456 Park Blvd, Riverside', status: 'pending', scheduledTime: '11:30 AM' },
+    { id: 'r1-5', propertyName: 'MARRIOTT COURTYARD', address: '7890 Hotel Way, Corona', status: 'pending', scheduledTime: '1:00 PM' },
+  ],
+  '2': [
+    { id: 'r2-1', propertyName: 'HOLIDAY INN EXPRESS', address: '2345 Express Dr, Riverside', status: 'completed', scheduledTime: '7:00 AM' },
+    { id: 'r2-2', propertyName: 'RIVERSIDE PALMS HOA', address: '1234 Palm Ave, Riverside', status: 'in_progress', scheduledTime: '9:00 AM' },
+    { id: 'r2-3', propertyName: 'CANYON SPRINGS HOA', address: '6789 Canyon Rd, Moreno Valley', status: 'pending', scheduledTime: '11:00 AM' },
+  ],
+  '3': [
+    { id: 'r3-1', propertyName: 'SUNNYMEAD RANCH PCA', address: '9012 Ranch Rd, Moreno Valley', status: 'completed', scheduledTime: '8:00 AM' },
+    { id: 'r3-2', propertyName: 'HOLIDAY INN EXPRESS', address: '2345 Express Dr, Riverside', status: 'in_progress', scheduledTime: '10:30 AM' },
+    { id: 'r3-3', propertyName: 'HILTON GARDEN INN', address: '4567 Garden Blvd, Corona', status: 'pending', scheduledTime: '1:00 PM' },
+    { id: 'r3-4', propertyName: 'CORONA HILLS ESTATES', address: '5678 Hill Dr, Corona', status: 'pending', scheduledTime: '3:00 PM' },
+  ],
+  '4': [
+    { id: 'r4-1', propertyName: 'PARKVIEW APARTMENTS', address: '3456 Park Blvd, Riverside', status: 'pending', scheduledTime: '8:00 AM' },
+    { id: 'r4-2', propertyName: 'RIVERSIDE PALMS HOA', address: '1234 Palm Ave, Riverside', status: 'pending', scheduledTime: '10:00 AM' },
+  ],
+};
+
 export const mockQCInspections: QCInspection[] = [
   {
     id: '1',

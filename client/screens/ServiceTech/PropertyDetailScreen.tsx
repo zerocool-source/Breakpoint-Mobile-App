@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Pressable, ScrollView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
-import { Image } from 'expo-image';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { ThemedText } from '@/components/ThemedText';
 import { BPButton } from '@/components/BPButton';
@@ -13,8 +13,9 @@ import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
 import type { RouteStop, BodyOfWater } from '@/lib/serviceTechMockData';
 
-type RootStackParamList = {
+type ServiceTechStackParamList = {
   PropertyDetail: { stop: RouteStop };
+  BodyOfWaterDetail: { body: BodyOfWater; propertyName: string };
 };
 
 interface QuickActionProps {
@@ -33,6 +34,34 @@ function QuickAction({ icon, label, color, onPress }: QuickActionProps) {
         <Feather name={icon} size={24} color={color} />
       </View>
       <ThemedText style={styles.quickActionLabel}>{label}</ThemedText>
+    </Pressable>
+  );
+}
+
+interface ChecklistItemProps {
+  label: string;
+  checked: boolean;
+  onToggle: () => void;
+}
+
+function ChecklistItem({ label, checked, onToggle }: ChecklistItemProps) {
+  const { theme } = useTheme();
+  
+  return (
+    <Pressable style={styles.checklistItem} onPress={onToggle}>
+      <View style={[
+        styles.checkbox,
+        { borderColor: checked ? BrandColors.azureBlue : theme.border },
+        checked && { backgroundColor: BrandColors.azureBlue },
+      ]}>
+        {checked && <Feather name="check" size={14} color="#FFFFFF" />}
+      </View>
+      <ThemedText style={[
+        styles.checklistItemText,
+        checked && styles.checklistItemTextChecked,
+      ]}>
+        {label}
+      </ThemedText>
     </Pressable>
   );
 }
@@ -73,15 +102,28 @@ function BodyOfWaterCard({ body, onPress }: BodyOfWaterCardProps) {
   );
 }
 
+const poolAreaChecklistItems = [
+  'Clean Pump Basket',
+  'Tile',
+  'Vacuum',
+  'Netted',
+  'Check Handrails',
+  'Deck Brushed Pool',
+];
+
 export default function PropertyDetailScreen() {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation();
-  const route = useRoute<RouteProp<RootStackParamList, 'PropertyDetail'>>();
+  const navigation = useNavigation<NativeStackNavigationProp<ServiceTechStackParamList>>();
+  const route = useRoute<RouteProp<ServiceTechStackParamList, 'PropertyDetail'>>();
   const { theme } = useTheme();
   
   const { stop } = route.params;
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [bodiesCompleted, setBodiesCompleted] = useState(0);
+  const [propertyInfoExpanded, setPropertyInfoExpanded] = useState(false);
+  const [poolAreaExpanded, setPoolAreaExpanded] = useState(false);
+  const [poolAreaChecklist, setPoolAreaChecklist] = useState<Record<string, boolean>>({});
+  const [quickActionsExpanded, setQuickActionsExpanded] = useState(true);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -100,6 +142,17 @@ export default function PropertyDetailScreen() {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
+  };
+
+  const handleToggleChecklistItem = (item: string) => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    setPoolAreaChecklist(prev => ({ ...prev, [item]: !prev[item] }));
+  };
+
+  const handleBodyOfWaterPress = (body: BodyOfWater) => {
+    navigation.navigate('BodyOfWaterDetail', { body, propertyName: stop.propertyName });
   };
 
   const handleCompleteProperty = () => {
@@ -152,11 +205,89 @@ export default function PropertyDetailScreen() {
           </View>
         </Animated.View>
 
+        <Animated.View entering={FadeInDown.delay(250).springify()}>
+          <Pressable 
+            style={[styles.expandableCard, { backgroundColor: theme.surface }]}
+            onPress={() => setPropertyInfoExpanded(!propertyInfoExpanded)}
+          >
+            <View style={styles.expandableCardLeft}>
+              <Feather name="info" size={20} color={BrandColors.azureBlue} />
+              <ThemedText style={styles.expandableCardText}>Property Info</ThemedText>
+            </View>
+            <Feather 
+              name={propertyInfoExpanded ? 'chevron-down' : 'chevron-right'} 
+              size={20} 
+              color={BrandColors.textSecondary} 
+            />
+          </Pressable>
+          {propertyInfoExpanded && (
+            <View style={[styles.expandedContent, { backgroundColor: theme.surface }]}>
+              {stop.gateCode && (
+                <View style={styles.infoRow}>
+                  <ThemedText style={[styles.infoLabel, { color: theme.textSecondary }]}>Gate Code:</ThemedText>
+                  <ThemedText style={styles.infoValue}>{stop.gateCode}</ThemedText>
+                </View>
+              )}
+              {stop.contactName && (
+                <View style={styles.infoRow}>
+                  <ThemedText style={[styles.infoLabel, { color: theme.textSecondary }]}>Contact:</ThemedText>
+                  <ThemedText style={styles.infoValue}>{stop.contactName}</ThemedText>
+                </View>
+              )}
+              {stop.contactPhone && (
+                <View style={styles.infoRow}>
+                  <ThemedText style={[styles.infoLabel, { color: theme.textSecondary }]}>Phone:</ThemedText>
+                  <ThemedText style={styles.infoValue}>{stop.contactPhone}</ThemedText>
+                </View>
+              )}
+              {stop.notes && (
+                <View style={styles.infoRow}>
+                  <ThemedText style={[styles.infoLabel, { color: theme.textSecondary }]}>Notes:</ThemedText>
+                  <ThemedText style={styles.infoValue}>{stop.notes}</ThemedText>
+                </View>
+              )}
+            </View>
+          )}
+        </Animated.View>
+
         <Animated.View entering={FadeInDown.delay(300).springify()}>
-          <Pressable style={[styles.checklistCard, { backgroundColor: theme.surface }]}>
-            <View style={styles.checklistLeft}>
+          <Pressable 
+            style={[styles.expandableCard, { backgroundColor: theme.surface }]}
+            onPress={() => setPoolAreaExpanded(!poolAreaExpanded)}
+          >
+            <View style={styles.expandableCardLeft}>
+              <Feather name="list" size={20} color={BrandColors.azureBlue} />
+              <ThemedText style={styles.expandableCardText}>Pool Area Checklist</ThemedText>
+            </View>
+            <Feather 
+              name={poolAreaExpanded ? 'chevron-down' : 'chevron-right'} 
+              size={20} 
+              color={BrandColors.textSecondary} 
+            />
+          </Pressable>
+          {poolAreaExpanded && (
+            <View style={[styles.expandedContent, { backgroundColor: theme.surface }]}>
+              {poolAreaChecklistItems.map((item) => (
+                <ChecklistItem
+                  key={item}
+                  label={item}
+                  checked={poolAreaChecklist[item] || false}
+                  onToggle={() => handleToggleChecklistItem(item)}
+                />
+              ))}
+              <Pressable style={styles.addOtherButton}>
+                <Feather name="plus" size={16} color={BrandColors.azureBlue} />
+                <ThemedText style={styles.addOtherText}>Add Other</ThemedText>
+              </Pressable>
+            </View>
+          )}
+        </Animated.View>
+
+        <Animated.View entering={FadeInDown.delay(350).springify()}>
+          <Pressable style={[styles.expandableCard, { backgroundColor: theme.surface }]}>
+            <View style={styles.expandableCardLeft}>
               <Feather name="settings" size={20} color={BrandColors.azureBlue} />
-              <ThemedText style={styles.checklistText}>Pump Room Checklist</ThemedText>
+              <ThemedText style={styles.expandableCardText}>Pump Room Checklist</ThemedText>
             </View>
             <Feather name="chevron-right" size={20} color={BrandColors.textSecondary} />
           </Pressable>
@@ -164,36 +295,45 @@ export default function PropertyDetailScreen() {
 
         <Animated.View entering={FadeInDown.delay(400).springify()}>
           <View style={styles.quickActionsSection}>
-            <View style={styles.quickActionsHeader}>
+            <Pressable 
+              style={styles.quickActionsHeader}
+              onPress={() => setQuickActionsExpanded(!quickActionsExpanded)}
+            >
               <ThemedText style={styles.sectionTitle}>QUICK ACTIONS</ThemedText>
-              <Feather name="chevron-down" size={18} color={BrandColors.textSecondary} />
-            </View>
-            <View style={styles.quickActionsGrid}>
-              <QuickAction
-                icon="tool"
-                label="Repairs Needed"
-                color={BrandColors.vividTangerine}
-                onPress={() => handleQuickAction('repairs')}
+              <Feather 
+                name={quickActionsExpanded ? 'chevron-down' : 'chevron-right'} 
+                size={18} 
+                color={BrandColors.textSecondary} 
               />
-              <QuickAction
-                icon="droplet"
-                label="Chemical Order"
-                color={BrandColors.azureBlue}
-                onPress={() => handleQuickAction('chemical')}
-              />
-              <QuickAction
-                icon="wind"
-                label="Windy Cleanup"
-                color={BrandColors.tropicalTeal}
-                onPress={() => handleQuickAction('windy')}
-              />
-              <QuickAction
-                icon="settings"
-                label="Service Repairs"
-                color={BrandColors.vividTangerine}
-                onPress={() => handleQuickAction('service')}
-              />
-            </View>
+            </Pressable>
+            {quickActionsExpanded && (
+              <View style={styles.quickActionsGrid}>
+                <QuickAction
+                  icon="tool"
+                  label="Repairs Needed"
+                  color={BrandColors.vividTangerine}
+                  onPress={() => handleQuickAction('repairs')}
+                />
+                <QuickAction
+                  icon="droplet"
+                  label="Chemical Order"
+                  color={BrandColors.azureBlue}
+                  onPress={() => handleQuickAction('chemical')}
+                />
+                <QuickAction
+                  icon="wind"
+                  label="Windy Cleanup"
+                  color={BrandColors.tropicalTeal}
+                  onPress={() => handleQuickAction('windy')}
+                />
+                <QuickAction
+                  icon="tool"
+                  label="Service Repairs"
+                  color={BrandColors.vividTangerine}
+                  onPress={() => handleQuickAction('service')}
+                />
+              </View>
+            )}
           </View>
         </Animated.View>
 
@@ -216,7 +356,7 @@ export default function PropertyDetailScreen() {
                 <BodyOfWaterCard
                   key={body.id}
                   body={body}
-                  onPress={() => {}}
+                  onPress={() => handleBodyOfWaterPress(body)}
                 />
               ))}
             </View>
@@ -262,7 +402,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: BorderRadius.md,
-    backgroundColor: BrandColors.azureBlue,
+    backgroundColor: BrandColors.vividTangerine,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -299,7 +439,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.md,
   },
   timerLeft: {
     flexDirection: 'row',
@@ -330,26 +470,82 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.7)',
     fontSize: 13,
   },
-  checklistCard: {
+  expandableCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: Spacing.lg,
     borderRadius: BorderRadius.md,
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.sm,
     ...Shadows.card,
   },
-  checklistLeft: {
+  expandableCardLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
   },
-  checklistText: {
+  expandableCardText: {
     fontSize: 16,
     fontWeight: '600',
   },
+  expandedContent: {
+    padding: Spacing.lg,
+    paddingTop: 0,
+    marginTop: -Spacing.sm,
+    marginBottom: Spacing.sm,
+    borderBottomLeftRadius: BorderRadius.md,
+    borderBottomRightRadius: BorderRadius.md,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    paddingVertical: Spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: BrandColors.border,
+  },
+  infoLabel: {
+    fontSize: 14,
+    width: 80,
+  },
+  infoValue: {
+    fontSize: 14,
+    flex: 1,
+    fontWeight: '500',
+  },
+  checklistItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: Spacing.md,
+    gap: Spacing.md,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: BorderRadius.xs,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checklistItemText: {
+    fontSize: 15,
+  },
+  checklistItemTextChecked: {
+    textDecorationLine: 'line-through',
+    color: BrandColors.textSecondary,
+  },
+  addOtherButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.md,
+  },
+  addOtherText: {
+    fontSize: 15,
+    color: BrandColors.azureBlue,
+    fontWeight: '500',
+  },
   quickActionsSection: {
     marginBottom: Spacing.lg,
+    marginTop: Spacing.sm,
   },
   quickActionsHeader: {
     flexDirection: 'row',

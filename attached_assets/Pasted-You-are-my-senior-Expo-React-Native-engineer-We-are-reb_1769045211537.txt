@@ -1,0 +1,156 @@
+You are my senior Expo/React Native engineer. We are rebuilding our Breakpoint Commercial Pool Systems mobile app as a proper Expo app so we can generate an Android Developer Build (APK) using EAS from inside Replit.
+
+GOAL:
+- Build a mobile-first app in Expo (React Native + TypeScript)
+- Use NativeWind for Tailwind-style classes (NOT web Tailwind)
+- Use React Navigation (NOT Wouter)
+- Use TanStack Query for data fetching
+- Use an Express + TypeScript backend with PostgreSQL + Drizzle ORM (separate service)
+- Ensure the Expo app is EAS-ready and can build an Android development client APK.
+- Apply brand colors:
+  - Azure Blue: #0078D4 (primary)
+  - Vivid Tangerine: #FF8000 (accent)
+  - Tropical Teal: #17BEBB
+  - Emerald: #22D69A
+
+IMPORTANT RULES:
+- You MUST be step-by-step. After each step, STOP and ask me to run/confirm the commands and paste output.
+- Do not use Vite. Do not use Wouter. Do not use @dnd-kit. This is React Native.
+- Use react-native-draggable-flatlist for reorder lists.
+- Use expo-image-picker for photos.
+- Use react-native-toast-message for toasts.
+- Use @react-native-community/netinfo + AsyncStorage for offline queue basics.
+- Keep components simple, reusable, and mobile-first.
+
+PHASE 1: PROJECT SETUP (MOBILE)
+Step 1: Create the Expo app (TypeScript).
+- Provide the exact commands to run in Replit shell.
+- Confirm the app runs with `npx expo start`.
+
+Step 2: Install and configure navigation.
+- Install @react-navigation/native, native-stack, bottom-tabs
+- Install required Expo dependencies (react-native-screens, safe-area-context, etc.)
+- Create navigation structure:
+  - AuthStack: SplashScreen (2s), LoginScreen
+  - AppTabs: RepairTechTabs (Home, Queue, Estimates, Jobs, Profile)
+- Add a basic placeholder screen for each tab.
+
+Step 3: Install NativeWind and set up styling tokens.
+- Install nativewind + tailwindcss
+- Configure babel + tailwind.config
+- Add theme tokens for Breakpoint colors
+- Create a `theme.ts` exporting colors & spacing tokens.
+- Build 1 reusable component: <BPButton> with variants (primary/secondary/danger)
+
+Step 4: Install TanStack Query and set up API client.
+- Install @tanstack/react-query
+- Create QueryClient provider at root
+- Create `api.ts` with axios (or fetch) baseURL = ENV var
+- Create `env.ts` for API_BASE_URL (use Expo config / app.config)
+
+Step 5: EAS DEV BUILD readiness
+- Install expo-dev-client
+- Run `eas login`
+- Run `eas build:configure`
+- Create `eas.json` with profiles: development + production
+- Ensure development profile uses developmentClient: true
+- Provide the exact command to create Android dev APK:
+  `eas build --platform android --profile development`
+- STOP and ask me to paste the output/errors.
+
+PHASE 1: PROJECT SETUP (BACKEND API) – SEPARATE SERVICE
+Step 6: Create Express + TypeScript + Drizzle + PostgreSQL backend (separate folder or separate Replit).
+- Provide exact commands to scaffold.
+- Set up DB connection + Drizzle.
+- Create tables:
+  Users (id, name, email, passwordHash, role: service_tech/repair_tech)
+  Properties (id, name, address, type, gateCode, contactName, contactPhone, notes, poolCount)
+  RouteStops (id, propertyId, technicianId, scheduledTime, order, completed)
+  FieldEntries (id, propertyId, technicianId, type, notes, photos, createdAt)
+  Estimates (id, estimateNumber, propertyId, technicianId, status, total, items, createdAt)
+  RepairJobs (id, propertyId, title, description, priority, status, photos)
+
+Step 7: Create minimal API endpoints:
+- POST /auth/login (email/password) returns JWT + user role
+- GET /me returns user
+- GET /properties
+- GET /route-stops/today
+- GET /jobs/today
+- POST /field-entries
+- POST /estimates
+- PATCH /jobs/:id
+
+Step 8: Connect mobile app to backend:
+- Add login flow in mobile app
+- Store token securely (SecureStore if possible; fallback AsyncStorage)
+- Add a simple Home screen fetch:
+  - greeting + user name
+  - “Next Stop” card from route-stops
+  - “Today’s Jobs” list from jobs with drag reorder
+- STOP and ask me to confirm it works.
+
+PHASE 2: REPAIR TECH UI (MATCH OR BETTER)
+Step 9: Implement the Repair Tech screens one by one, matching these requirements:
+- Splash screen with logo animation (2 seconds)
+- Login screen username/password
+- Bottom tabs: Home, Queue, Estimates, Jobs, Profile
+- Azure Blue headers
+- Desktop preview device-frame container 390x844 while keeping full-screen on mobile
+
+Home Screen:
+- Greeting + name + avatar + chat button
+- Next Stop card (property name/address/type badge/pool count)
+- Quick actions: Emergency (red), New Estimate (green), Order Parts (orange), Report Issue (red)
+- Today’s Jobs list with drag reorder using react-native-draggable-flatlist
+- Each card: handle, number, property name, time, address, pool count
+
+Report Issue Modal:
+- Property dropdown
+- Issue type dropdown
+- Description
+- Priority: Low/Normal/High/Urgent
+- Photo upload (expo-image-picker)
+- Validation + submit
+
+Queue Screen:
+- 2x2 metric cards (My Estimates, Urgent Jobs, Parts Ordered, Completed)
+- clicking card scrolls to section
+- collapsible sections
+- priority filter dropdown
+- job cards with status badges
+
+Estimates:
+- list screen + detail screen
+- create estimate screen with auto-number format EST-YYMM-####
+- line items table: add line, product search modal, qty/rate/amount
+- subtotal/tax/total
+- send estimate + save draft
+
+Chat:
+- orange floating button on major screens
+- full screen modal with mock history
+
+PHASE 3: SERVICE TECH UI
+Step 10: Implement Service Tech screens:
+- Splash screen
+- phone login (mock or real)
+- tabs: Home, Truck, Profile
+- purple theme (#4169E1)
+- drag reorder for today’s route
+- property screen with timer + checklists
+- pool screen with service type grid
+- voice entry screen with mic + transcription
+- modals: chemical order, drop-off, repairs needed, service repairs, windy cleanup, emergency
+
+PHASE 4: SHARED FEATURES
+Step 11:
+- Offline banner using NetInfo
+- Cache with AsyncStorage (or SQLite) and queue actions
+- Toast notifications system
+- Photo capture & preview
+- Animations (Reanimated) for transitions, modals, pulses
+
+DELIVERY:
+- Create the folder structure, code files, and configs.
+- Provide every command I need to run.
+- After each step, STOP and ask me to run the commands and paste results before continuing.

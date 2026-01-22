@@ -273,6 +273,21 @@ export default function ServiceTechHomeScreen() {
 
         <Animated.View entering={FadeInDown.delay(400).springify()}>
           <View style={styles.routeSection}>
+            <View style={styles.routeDateRow}>
+              <ThemedText style={styles.routeDate}>
+                {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+              </ThemedText>
+              <View style={[styles.scheduleBadge, { backgroundColor: new Date().getMonth() >= 4 && new Date().getMonth() <= 9 ? BrandColors.vividTangerine + '20' : BrandColors.azureBlue + '20' }]}>
+                <Feather 
+                  name={new Date().getMonth() >= 4 && new Date().getMonth() <= 9 ? 'sun' : 'cloud'} 
+                  size={12} 
+                  color={new Date().getMonth() >= 4 && new Date().getMonth() <= 9 ? BrandColors.vividTangerine : BrandColors.azureBlue} 
+                />
+                <ThemedText style={[styles.scheduleBadgeText, { color: new Date().getMonth() >= 4 && new Date().getMonth() <= 9 ? BrandColors.vividTangerine : BrandColors.azureBlue }]}>
+                  {new Date().getMonth() >= 4 && new Date().getMonth() <= 9 ? 'Summer (6 days)' : 'Winter (5 days)'}
+                </ThemedText>
+              </View>
+            </View>
             <View style={styles.routeHeader}>
               <ThemedText style={styles.routeTitle}>Today's Route</ThemedText>
               <View style={styles.dragBadge}>
@@ -549,6 +564,29 @@ const styles = StyleSheet.create({
   },
   routeSection: {
     marginBottom: Spacing.lg,
+  },
+  routeDateRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  routeDate: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#FFFFFF',
+  },
+  scheduleBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.full,
+    gap: Spacing.xs,
+  },
+  scheduleBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
   },
   routeHeader: {
     flexDirection: 'row',

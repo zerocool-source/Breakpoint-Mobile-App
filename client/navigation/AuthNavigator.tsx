@@ -2,27 +2,32 @@ import React, { useState } from 'react';
 
 import SplashScreen from '@/screens/SplashScreen';
 import RoleSelectionScreen from '@/screens/RoleSelectionScreen';
+import LoginScreen from '@/screens/LoginScreen';
 import RootStackNavigator from '@/navigation/RootStackNavigator';
-import { useAuth } from '@/context/AuthContext';
-
-type Role = 'service_tech' | 'supervisor' | 'repair_tech' | 'repair_foreman';
+import { useAuth, UserRole } from '@/context/AuthContext';
 
 export default function AuthNavigator() {
-  const { isAuthenticated, login } = useAuth();
+  const { isAuthenticated, selectedRole, setSelectedRole } = useAuth();
   const [showSplash, setShowSplash] = useState(true);
-  const [selectedRole, setSelectedRole] = useState<Role | null>(null);
 
-  const handleRoleSelect = async (role: Role) => {
+  const handleRoleSelect = (role: UserRole) => {
     setSelectedRole(role);
-    await login('demo@breakpoint.com', 'demo123');
+  };
+
+  const handleBackToRoleSelection = () => {
+    setSelectedRole(null);
   };
 
   if (showSplash) {
     return <SplashScreen onFinish={() => setShowSplash(false)} />;
   }
 
-  if (!isAuthenticated) {
+  if (!selectedRole) {
     return <RoleSelectionScreen onSelectRole={handleRoleSelect} />;
+  }
+
+  if (!isAuthenticated) {
+    return <LoginScreen onBack={handleBackToRoleSelection} />;
   }
 
   return <RootStackNavigator />;

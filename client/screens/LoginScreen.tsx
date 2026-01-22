@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TextInput, Dimensions, Alert, Platform } from 'react-native';
+import { View, StyleSheet, TextInput, Dimensions, Alert, Platform, Pressable } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -9,20 +10,37 @@ import Animated, {
   FadeInDown,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import { Feather } from '@expo/vector-icons';
 
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 import { ThemedText } from '@/components/ThemedText';
 import { BPButton } from '@/components/BPButton';
-import { useAuth } from '@/context/AuthContext';
-import { useTheme } from '@/hooks/useTheme';
+import { useAuth, UserRole } from '@/context/AuthContext';
 import { BrandColors, BorderRadius, Spacing } from '@/constants/theme';
 
 const { width } = Dimensions.get('window');
 
-export default function LoginScreen() {
+const roleNames: Record<UserRole, string> = {
+  service_tech: 'Service Technician',
+  supervisor: 'Supervisor',
+  repair_tech: 'Repair Technician',
+  repair_foreman: 'Repair Foreman',
+};
+
+const roleColors: Record<UserRole, string> = {
+  service_tech: BrandColors.azureBlue,
+  supervisor: BrandColors.tropicalTeal,
+  repair_tech: BrandColors.azureBlue,
+  repair_foreman: BrandColors.vividTangerine,
+};
+
+interface LoginScreenProps {
+  onBack?: () => void;
+}
+
+export default function LoginScreen({ onBack }: LoginScreenProps) {
   const insets = useSafeAreaInsets();
-  const { theme } = useTheme();
-  const { login, isLoading } = useAuth();
+  const { login, isLoading, selectedRole } = useAuth();
 
   const [email, setEmail] = useState('demo@breakpoint.com');
   const [password, setPassword] = useState('demo123');
@@ -30,13 +48,16 @@ export default function LoginScreen() {
   const emailFocus = useSharedValue(0);
   const passwordFocus = useSharedValue(0);
 
+  const roleColor = selectedRole ? roleColors[selectedRole] : BrandColors.azureBlue;
+  const roleName = selectedRole ? roleNames[selectedRole] : 'User';
+
   const emailBorderStyle = useAnimatedStyle(() => ({
-    borderColor: emailFocus.value === 1 ? BrandColors.azureBlue : theme.border,
+    borderColor: emailFocus.value === 1 ? roleColor : 'rgba(255,255,255,0.2)',
     borderWidth: emailFocus.value === 1 ? 2 : 1,
   }));
 
   const passwordBorderStyle = useAnimatedStyle(() => ({
-    borderColor: passwordFocus.value === 1 ? BrandColors.azureBlue : theme.border,
+    borderColor: passwordFocus.value === 1 ? roleColor : 'rgba(255,255,255,0.2)',
     borderWidth: passwordFocus.value === 1 ? 2 : 1,
   }));
 
@@ -62,27 +83,48 @@ export default function LoginScreen() {
     }
   };
 
+  const handleBack = () => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    onBack?.();
+  };
+
   return (
-    <View style={[styles.container, { backgroundColor: theme.backgroundRoot }]}>
+    <LinearGradient
+      colors={['#1a1a2e', '#16213e', '#1a1a2e']}
+      style={styles.container}
+    >
       <KeyboardAwareScrollViewCompat
         contentContainerStyle={[
           styles.content,
           {
-            paddingTop: insets.top + 60,
+            paddingTop: insets.top + 20,
             paddingBottom: insets.bottom + 40,
           },
         ]}
       >
+        {onBack ? (
+          <Animated.View entering={FadeInDown.delay(50).springify()}>
+            <Pressable onPress={handleBack} style={styles.backButton}>
+              <Feather name="arrow-left" size={24} color="#FFFFFF" />
+              <ThemedText style={styles.backText}>Change Role</ThemedText>
+            </Pressable>
+          </Animated.View>
+        ) : null}
+
         <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.logoContainer}>
           <Image
             source={require('../../assets/images/breakpoint-logo.png')}
             style={styles.logo}
             contentFit="contain"
           />
-          <ThemedText style={styles.title}>Breakpoint</ThemedText>
-          <ThemedText style={[styles.subtitle, { color: theme.textSecondary }]}>
-            Commercial Pool Systems
-          </ThemedText>
+          <ThemedText style={styles.title}>Sign In</ThemedText>
+          <View style={[styles.roleBadge, { backgroundColor: roleColor + '30' }]}>
+            <ThemedText style={[styles.roleText, { color: roleColor }]}>
+              {roleName}
+            </ThemedText>
+          </View>
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(200).springify()} style={styles.form}>
@@ -90,9 +132,9 @@ export default function LoginScreen() {
             <ThemedText style={styles.label}>Email</ThemedText>
             <Animated.View style={[styles.inputContainer, emailBorderStyle]}>
               <TextInput
-                style={[styles.input, { color: theme.text }]}
+                style={styles.input}
                 placeholder="Enter your email"
-                placeholderTextColor={theme.textSecondary}
+                placeholderTextColor="rgba(255,255,255,0.4)"
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -109,9 +151,9 @@ export default function LoginScreen() {
             <ThemedText style={styles.label}>Password</ThemedText>
             <Animated.View style={[styles.inputContainer, passwordBorderStyle]}>
               <TextInput
-                style={[styles.input, { color: theme.text }]}
+                style={styles.input}
                 placeholder="Enter your password"
-                placeholderTextColor={theme.textSecondary}
+                placeholderTextColor="rgba(255,255,255,0.4)"
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
@@ -127,19 +169,19 @@ export default function LoginScreen() {
             loading={isLoading}
             fullWidth
             size="large"
-            style={styles.loginButton}
+            style={[styles.loginButton, { backgroundColor: roleColor }]}
           >
-            Sign In
+            Sign In as {roleName}
           </BPButton>
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(300).springify()} style={styles.footer}>
-          <ThemedText style={[styles.footerText, { color: theme.textSecondary }]}>
+          <ThemedText style={styles.footerText}>
             Demo credentials pre-filled - just tap Sign In
           </ThemedText>
         </Animated.View>
       </KeyboardAwareScrollViewCompat>
-    </View>
+    </LinearGradient>
   );
 }
 
@@ -152,22 +194,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xl,
     justifyContent: 'center',
   },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.xl,
+  },
+  backText: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    marginLeft: Spacing.sm,
+  },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: Spacing['4xl'],
+    marginBottom: Spacing['3xl'],
   },
   logo: {
-    width: width * 0.25,
-    height: width * 0.25,
+    width: width * 0.2,
+    height: width * 0.2,
     marginBottom: Spacing.lg,
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
-    marginBottom: 4,
+    color: '#FFFFFF',
+    marginBottom: Spacing.md,
   },
-  subtitle: {
-    fontSize: 15,
+  roleBadge: {
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.full,
+  },
+  roleText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   form: {
     marginBottom: Spacing['3xl'],
@@ -179,15 +238,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginBottom: Spacing.sm,
+    color: 'rgba(255,255,255,0.8)',
   },
   inputContainer: {
     borderRadius: BorderRadius.sm,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255,255,255,0.1)',
   },
   input: {
     height: Spacing.inputHeight,
     paddingHorizontal: Spacing.lg,
     fontSize: 16,
+    color: '#FFFFFF',
   },
   loginButton: {
     marginTop: Spacing.lg,
@@ -197,5 +258,6 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 13,
+    color: 'rgba(255,255,255,0.4)',
   },
 });

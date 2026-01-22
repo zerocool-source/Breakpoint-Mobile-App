@@ -4,6 +4,9 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import SupervisorTabNavigator from '@/navigation/SupervisorTabNavigator';
 import InspectionDetailScreen from '@/screens/Supervisor/InspectionDetailScreen';
 import ChatConversationScreen from '@/screens/shared/ChatConversationScreen';
+import TruckInspectionScreen from '@/screens/Supervisor/TruckInspectionScreen';
+import SupportiveActionsScreen from '@/screens/Supervisor/SupportiveActionsScreen';
+import WhosOnScreen from '@/screens/Supervisor/WhosOnScreen';
 import { useScreenOptions } from '@/hooks/useScreenOptions';
 import type { ChatChannel } from '@/screens/shared/ChatChannelsScreen';
 
@@ -11,6 +14,9 @@ export type SupervisorStackParamList = {
   Main: undefined;
   InspectionDetail: { inspectionId: string | undefined; propertyId?: string; propertyName?: string };
   ChatConversation: { channel: ChatChannel };
+  TruckInspection: undefined;
+  SupportiveActions: undefined;
+  WhosOn: undefined;
 };
 
 const Stack = createNativeStackNavigator<SupervisorStackParamList>();
@@ -39,6 +45,27 @@ export default function SupervisorStackNavigator() {
         options={{ 
           headerShown: true,
           headerTitle: 'Chat',
+        }}
+      />
+      <Stack.Screen
+        name="TruckInspection"
+        component={TruckInspectionScreen}
+        options={{ 
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="SupportiveActions"
+        component={SupportiveActionsScreen}
+        options={{ 
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="WhosOn"
+        component={WhosOnScreen}
+        options={{ 
+          headerShown: false,
         }}
       />
     </Stack.Navigator>

@@ -193,11 +193,6 @@ export default function RoleSelectionScreen({ onSelectRole }: RoleSelectionScree
           />
           <ThemedText style={styles.title}>Breakpoint Commercial Pools</ThemedText>
           <ThemedText style={styles.subtitle}>Select your role to continue</ThemedText>
-          <Image
-            source={require('../../assets/images/keeping-people-safe.png')}
-            style={styles.taglineLogo}
-            contentFit="contain"
-          />
         </Animated.View>
 
         <View style={styles.rolesContainer}>
@@ -212,6 +207,11 @@ export default function RoleSelectionScreen({ onSelectRole }: RoleSelectionScree
         </View>
 
         <Animated.View entering={FadeInDown.delay(700).springify()} style={styles.footer}>
+          <Image
+            source={require('../../assets/images/keeping-people-safe.png')}
+            style={styles.taglineLogo}
+            contentFit="contain"
+          />
           <ThemedText style={styles.footerText}>
             Quick demo access - no password required
           </ThemedText>
@@ -232,29 +232,29 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: Spacing['3xl'],
-  },
-  logo: {
-    width: 400,
-    height: 400,
     marginBottom: Spacing.lg,
   },
+  logo: {
+    width: 180,
+    height: 180,
+    marginBottom: Spacing.md,
+  },
   title: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
     color: BrandColors.textPrimary,
     marginBottom: Spacing.xs,
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 15,
+    fontSize: 13,
     color: BrandColors.textSecondary,
     textAlign: 'center',
   },
   taglineLogo: {
-    width: 200,
-    height: 70,
-    marginTop: Spacing['2xl'],
+    width: 140,
+    height: 50,
+    marginBottom: Spacing.sm,
   },
   rolesContainer: {
     flex: 1,

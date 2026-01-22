@@ -1,0 +1,200 @@
+Supervisor App
+What It Is
+The Supervisor App is a team management and oversight tool for field supervisors who oversee multiple service and repair technicians. It provides real-time visibility into team activities, allows task assignments, and enables quality control inspections.
+
+Who Uses It
+Supervisors - Office or field managers responsible for:
+
+Monitoring technician progress throughout the day
+Assigning special tasks to technicians
+Communicating with the team
+Performing quality control (QC) inspections
+Verifying completed work
+Bottom Navigation (5 Tabs)
+Tab	Icon	Name	Purpose
+🏠	Home	Overview	Team dashboard and status
+📊	Activity	Activity	QC inspections and reports
+📋	Clipboard	Assign	Create and track assignments
+💬	Message	Chat	Team and individual messaging
+👤	Person	Profile	Supervisor settings and stats
+1. OVERVIEW SCREEN (Home)
+Header
+Greeting with supervisor name
+Region badge (if assigned)
+Current date/time
+Team Status Cards
+Shows all technicians with:
+
+Field	Description
+Name	Technician name
+Role	Service Tech / Repair Tech
+Status Badge	Active (green), Behind (orange), Offline (gray)
+Current Stop	Property they're currently at
+Progress	"4/11 stops" completion count
+Expanded Technician View
+Tap a technician to see their full route:
+
+List of all properties for the day
+Status per property: ✓ Completed, 🔄 In Progress, ⏳ Pending
+Time at each stop
+Verification status (verified by supervisor or not)
+Quick action to message technician
+Today's Summary Stats
+Total Stops Verified
+Assignments Made
+Messages Sent
+2. ACTIVITY SCREEN
+QC Inspections Section
+List of scheduled quality control inspections:
+
+Field	Example
+Property	Mesa Verde HOA
+Technician	Jorge Martinez
+Date	Today / Tomorrow
+Time	2:00 PM
+Status	Pending, Scheduled, Completed
+QC Inspection Checklist Modal
+When you tap an inspection, opens a comprehensive checklist with 5 categories:
+
+Category 1: Water Chemistry (Health Department Critical)
+Free chlorine within range (2-4 ppm)
+Combined chlorine/chloramines acceptable (< 0.5 ppm)
+pH level (7.2-7.8)
+Cyanuric acid within limit
+Alkalinity balanced (80-120 ppm)
+Calcium hardness appropriate
+Water clarity — can you see main drain?
+Controller readings match manual test kit
+Category 2: Safety & Equipment
+Main drain covers secure and VGBA compliant
+Suction outlet covers in good condition
+Safety equipment present (ring buoy, shepherd's hook)
+Depth markers visible and accurate
+No Diving signs posted where required
+Gate/fence functioning, self-closing and latching
+Emergency shutoff accessible and labeled
+Category 3: Mechanical Room
+Chemical feeders functioning properly
+No leaks at pump, filter, or plumbing
+Pressure gauge readings normal
+Flow meter within required range
+Chemical storage proper (acids separated from chlorine)
+SDS sheets present
+Ventilation adequate
+Category 4: Documentation & Compliance
+Service log on-site and current
+Technician recorded readings match actual
+Operating permit displayed and valid
+Chemical logs up to date
+Category 5: General Cleanliness
+Tile line clean
+Skimmer baskets emptied
+Deck area free of hazards
+No visible algae or staining
+For Each Checklist Item
+Three response options:
+
+✓ Complete (green)
+⚠️ Needs Work (orange)
+✗ Not Done (red)
+Per Category Features
+Expandable/collapsible sections
+Notes text area
+Photo attachments
+Submit inspection button
+3. ASSIGN SCREEN
+Assignments List
+Shows all assignments created by this supervisor:
+
+Field	Description
+Type	Repairs Needed, Chemical Order, etc.
+Property	Where the task is
+Assigned To	Which technician
+Priority	Low, Medium, High
+Status	Pending, In Progress, Completed, Needs Help
+Created	Date/time
+Assignment Status Badges
+Status	Color	Meaning
+Pending	Gray	Not started
+In Progress	Blue	Being worked on
+Completed	Green	Done
+Not Completed	Red	Failed/skipped
+Needs Help	Orange	Tech requested assistance
+Create Assignment Modal
+Tap "+" button to create new assignment:
+
+Field	Type	Options
+Type	Dropdown	Repairs Needed, Chemical Order, Chemicals Drop-Off, Windy Day Clean Up, Service Repairs, Report Issue, Add Notes, Emergency
+Property	Dropdown	All properties from database
+Technician	Dropdown	All available technicians
+Priority	Dropdown	Low, Medium, High
+Notes	Text area	Instructions/details
+Images	Upload/Camera	Attach photos
+4. CHAT SCREEN
+Chat Tabs
+Team - Group chat with all technicians
+Individual tabs - DM each technician directly
+Team Chat
+See messages from all techs
+Send broadcast messages
+Timestamps on each message
+Sent/received styling
+Direct Messages
+Tap technician name to open DM
+Private conversation thread
+Real-time updates (polls every 5 seconds)
+Message Features
+Text input field
+Send button
+Message history scroll
+Sender name and time
+5. PROFILE SCREEN
+Supervisor Info
+Avatar with initials
+Full name
+Role: "Supervisor"
+Region assignment
+Daily Stats
+Stat	Description
+Stops Verified	Number of tech stops you've reviewed
+Assignments Made	Tasks assigned today
+Messages Sent	Communication count
+Quick Actions
+Send message to a property
+Property dropdown selector
+Logout
+Confirmation modal
+Clears auth and returns to role selection
+Supervisor Actions Available
+Action	Icon	What It Does
+Repairs Needed	Wrench	Assign repair task
+Chemical Order	Droplet	Request chemicals
+Chemicals Drop-Off	Truck	Schedule delivery
+Windy Day Clean Up	Wind	Extra cleanup task
+Service Repairs	Hammer	Minor repair assignment
+Report Issue	Alert	Flag a problem
+Add Notes	Document	Add notes to property
+Emergency	Alert (red)	Urgent attention needed
+Key Workflows
+1. Morning Routine
+Open app → See team overview
+Check who's active/behind/offline
+Review any pending assignments
+2. Monitor Team
+Watch progress throughout day
+Tap technicians to see their routes
+Verify completed stops
+3. Handle Issues
+Receive "Needs Help" alerts
+Chat with technician
+Create new assignments as needed
+4. QC Inspections
+Go to Activity tab
+Select scheduled inspection
+Complete checklist on-site
+Take photos, add notes
+Submit inspection report
+5. End of Day
+Verify all stops completed
+Review any outstanding items
+Check assignment statuses

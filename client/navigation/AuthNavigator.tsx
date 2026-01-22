@@ -5,6 +5,7 @@ import RoleSelectionScreen, { Role } from '@/screens/RoleSelectionScreen';
 import LoginScreen from '@/screens/LoginScreen';
 import RootStackNavigator from '@/navigation/RootStackNavigator';
 import ServiceTechStackNavigator from '@/navigation/ServiceTechStackNavigator';
+import SupervisorStackNavigator from '@/navigation/SupervisorStackNavigator';
 import { useAuth } from '@/context/AuthContext';
 
 export default function AuthNavigator() {
@@ -34,6 +35,10 @@ export default function AuthNavigator() {
   // Route to the appropriate app based on role
   if (selectedRole === 'service_tech') {
     return <ServiceTechStackNavigator />;
+  }
+
+  if (selectedRole === 'supervisor') {
+    return <SupervisorStackNavigator />;
   }
 
   // Repair Tech and other roles use the default navigator

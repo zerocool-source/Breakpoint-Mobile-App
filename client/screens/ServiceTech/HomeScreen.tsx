@@ -63,19 +63,54 @@ function AssignmentCard({ assignment, onPress }: AssignmentCardProps) {
 interface RouteStopCardProps {
   stop: RouteStop;
   index: number;
+  totalStops: number;
   onPress: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
 }
 
-function RouteStopCard({ stop, index, onPress }: RouteStopCardProps) {
+function RouteStopCard({ stop, index, totalStops, onPress, onMoveUp, onMoveDown }: RouteStopCardProps) {
   const { theme } = useTheme();
+  
+  const handleMoveUp = () => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    onMoveUp();
+  };
+
+  const handleMoveDown = () => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    onMoveDown();
+  };
   
   return (
     <Pressable 
       style={[styles.routeStopCard, { backgroundColor: theme.surface }]}
       onPress={onPress}
     >
-      <View style={styles.routeStopNumber}>
-        <ThemedText style={styles.routeStopNumberText}>{index + 1}</ThemedText>
+      <View style={styles.routeStopLeft}>
+        <View style={styles.routeStopNumber}>
+          <ThemedText style={styles.routeStopNumberText}>{index + 1}</ThemedText>
+        </View>
+        <View style={styles.reorderButtons}>
+          <Pressable 
+            onPress={handleMoveUp} 
+            style={[styles.reorderButton, index === 0 && styles.reorderButtonDisabled]}
+            disabled={index === 0}
+          >
+            <Feather name="chevron-up" size={16} color={index === 0 ? theme.border : BrandColors.azureBlue} />
+          </Pressable>
+          <Pressable 
+            onPress={handleMoveDown} 
+            style={[styles.reorderButton, index === totalStops - 1 && styles.reorderButtonDisabled]}
+            disabled={index === totalStops - 1}
+          >
+            <Feather name="chevron-down" size={16} color={index === totalStops - 1 ? theme.border : BrandColors.azureBlue} />
+          </Pressable>
+        </View>
       </View>
       <View style={styles.routeStopContent}>
         <ThemedText style={styles.routeStopName}>{stop.propertyName}</ThemedText>
@@ -109,9 +144,28 @@ export default function ServiceTechHomeScreen() {
   
   const [assignmentsExpanded, setAssignmentsExpanded] = useState(true);
   const [currentTime] = useState(getCurrentTime());
+  const [routeStops, setRouteStops] = useState(mockRouteStops);
   
-  const nextStop = mockRouteStops.find(stop => !stop.completed) || mockRouteStops[0];
+  const nextStop = routeStops.find(stop => !stop.completed) || routeStops[0];
   const progress = mockDailyProgress;
+
+  const handleMoveUp = useCallback((index: number) => {
+    if (index === 0) return;
+    setRouteStops(prev => {
+      const newStops = [...prev];
+      [newStops[index - 1], newStops[index]] = [newStops[index], newStops[index - 1]];
+      return newStops;
+    });
+  }, []);
+
+  const handleMoveDown = useCallback((index: number) => {
+    setRouteStops(prev => {
+      if (index === prev.length - 1) return prev;
+      const newStops = [...prev];
+      [newStops[index], newStops[index + 1]] = [newStops[index + 1], newStops[index]];
+      return newStops;
+    });
+  }, []);
 
   const handleSync = () => {
     if (Platform.OS !== 'web') {
@@ -380,16 +434,19 @@ export default function ServiceTechHomeScreen() {
             <View style={styles.routeHeader}>
               <ThemedText style={styles.routeTitle}>Today's Route</ThemedText>
               <View style={styles.dragBadge}>
-                <ThemedText style={styles.dragBadgeText}>Drag to reorder</ThemedText>
+                <ThemedText style={styles.dragBadgeText}>Tap arrows to reorder</ThemedText>
               </View>
             </View>
             <View style={styles.routeList}>
-              {mockRouteStops.map((stop, index) => (
+              {routeStops.map((stop, index) => (
                 <RouteStopCard
                   key={stop.id}
                   stop={stop}
                   index={index}
+                  totalStops={routeStops.length}
                   onPress={() => handleStopPress(stop)}
+                  onMoveUp={() => handleMoveUp(index)}
+                  onMoveDown={() => handleMoveDown(index)}
                 />
               ))}
             </View>
@@ -811,6 +868,12 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     ...Shadows.card,
   },
+  routeStopLeft: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    marginRight: Spacing.md,
+    gap: 4,
+  },
   routeStopNumber: {
     width: 28,
     height: 28,
@@ -818,7 +881,21 @@ const styles = StyleSheet.create({
     backgroundColor: BrandColors.azureBlue,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: Spacing.md,
+  },
+  reorderButtons: {
+    flexDirection: 'row',
+    gap: 2,
+  },
+  reorderButton: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: BorderRadius.xs,
+    backgroundColor: 'rgba(0,120,212,0.1)',
+  },
+  reorderButtonDisabled: {
+    backgroundColor: 'rgba(0,0,0,0.03)',
   },
   routeStopNumberText: {
     color: '#FFFFFF',

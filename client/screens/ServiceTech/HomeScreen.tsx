@@ -16,6 +16,7 @@ import { BatterySaverBanner } from '@/components/BatterySaverBanner';
 import { useAuth } from '@/context/AuthContext';
 import { useNetwork } from '@/context/NetworkContext';
 import { useBattery } from '@/context/BatteryContext';
+import { useUrgentAlerts } from '@/context/UrgentAlertsContext';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
 import {
@@ -147,6 +148,7 @@ export default function ServiceTechHomeScreen() {
   const { theme } = useTheme();
   const { isConnected } = useNetwork();
   const { isBatterySaverEnabled } = useBattery();
+  const { addAlert } = useUrgentAlerts();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   
   const [assignmentsExpanded, setAssignmentsExpanded] = useState(true);
@@ -154,9 +156,18 @@ export default function ServiceTechHomeScreen() {
   const [routeStops, setRouteStops] = useState(mockRouteStops);
   const [showNotification, setShowNotification] = useState(false);
 
+  const demoAlert = {
+    title: 'Urgent Pool Service Required',
+    message: 'Sunset Valley Resort needs immediate attention - pool water is cloudy and guests are complaining.',
+    type: 'urgent' as const,
+    property: 'Sunset Valley Resort',
+    details: 'The main pool at Sunset Valley Resort has become cloudy overnight. Multiple guests have complained to management. The pool has been closed temporarily. Please prioritize this location and assess the situation as soon as possible. Check chemical levels, filtration system, and look for any contamination sources.',
+  };
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowNotification(true);
+      addAlert(demoAlert);
     }, 2000);
     return () => clearTimeout(timer);
   }, []);
@@ -203,11 +214,15 @@ export default function ServiceTechHomeScreen() {
     <BubbleBackground bubbleCount={18}>
       <NotificationBanner
         visible={showNotification}
-        title="Urgent Pool Service Required"
-        message="Sunset Valley Resort needs immediate attention - pool water is cloudy and guests are complaining."
+        title={demoAlert.title}
+        message={demoAlert.message}
         type="urgent"
         icon="alert-circle"
         onDismiss={() => setShowNotification(false)}
+        onPress={() => {
+          setShowNotification(false);
+          (navigation.getParent() as any)?.navigate('Chat');
+        }}
       />
       {!isConnected ? <OfflineBanner /> : null}
       {isBatterySaverEnabled ? <BatterySaverBanner /> : null}

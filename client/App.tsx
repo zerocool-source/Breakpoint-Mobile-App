@@ -13,6 +13,7 @@ import AuthNavigator from '@/navigation/AuthNavigator';
 import { AuthProvider } from '@/context/AuthContext';
 import { NetworkProvider } from '@/context/NetworkContext';
 import { BatteryProvider } from '@/context/BatteryContext';
+import { UrgentAlertsProvider } from '@/context/UrgentAlertsContext';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 export default function App() {
@@ -24,11 +25,13 @@ export default function App() {
             <KeyboardProvider>
               <NetworkProvider>
                 <BatteryProvider>
-                  <AuthProvider>
-                    <NavigationContainer>
-                      <AuthNavigator />
-                    </NavigationContainer>
-                  </AuthProvider>
+                  <UrgentAlertsProvider>
+                    <AuthProvider>
+                      <NavigationContainer>
+                        <AuthNavigator />
+                      </NavigationContainer>
+                    </AuthProvider>
+                  </UrgentAlertsProvider>
                 </BatteryProvider>
               </NetworkProvider>
               <StatusBar style="auto" />

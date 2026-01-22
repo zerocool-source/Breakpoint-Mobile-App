@@ -95,6 +95,11 @@ client/
 - **Backend**: `npm run server:dev` (port 5000)
 
 ## Recent Changes
+- January 22, 2026: Redesigned Repair Tech app with light bubble background theme
+- January 22, 2026: New HomeScreen with blue gradient header, progress cards, next stop, quick actions grid, draggable jobs
+- January 22, 2026: New QueueScreen with 2x2 metrics grid and collapsible sections
+- January 22, 2026: New JobsScreen with enhanced job cards, attachments, Navigate/Details buttons
+- January 22, 2026: Added NewEstimateModal, OrderPartsModal, ReportIssueModal for quick actions
 - January 22, 2026: Fixed Team Tracker - Assignment Breakdown modal now expands properly with ScrollView
 - January 22, 2026: Added Today's Route section showing technician property stops with status
 - January 22, 2026: Connected Create Assignment button to CreateAssignmentModal
@@ -103,7 +108,7 @@ client/
 - January 2026: Added Service Technician app with complete flow
 - January 2026: Updated logo to official Breakpoint "Keeping People Safe" branding
 - Role selection as landing page with 4 distinct role cards
-- Custom components: Badge, BPButton, JobCard, NextStopCard, MetricCard, EstimateCard
+- Custom components: Badge, BPButton, JobCard, NextStopCard, MetricCard, EstimateCard, LightBubbleBackground
 
 ## User Preferences
 - Mobile-first design matching iOS Human Interface Guidelines

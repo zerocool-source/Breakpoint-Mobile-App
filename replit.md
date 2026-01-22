@@ -99,6 +99,7 @@ client/
 - January 22, 2026: New HomeScreen with blue gradient header, progress cards, next stop, quick actions grid, draggable jobs
 - January 22, 2026: New QueueScreen with 2x2 metrics grid and collapsible sections
 - January 22, 2026: New JobsScreen with enhanced job cards, attachments, Navigate/Details buttons
+- January 22, 2026: Added EmergencyReportModal with property selection, emergency type grid, and auto-admin notification
 - January 22, 2026: Added NewEstimateModal, OrderPartsModal, ReportIssueModal for quick actions
 - January 22, 2026: Fixed Team Tracker - Assignment Breakdown modal now expands properly with ScrollView
 - January 22, 2026: Added Today's Route section showing technician property stops with status

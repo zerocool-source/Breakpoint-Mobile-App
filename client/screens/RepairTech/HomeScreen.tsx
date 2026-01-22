@@ -20,7 +20,7 @@ import { useNetwork } from '@/context/NetworkContext';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
 import { mockJobs, mockRouteStops, mockQueueMetrics } from '@/lib/mockData';
-import { NewEstimateModal, OrderPartsModal, ReportIssueModal } from './Modals';
+import { NewEstimateModal, OrderPartsModal, ReportIssueModal, EmergencyReportModal } from './Modals';
 import type { Job } from '@/types';
 import type { RootStackParamList } from '@/navigation/RootStackNavigator';
 
@@ -125,6 +125,7 @@ export default function HomeScreen() {
   const [showNewEstimateModal, setShowNewEstimateModal] = useState(false);
   const [showOrderPartsModal, setShowOrderPartsModal] = useState(false);
   const [showReportIssueModal, setShowReportIssueModal] = useState(false);
+  const [showEmergencyModal, setShowEmergencyModal] = useState(false);
 
   const nextStop = mockRouteStops.find(stop => !stop.completed);
   const truckId = 'RT-007';
@@ -142,7 +143,7 @@ export default function HomeScreen() {
     }
     switch (action) {
       case 'emergency':
-        setShowReportIssueModal(true);
+        setShowEmergencyModal(true);
         break;
       case 'estimate':
         setShowNewEstimateModal(true);
@@ -326,6 +327,11 @@ export default function HomeScreen() {
         visible={showReportIssueModal}
         onClose={() => setShowReportIssueModal(false)}
         onSubmit={(data) => console.log('Issue:', data)}
+      />
+      <EmergencyReportModal
+        visible={showEmergencyModal}
+        onClose={() => setShowEmergencyModal(false)}
+        onSubmit={(data) => console.log('Emergency:', data)}
       />
     </LightBubbleBackground>
   );

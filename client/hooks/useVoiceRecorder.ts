@@ -1,10 +1,10 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Platform } from 'react-native';
 import { 
   useAudioRecorder, 
-  AudioModule, 
+  useAudioPlayer, 
   RecordingPresets,
-  useAudioPlayer,
+  requestRecordingPermissionsAsync,
 } from 'expo-audio';
 import * as Haptics from 'expo-haptics';
 
@@ -34,12 +34,13 @@ export function useVoiceRecorder(options: UseVoiceRecorderOptions = {}): UseVoic
   const [recordingUri, setRecordingUri] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
 
-  const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
-  const player = useAudioPlayer(recordingUri || undefined);
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  
+  const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
 
-  const isRecording = audioRecorder.isRecording;
+  const player = useAudioPlayer(recordingUri ? { uri: recordingUri } : null);
 
   useEffect(() => {
     return () => {
@@ -50,17 +51,10 @@ export function useVoiceRecorder(options: UseVoiceRecorderOptions = {}): UseVoic
   }, []);
 
   useEffect(() => {
-    if (player) {
-      const handlePlaybackStatus = () => {
-        if (player.currentTime >= player.duration && player.duration > 0) {
-          setIsPlaying(false);
-        }
-      };
-      
-      const interval = setInterval(handlePlaybackStatus, 100);
-      return () => clearInterval(interval);
+    if (player && player.playing === false && isPlaying) {
+      setIsPlaying(false);
     }
-  }, [player]);
+  }, [player?.playing, isPlaying]);
 
   const startRecording = useCallback(async () => {
     try {
@@ -70,15 +64,18 @@ export function useVoiceRecorder(options: UseVoiceRecorderOptions = {}): UseVoic
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       }
 
-      const permissionStatus = await AudioModule.requestRecordingPermissionsAsync();
-      if (!permissionStatus.granted) {
+      const permissionResult = await requestRecordingPermissionsAsync();
+      if (!permissionResult.granted) {
         setErrorMessage('Microphone permission is required for voice notes');
         setStatus('error');
         return;
       }
 
+      await audioRecorder.prepareToRecordAsync();
       audioRecorder.record();
+      
       setStatus('recording');
+      setIsRecording(true);
       setDuration(0);
 
       durationIntervalRef.current = setInterval(() => {
@@ -105,6 +102,7 @@ export function useVoiceRecorder(options: UseVoiceRecorderOptions = {}): UseVoic
       await audioRecorder.stop();
       const uri = audioRecorder.uri;
       
+      setIsRecording(false);
       setStatus('stopped');
       
       if (uri) {
@@ -118,6 +116,7 @@ export function useVoiceRecorder(options: UseVoiceRecorderOptions = {}): UseVoic
       console.error('Failed to stop recording:', error);
       setErrorMessage('Failed to save recording. Please try again.');
       setStatus('error');
+      setIsRecording(false);
       return null;
     }
   }, [audioRecorder, duration, options]);
@@ -129,17 +128,18 @@ export function useVoiceRecorder(options: UseVoiceRecorderOptions = {}): UseVoic
         durationIntervalRef.current = null;
       }
 
-      if (audioRecorder.isRecording) {
+      if (isRecording) {
         await audioRecorder.stop();
       }
 
+      setIsRecording(false);
       setStatus('idle');
       setDuration(0);
       setRecordingUri(null);
     } catch (error) {
       console.error('Failed to cancel recording:', error);
     }
-  }, [audioRecorder]);
+  }, [audioRecorder, isRecording]);
 
   const playRecording = useCallback(async () => {
     try {

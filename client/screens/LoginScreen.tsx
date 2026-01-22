@@ -123,6 +123,31 @@ export default function LoginScreen({ onBack }: LoginScreenProps) {
     onBack?.();
   };
 
+  const handleQuickAccess = async () => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+    setError(null);
+    
+    const devEmail = `dev-${selectedRole}@breakpoint.com`;
+    const devPassword = 'devpass123';
+    const devName = `Dev ${roleName}`;
+    
+    let result = await login(devEmail, devPassword);
+    
+    if (!result.success) {
+      result = await register(devEmail, devPassword, devName);
+    }
+    
+    if (result.success) {
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    } else {
+      setError(result.error || 'Quick access failed. Please try again.');
+    }
+  };
+
   const toggleMode = () => {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -254,6 +279,23 @@ export default function LoginScreen({ onBack }: LoginScreenProps) {
             </ThemedText>
           </Pressable>
         </Animated.View>
+
+        <Animated.View entering={FadeInDown.delay(400).springify()} style={styles.quickAccessSection}>
+          <View style={styles.quickAccessDivider}>
+            <View style={styles.dividerLine} />
+            <ThemedText style={styles.dividerText}>Quick Access</ThemedText>
+            <View style={styles.dividerLine} />
+          </View>
+          <Pressable 
+            style={[styles.quickAccessButton, { borderColor: roleColor }]}
+            onPress={handleQuickAccess}
+          >
+            <Feather name="zap" size={18} color={roleColor} />
+            <ThemedText style={[styles.quickAccessText, { color: roleColor }]}>
+              Dev Login as {roleName}
+            </ThemedText>
+          </Pressable>
+        </Animated.View>
       </KeyboardAwareScrollViewCompat>
     </BubbleBackground>
   );
@@ -356,6 +398,42 @@ const styles = StyleSheet.create({
     color: BrandColors.textSecondary,
   },
   footerLink: {
+    fontWeight: '600',
+  },
+  quickAccessSection: {
+    marginTop: Spacing['2xl'],
+    alignItems: 'center',
+  },
+  quickAccessDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+    width: '100%',
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: BrandColors.border,
+  },
+  dividerText: {
+    paddingHorizontal: Spacing.md,
+    fontSize: 12,
+    color: BrandColors.textSecondary,
+    fontWeight: '600',
+  },
+  quickAccessButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.xl,
+    borderWidth: 2,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    gap: Spacing.sm,
+  },
+  quickAccessText: {
+    fontSize: 16,
     fontWeight: '600',
   },
 });

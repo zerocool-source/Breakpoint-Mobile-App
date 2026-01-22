@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: BrandColors.textPrimary,
+    color: '#FFFFFF',
     marginBottom: Spacing.md,
   },
   roleBadge: {

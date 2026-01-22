@@ -142,7 +142,7 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
       <View style={styles.content}>
         <Animated.View style={[styles.logoContainer, logoAnimatedStyle]}>
           <Image
-            source={require('../../assets/images/breakpoint-logo-clean.png')}
+            source={require('../../assets/images/breakpoint-logo.png')}
             style={styles.logo}
             contentFit="contain"
           />

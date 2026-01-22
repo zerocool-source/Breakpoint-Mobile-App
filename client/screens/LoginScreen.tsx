@@ -178,7 +178,7 @@ export default function LoginScreen({ onBack }: LoginScreenProps) {
 
         <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.logoContainer}>
           <Image
-            source={require('../../assets/images/breakpoint-logo-clean.png')}
+            source={require('../../assets/images/breakpoint-logo.png')}
             style={styles.logo}
             contentFit="contain"
           />

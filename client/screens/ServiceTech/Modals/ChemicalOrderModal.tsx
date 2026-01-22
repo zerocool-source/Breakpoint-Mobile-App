@@ -158,6 +158,7 @@ export function ChemicalOrderModal({
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           >
             {rows.map((row) => (
               <View key={row.id} style={styles.chemicalRow}>

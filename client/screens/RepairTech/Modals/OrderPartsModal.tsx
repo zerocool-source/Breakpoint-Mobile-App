@@ -59,6 +59,7 @@ export function OrderPartsModal({ visible, onClose, onSubmit }: OrderPartsModalP
             style={styles.scrollView}
             contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 100 }]}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           >
             <View style={styles.field}>
               <ThemedText style={[styles.label, { color: theme.textSecondary }]}>Property</ThemedText>

@@ -99,6 +99,7 @@ export function WindyDayCleanupModal({
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           >
             <View style={[styles.propertyCard, { backgroundColor: theme.backgroundSecondary }]}>
               <ThemedText style={[styles.propertyLabel, { color: BrandColors.azureBlue }]}>PROPERTY</ThemedText>

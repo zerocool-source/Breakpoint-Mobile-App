@@ -140,6 +140,7 @@ function ProductPicker({ visible, onClose, onSelect }: ProductPickerProps) {
           <ScrollView 
             style={pickerStyles.productList}
             contentContainerStyle={{ paddingBottom: insets.bottom + Spacing.lg }}
+            keyboardShouldPersistTaps="handled"
           >
             {filteredProducts.map(product => (
               <Pressable
@@ -266,6 +267,7 @@ export function NewEstimateModal({ visible, onClose, onSubmit }: NewEstimateModa
             style={styles.scrollView}
             contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 100 }]}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           >
             <View style={styles.row}>
               <View style={styles.halfField}>

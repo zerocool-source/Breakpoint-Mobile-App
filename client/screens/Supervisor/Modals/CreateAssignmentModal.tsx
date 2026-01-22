@@ -127,6 +127,7 @@ export function CreateAssignmentModal({ visible, onClose }: CreateAssignmentModa
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           >
             <View style={styles.inputSection}>
               <ThemedText style={styles.inputLabel}>Assignment Type *</ThemedText>
@@ -154,7 +155,7 @@ export function CreateAssignmentModal({ visible, onClose }: CreateAssignmentModa
                       setTechNeedingHelp('');
                     }
                   }}
-                  style={[styles.picker, { color: theme.text }]}
+                  style={styles.picker}
                 >
                   <Picker.Item label="Select technician..." value="" color={theme.textSecondary} />
                   {mockTechnicians.map((tech) => (
@@ -201,7 +202,7 @@ export function CreateAssignmentModal({ visible, onClose }: CreateAssignmentModa
                   <Picker
                     selectedValue={techNeedingHelp}
                     onValueChange={(value: string) => setTechNeedingHelp(value)}
-                    style={[styles.picker, { color: theme.text }]}
+                    style={styles.picker}
                   >
                     <Picker.Item label="Select technician to assist..." value="" color={theme.textSecondary} />
                     {availableTechsToHelp.map((tech) => (
@@ -228,7 +229,7 @@ export function CreateAssignmentModal({ visible, onClose }: CreateAssignmentModa
                 <Picker
                   selectedValue={selectedProperty}
                   onValueChange={(value: string) => setSelectedProperty(value)}
-                  style={[styles.picker, { color: theme.text }]}
+                  style={styles.picker}
                 >
                   <Picker.Item label="Select property..." value="" color={theme.textSecondary} />
                   {mockProperties.map((prop) => (

@@ -133,6 +133,7 @@ export function ServiceRepairModal({
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           >
             <View style={styles.inputSection}>
               <ThemedText style={styles.inputLabel}>ISSUE DESCRIPTION</ThemedText>

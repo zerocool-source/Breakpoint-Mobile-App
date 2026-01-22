@@ -109,6 +109,7 @@ export function EmergencyReportModal({ visible, onClose, onSubmit }: EmergencyRe
             style={styles.scrollView}
             contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 100 }]}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           >
             <View style={styles.field}>
               <ThemedText style={[styles.label, { color: theme.textSecondary }]}>

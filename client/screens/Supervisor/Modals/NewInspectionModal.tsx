@@ -92,6 +92,7 @@ export function NewInspectionModal({ visible, onClose, onStartInspection }: NewI
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           >
             <View style={styles.section}>
               <ThemedText style={[styles.sectionLabel, { color: theme.textSecondary }]}>

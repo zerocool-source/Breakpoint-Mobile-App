@@ -104,6 +104,7 @@ export function RepairsNeededModal({
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           >
             <View style={styles.propertySection}>
               <ThemedText style={styles.propertyName}>{propertyName}</ThemedText>

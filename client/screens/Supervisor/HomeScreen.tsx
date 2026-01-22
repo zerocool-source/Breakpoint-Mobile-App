@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Pressable, ScrollView, Platform } from 'react-native';
+import { View, StyleSheet, Pressable, ScrollView, Platform, Modal } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,8 +16,11 @@ import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
 import {
   mockWeeklyMetrics,
   mockQCInspections,
+  mockTechnicians,
+  mockTechnicianAssignmentStats,
   supervisorInfo,
   type QCInspection,
+  type Technician,
 } from '@/lib/supervisorMockData';
 
 function getGreeting(): string {
@@ -93,6 +96,188 @@ function InspectionItem({ inspection, onPress }: InspectionItemProps) {
   );
 }
 
+interface TechnicianCardProps {
+  technician: Technician;
+  onPress: () => void;
+}
+
+function TechnicianCard({ technician, onPress }: TechnicianCardProps) {
+  const { theme } = useTheme();
+  
+  const getStatusInfo = (status: string) => {
+    switch (status) {
+      case 'active':
+        return { label: 'Active', color: BrandColors.emerald };
+      case 'running_behind':
+        return { label: 'Running Behind', color: BrandColors.vividTangerine };
+      case 'offline':
+      case 'inactive':
+        return { label: 'Offline', color: theme.textSecondary };
+      case 'on_break':
+        return { label: 'On Break', color: '#9C27B0' };
+      default:
+        return { label: status, color: theme.textSecondary };
+    }
+  };
+
+  const statusInfo = getStatusInfo(technician.status);
+
+  return (
+    <Pressable 
+      style={[styles.technicianCard, { backgroundColor: theme.surface }]} 
+      onPress={onPress}
+    >
+      <View style={styles.technicianLeft}>
+        <View style={styles.techAvatarContainer}>
+          <View style={styles.techAvatar}>
+            <Feather name="user" size={20} color="#FFFFFF" />
+          </View>
+          <View style={[styles.statusDot, { backgroundColor: statusInfo.color }]} />
+        </View>
+        <View style={styles.techInfo}>
+          <ThemedText style={styles.techName}>{technician.name}</ThemedText>
+          <ThemedText style={[styles.techStatus, { color: statusInfo.color }]}>
+            {statusInfo.label}
+          </ThemedText>
+        </View>
+      </View>
+      <View style={styles.technicianRight}>
+        <ThemedText style={[styles.techProgress, { color: theme.text }]}>
+          {technician.progress.completed}/{technician.progress.total} completed
+        </ThemedText>
+        <Feather name="chevron-down" size={20} color={theme.textSecondary} />
+      </View>
+    </Pressable>
+  );
+}
+
+interface AssignmentBreakdownModalProps {
+  visible: boolean;
+  technician: Technician | null;
+  onClose: () => void;
+  onCreateAssignment: () => void;
+  onSendMessage: () => void;
+}
+
+function AssignmentBreakdownModal({ 
+  visible, 
+  technician, 
+  onClose,
+  onCreateAssignment,
+  onSendMessage 
+}: AssignmentBreakdownModalProps) {
+  const { theme } = useTheme();
+  const stats = technician ? mockTechnicianAssignmentStats[technician.id] : null;
+
+  if (!technician || !stats) return null;
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={[styles.modalContent, { backgroundColor: theme.surface }]}>
+          <View style={styles.modalHeader}>
+            <View>
+              <ThemedText style={styles.modalTitle}>{technician.name}</ThemedText>
+              <ThemedText style={[styles.modalSubtitle, { color: theme.textSecondary }]}>
+                Assignment Breakdown
+              </ThemedText>
+            </View>
+            <Pressable onPress={onClose} style={styles.closeButton}>
+              <Feather name="x" size={24} color={theme.text} />
+            </Pressable>
+          </View>
+
+          <ThemedText style={styles.summaryLabel}>SUMMARY</ThemedText>
+          
+          <View style={styles.summaryGrid}>
+            <View style={styles.summaryRow}>
+              <View style={[styles.summaryCard, { backgroundColor: theme.backgroundRoot }]}>
+                <ThemedText style={[styles.summaryValue, { color: BrandColors.azureBlue }]}>
+                  {stats.total}
+                </ThemedText>
+                <ThemedText style={[styles.summaryCardLabel, { color: theme.textSecondary }]}>
+                  Total
+                </ThemedText>
+              </View>
+              <View style={[styles.summaryCard, { backgroundColor: theme.backgroundRoot }]}>
+                <ThemedText style={[styles.summaryValue, { color: BrandColors.emerald }]}>
+                  {stats.completed}
+                </ThemedText>
+                <ThemedText style={[styles.summaryCardLabel, { color: theme.textSecondary }]}>
+                  Completed
+                </ThemedText>
+              </View>
+            </View>
+            <View style={styles.summaryRow}>
+              <View style={[styles.summaryCard, { backgroundColor: theme.backgroundRoot }]}>
+                <ThemedText style={[styles.summaryValue, { color: BrandColors.danger }]}>
+                  {stats.notDone}
+                </ThemedText>
+                <ThemedText style={[styles.summaryCardLabel, { color: theme.textSecondary }]}>
+                  Not Done
+                </ThemedText>
+              </View>
+              <View style={[styles.summaryCard, { backgroundColor: theme.backgroundRoot }]}>
+                <ThemedText style={[styles.summaryValue, { color: BrandColors.vividTangerine }]}>
+                  {stats.needHelp}
+                </ThemedText>
+                <ThemedText style={[styles.summaryCardLabel, { color: theme.textSecondary }]}>
+                  Need Help
+                </ThemedText>
+              </View>
+            </View>
+          </View>
+
+          <ThemedText style={styles.myAssignmentsLabel}>My Assignments</ThemedText>
+          
+          <View style={[styles.assignmentsCard, { backgroundColor: theme.backgroundRoot }]}>
+            <ThemedText style={[styles.totalAssignments, { color: BrandColors.azureBlue }]}>
+              {stats.total}
+            </ThemedText>
+            <ThemedText style={[styles.totalAssignmentsLabel, { color: theme.textSecondary }]}>
+              Total assignments this week
+            </ThemedText>
+            <View style={styles.assignmentBadges}>
+              <View style={[styles.assignmentBadge, { backgroundColor: BrandColors.emerald + '20' }]}>
+                <ThemedText style={[styles.assignmentBadgeText, { color: BrandColors.emerald }]}>
+                  {stats.completed} Completed
+                </ThemedText>
+              </View>
+              <View style={[styles.assignmentBadge, { backgroundColor: BrandColors.vividTangerine + '20' }]}>
+                <ThemedText style={[styles.assignmentBadgeText, { color: BrandColors.vividTangerine }]}>
+                  {stats.total - stats.completed} Pending
+                </ThemedText>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.modalActions}>
+            <Pressable 
+              style={[styles.createAssignmentButton, { backgroundColor: BrandColors.azureBlue }]}
+              onPress={onCreateAssignment}
+            >
+              <Feather name="plus" size={18} color="#FFFFFF" />
+              <ThemedText style={styles.createAssignmentText}>Create Assignment</ThemedText>
+            </Pressable>
+            <Pressable 
+              style={[styles.sendMessageButton, { borderColor: theme.border }]}
+              onPress={onSendMessage}
+            >
+              <Feather name="message-square" size={18} color={theme.text} />
+              <ThemedText style={styles.sendMessageText}>Send Message</ThemedText>
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 export default function SupervisorHomeScreen() {
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
@@ -100,8 +285,12 @@ export default function SupervisorHomeScreen() {
   const { theme } = useTheme();
   
   const [quickActionsExpanded, setQuickActionsExpanded] = useState(true);
+  const [selectedTechnician, setSelectedTechnician] = useState<Technician | null>(null);
+  const [showBreakdownModal, setShowBreakdownModal] = useState(false);
+  
   const metrics = mockWeeklyMetrics;
   const inspections = mockQCInspections.slice(0, 4);
+  const technicians = mockTechnicians;
 
   const handleChatPress = () => {
     if (Platform.OS !== 'web') {
@@ -113,6 +302,14 @@ export default function SupervisorHomeScreen() {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
+  };
+
+  const handleTechnicianPress = (technician: Technician) => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    setSelectedTechnician(technician);
+    setShowBreakdownModal(true);
   };
 
   return (
@@ -176,6 +373,27 @@ export default function SupervisorHomeScreen() {
                 label="QC Inspections"
                 color="#9C27B0"
               />
+            </View>
+          </View>
+        </Animated.View>
+
+        <Animated.View entering={FadeInDown.delay(150).springify()}>
+          <View style={[styles.teamTrackerCard, { backgroundColor: theme.surface }]}>
+            <View style={styles.teamTrackerHeader}>
+              <ThemedText style={styles.teamTrackerTitle}>Team Tracker</ThemedText>
+              <ThemedText style={[styles.teamTrackerSubtitle, { color: theme.textSecondary }]}>
+                Monitor technician progress
+              </ThemedText>
+            </View>
+            
+            <View style={styles.techniciansList}>
+              {technicians.map((technician) => (
+                <TechnicianCard
+                  key={technician.id}
+                  technician={technician}
+                  onPress={() => handleTechnicianPress(technician)}
+                />
+              ))}
             </View>
           </View>
         </Animated.View>
@@ -254,10 +472,37 @@ export default function SupervisorHomeScreen() {
                   onPress={() => handleQuickAction('report')}
                 />
               </View>
+              <View style={styles.quickActionsRow}>
+                <QuickActionButton
+                  icon="file-text"
+                  label="Add Notes"
+                  color={BrandColors.azureBlue}
+                  onPress={() => handleQuickAction('notes')}
+                />
+                <QuickActionButton
+                  icon="alert-circle"
+                  label="Emergency"
+                  color={BrandColors.danger}
+                  onPress={() => handleQuickAction('emergency')}
+                />
+                <View style={styles.quickActionPlaceholder} />
+              </View>
             </View>
           ) : null}
         </Animated.View>
       </ScrollView>
+
+      <AssignmentBreakdownModal
+        visible={showBreakdownModal}
+        technician={selectedTechnician}
+        onClose={() => setShowBreakdownModal(false)}
+        onCreateAssignment={() => {
+          setShowBreakdownModal(false);
+        }}
+        onSendMessage={() => {
+          setShowBreakdownModal(false);
+        }}
+      />
     </View>
   );
 }
@@ -365,6 +610,83 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     textAlign: 'center',
   },
+  teamTrackerCard: {
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+    marginBottom: Spacing.xl,
+    ...Shadows.card,
+  },
+  teamTrackerHeader: {
+    marginBottom: Spacing.lg,
+  },
+  teamTrackerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: Spacing.xs,
+  },
+  teamTrackerSubtitle: {
+    fontSize: 13,
+  },
+  techniciansList: {
+    gap: Spacing.sm,
+  },
+  technicianCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
+  },
+  technicianLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  techAvatarContainer: {
+    position: 'relative',
+    marginRight: Spacing.md,
+  },
+  techAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: BrandColors.azureBlue,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusDot: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  techInfo: {
+    flex: 1,
+  },
+  techName: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  techStatus: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  technicianRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  techProgress: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
   inspectionsList: {
     gap: Spacing.sm,
     marginBottom: Spacing.xl,
@@ -426,5 +748,129 @@ const styles = StyleSheet.create({
   quickActionsRow: {
     flexDirection: 'row',
     gap: Spacing.md,
+  },
+  quickActionPlaceholder: {
+    flex: 1,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: BorderRadius.xl,
+    borderTopRightRadius: BorderRadius.xl,
+    padding: Spacing.xl,
+    paddingBottom: Spacing["2xl"] + 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: Spacing.xl,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: Spacing.xs,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+  },
+  closeButton: {
+    padding: Spacing.xs,
+  },
+  summaryLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    marginBottom: Spacing.md,
+  },
+  summaryGrid: {
+    gap: Spacing.sm,
+    marginBottom: Spacing.xl,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  summaryCard: {
+    flex: 1,
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.md,
+    alignItems: 'center',
+  },
+  summaryValue: {
+    fontSize: 28,
+    fontWeight: '700',
+    marginBottom: Spacing.xs,
+  },
+  summaryCardLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  myAssignmentsLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: Spacing.md,
+  },
+  assignmentsCard: {
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.md,
+    marginBottom: Spacing.xl,
+  },
+  totalAssignments: {
+    fontSize: 36,
+    fontWeight: '700',
+    marginBottom: Spacing.xs,
+  },
+  totalAssignmentsLabel: {
+    fontSize: 13,
+    marginBottom: Spacing.md,
+  },
+  assignmentBadges: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  assignmentBadge: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.full,
+  },
+  assignmentBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+  },
+  createAssignmentButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
+    gap: Spacing.sm,
+  },
+  createAssignmentText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  sendMessageButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    gap: Spacing.sm,
+  },
+  sendMessageText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

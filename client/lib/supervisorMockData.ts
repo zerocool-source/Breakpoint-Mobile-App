@@ -2,7 +2,7 @@ export interface Technician {
   id: string;
   name: string;
   role: 'service_tech' | 'repair_tech';
-  status: 'active' | 'inactive' | 'on_break';
+  status: 'active' | 'inactive' | 'on_break' | 'running_behind' | 'offline';
   currentStop?: string;
   progress: {
     completed: number;
@@ -65,57 +65,63 @@ export interface WeeklyMetrics {
   qcInspections: number;
 }
 
+export type TechnicianStatus = 'active' | 'running_behind' | 'offline' | 'on_break';
+
+export interface TechnicianAssignmentStats {
+  total: number;
+  completed: number;
+  notDone: number;
+  needHelp: number;
+}
+
 export const mockTechnicians: Technician[] = [
   {
     id: '1',
-    name: 'John Smith',
+    name: 'Mike Rodriguez',
     role: 'service_tech',
     status: 'active',
     currentStop: 'SUNNYMEAD RANCH PCA',
-    progress: { completed: 3, total: 8 },
+    progress: { completed: 4, total: 11 },
     phone: '(951) 555-0123',
-    email: 'john.smith@breakpoint.com',
+    email: 'mike.rodriguez@breakpoint.com',
   },
   {
     id: '2',
-    name: 'Maria Garcia',
+    name: 'Jorge Martinez',
     role: 'service_tech',
     status: 'active',
     currentStop: 'RIVERSIDE PALMS HOA',
-    progress: { completed: 5, total: 6 },
+    progress: { completed: 6, total: 9 },
     phone: '(951) 555-0124',
-    email: 'maria.garcia@breakpoint.com',
+    email: 'jorge.martinez@breakpoint.com',
   },
   {
     id: '3',
-    name: 'David Chen',
+    name: 'Sarah Chen',
     role: 'repair_tech',
     status: 'active',
     currentStop: 'HOLIDAY INN EXPRESS',
-    progress: { completed: 2, total: 5 },
+    progress: { completed: 3, total: 8 },
     phone: '(951) 555-0125',
-    email: 'david.chen@breakpoint.com',
+    email: 'sarah.chen@breakpoint.com',
   },
   {
     id: '4',
-    name: 'Sarah Johnson',
+    name: 'Alex Johnson',
     role: 'service_tech',
-    status: 'on_break',
-    progress: { completed: 4, total: 7 },
+    status: 'inactive',
+    progress: { completed: 0, total: 5 },
     phone: '(951) 555-0126',
-    email: 'sarah.johnson@breakpoint.com',
-  },
-  {
-    id: '5',
-    name: 'Mike Wilson',
-    role: 'repair_tech',
-    status: 'active',
-    currentStop: 'PARKVIEW APARTMENTS',
-    progress: { completed: 1, total: 4 },
-    phone: '(951) 555-0127',
-    email: 'mike.wilson@breakpoint.com',
+    email: 'alex.johnson@breakpoint.com',
   },
 ];
+
+export const mockTechnicianAssignmentStats: Record<string, TechnicianAssignmentStats> = {
+  '1': { total: 12, completed: 7, notDone: 3, needHelp: 2 },
+  '2': { total: 8, completed: 5, notDone: 2, needHelp: 1 },
+  '3': { total: 10, completed: 6, notDone: 3, needHelp: 1 },
+  '4': { total: 5, completed: 2, notDone: 2, needHelp: 1 },
+};
 
 export const mockQCInspections: QCInspection[] = [
   {

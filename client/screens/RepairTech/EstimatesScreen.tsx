@@ -61,6 +61,7 @@ export default function EstimatesScreen() {
         keyExtractor={(item) => item.id}
         renderItem={renderEstimate}
         ListEmptyComponent={renderEmpty}
+        keyboardShouldPersistTaps="handled"
         contentContainerStyle={[
           {
             paddingTop: headerHeight + Spacing.lg,

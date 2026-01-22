@@ -85,6 +85,7 @@ export default function AssignmentDetailScreen() {
         style={styles.scrollView}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         <Animated.View entering={FadeInDown.delay(100).springify()}>
           <View style={[styles.card, { backgroundColor: theme.surface }]}>

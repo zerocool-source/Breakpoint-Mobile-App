@@ -207,6 +207,7 @@ export default function QueueScreen() {
         style={styles.scrollView}
         contentContainerStyle={{ paddingBottom: tabBarHeight + Spacing.fabSize + Spacing['2xl'] }}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         <View style={styles.content}>
           <View style={styles.titleRow}>

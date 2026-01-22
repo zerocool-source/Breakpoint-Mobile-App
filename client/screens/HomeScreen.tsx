@@ -23,6 +23,7 @@ export default function HomeScreen() {
       scrollIndicatorInsets={{ bottom: insets.bottom }}
       data={[]}
       renderItem={() => null}
+      keyboardShouldPersistTaps="handled"
     />
   );
 }

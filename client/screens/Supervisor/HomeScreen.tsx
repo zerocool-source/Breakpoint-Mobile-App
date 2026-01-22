@@ -218,7 +218,7 @@ function TeamChatModal({
           </Pressable>
 
           <ThemedText style={styles.chatSectionLabel}>SERVICE TECHS</ThemedText>
-          <ScrollView style={styles.techChatList} showsVerticalScrollIndicator={false}>
+          <ScrollView style={styles.techChatList} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             {technicians.filter(t => t.role === 'service_tech').map((tech) => {
               const statusColor = tech.status === 'active' ? BrandColors.emerald : 
                                   tech.status === 'running_behind' ? BrandColors.vividTangerine : 
@@ -337,6 +337,7 @@ function AssignmentBreakdownModal({
             style={styles.modalScrollView} 
             contentContainerStyle={[styles.modalScrollContent, { paddingBottom: insets.bottom + Spacing.lg }]}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           >
             <ThemedText style={styles.summaryLabel}>SUMMARY</ThemedText>
             
@@ -535,6 +536,7 @@ export default function SupervisorHomeScreen() {
         style={styles.scrollView}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarHeight + Spacing.xl }]}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         <Animated.View entering={FadeInDown.delay(100).springify()}>
           <View style={styles.sectionHeader}>

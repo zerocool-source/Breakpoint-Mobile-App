@@ -107,6 +107,7 @@ function ProductPicker({ visible, onClose, onSelect }: ProductPickerProps) {
             showsHorizontalScrollIndicator={false} 
             style={pickerStyles.categoriesContainer}
             contentContainerStyle={pickerStyles.categoriesContent}
+            keyboardShouldPersistTaps="handled"
           >
             <Pressable
               style={[

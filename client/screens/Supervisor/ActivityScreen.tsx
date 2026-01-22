@@ -184,6 +184,7 @@ function QCChecklistModal({ visible, onClose, inspection }: QCChecklistModalProp
             style={styles.modalScrollView}
             contentContainerStyle={styles.modalScrollContent}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           >
             {categories.map((category) => (
               <View key={category.id} style={styles.categoryContainer}>
@@ -280,6 +281,7 @@ export default function SupervisorActivityScreen() {
         style={styles.scrollView}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarHeight + Spacing.xl }]}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         {todayInspections.length > 0 ? (
           <View style={styles.section}>

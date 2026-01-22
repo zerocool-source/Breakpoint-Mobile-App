@@ -126,6 +126,7 @@ export default function TruckScreen() {
         style={styles.scrollView}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarHeight + Spacing.xl }]}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         <Animated.View entering={FadeInDown.delay(100).springify()}>
           <View style={styles.sectionHeader}>

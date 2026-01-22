@@ -19,6 +19,7 @@ export default function ModalScreen() {
         paddingHorizontal: Spacing.lg,
       }}
       scrollIndicatorInsets={{ bottom: insets.bottom }}
+      keyboardShouldPersistTaps="handled"
     />
   );
 }

@@ -126,6 +126,7 @@ export default function ChatScreen() {
         contentContainerStyle={[styles.messagesList, { paddingBottom: Spacing.lg }]}
         showsVerticalScrollIndicator={false}
         onContentSizeChange={() => flatListRef.current?.scrollToEnd()}
+        keyboardShouldPersistTaps="handled"
       />
 
       <View style={[styles.inputContainer, { paddingBottom: tabBarHeight + Spacing.md }]}>

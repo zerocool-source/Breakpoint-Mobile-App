@@ -92,6 +92,7 @@ export function NotificationBanner({
 
   return (
     <Animated.View
+      testID="notification-banner"
       style={[
         styles.container,
         { top: insets.top + Spacing.sm },
@@ -124,7 +125,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: Spacing.md,
     right: Spacing.md,
-    zIndex: 1000,
+    zIndex: 9999,
+    elevation: 9999,
   },
   banner: {
     flexDirection: 'row',

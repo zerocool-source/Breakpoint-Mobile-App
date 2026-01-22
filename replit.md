@@ -122,6 +122,10 @@ client/
 - **Backend**: `npm run server:dev` (port 5000)
 
 ## Recent Changes
+- January 22, 2026: Added NotificationBanner component for push notification demos with animated slide-in, haptic feedback, and auto-dismiss
+- January 22, 2026: Added demo push notifications to all roles: Service Tech (pool service urgent), Supervisor (health department alert), Repair Tech (power outage emergency)
+- January 22, 2026: Added Quick Repairs (Under $500) section to Repair Tech Queue - Operations Manager direct assignment with claim functionality
+- January 22, 2026: Added 5 sample quick repair jobs to mock data with priority levels and cost ranges under $500
 - January 22, 2026: Added Emergency tab for Service Technicians with dedicated emergency reporting screen
 - January 22, 2026: Added Supervisor management features - Who's On (active tech tracking), Truck Inspection (touch damage marking), Supportive Actions (performance coaching)
 - January 22, 2026: Added 30 customers to mock data for Supervisor dropdown (AVELINA HOA through Horsethief Canyon Ranch MA)

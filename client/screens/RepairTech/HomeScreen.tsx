@@ -494,6 +494,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '700',
     marginBottom: Spacing.xs,
+    fontVariant: ['tabular-nums'],
   },
   progressLabel: {
     fontSize: 10,

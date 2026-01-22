@@ -383,6 +383,7 @@ const styles = StyleSheet.create({
   metricValue: {
     fontSize: 28,
     fontWeight: '700',
+    fontVariant: ['tabular-nums'],
   },
   metricLabel: {
     fontSize: 12,

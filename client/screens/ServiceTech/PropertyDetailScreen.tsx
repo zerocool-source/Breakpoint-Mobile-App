@@ -593,6 +593,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 32,
     fontWeight: '700',
+    fontVariant: ['tabular-nums'],
   },
   timerRight: {
     flexDirection: 'row',

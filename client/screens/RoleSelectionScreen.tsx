@@ -36,6 +36,8 @@ const roles: RoleOption[] = [
     title: 'Service Technician',
     subtitle: 'Routes, stops, voice entries',
     avatar: require('../../assets/images/avatar-service-tech.png'),
+    isHighlighted: true,
+    highlightColor: BrandColors.vividTangerine,
   },
   {
     id: 'supervisor',

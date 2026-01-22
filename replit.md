@@ -121,7 +121,23 @@ client/
 - **Frontend**: `npm run expo:dev` (port 8081)
 - **Backend**: `npm run server:dev` (port 5000)
 
+## Offline Mode
+The app includes comprehensive offline support for field technicians:
+- **Network Detection**: Automatic connectivity monitoring via `@react-native-community/netinfo`
+- **Offline Banner**: Visual indicator when disconnected with pending action count
+- **Action Queue**: Queues changes made offline for sync when reconnected
+- **Data Caching**: Caches jobs, assignments, properties, estimates, etc. with configurable TTL
+- **Auto-Sync**: Automatically syncs queued actions when connection restored
+- **Last Sync Display**: Shows time since last successful sync
+
+### Key Files
+- `client/lib/offlineService.ts` - Offline queue and caching service
+- `client/context/NetworkContext.tsx` - Network state management
+- `client/components/OfflineBanner.tsx` - Offline status banner
+
 ## Recent Changes
+- January 22, 2026: Added comprehensive offline mode with action queue, data caching, and auto-sync
+- January 22, 2026: Optimized all images with Lanczos resampling for HD mobile displays
 - January 22, 2026: Added NotificationBanner component for push notification demos with animated slide-in, haptic feedback, and auto-dismiss
 - January 22, 2026: Added demo push notifications to all roles: Service Tech (pool service urgent), Supervisor (health department alert), Repair Tech (power outage emergency)
 - January 22, 2026: Added Quick Repairs (Under $500) section to Repair Tech Queue - Operations Manager direct assignment with claim functionality

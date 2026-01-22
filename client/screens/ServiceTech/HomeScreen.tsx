@@ -11,7 +11,9 @@ import { ThemedText } from '@/components/ThemedText';
 import { Avatar } from '@/components/Avatar';
 import { BubbleBackground } from '@/components/BubbleBackground';
 import { NotificationBanner } from '@/components/NotificationBanner';
+import { OfflineBanner } from '@/components/OfflineBanner';
 import { useAuth } from '@/context/AuthContext';
+import { useNetwork } from '@/context/NetworkContext';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
 import {
@@ -141,6 +143,7 @@ export default function ServiceTechHomeScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { theme } = useTheme();
+  const { isConnected } = useNetwork();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   
   const [assignmentsExpanded, setAssignmentsExpanded] = useState(true);
@@ -203,6 +206,7 @@ export default function ServiceTechHomeScreen() {
         icon="alert-circle"
         onDismiss={() => setShowNotification(false)}
       />
+      {!isConnected ? <OfflineBanner /> : null}
       <View
         style={[styles.header, { paddingTop: insets.top + Spacing.md }]}
       >

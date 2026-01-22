@@ -96,7 +96,7 @@ export const mockRouteStops: RouteStop[] = [
     propertyName: 'SUNNYMEAD RANCH PCA',
     address: '24100 Sunnymead Blvd, Moreno Valley',
     propertyType: 'HOA',
-    poolCount: 2,
+    poolCount: 3,
     scheduledTime: '8:15 AM',
     completed: false,
     gateCode: '1234#',
@@ -105,7 +105,8 @@ export const mockRouteStops: RouteStop[] = [
     notes: 'Enter through main gate. Pool house key is under mat.',
     bodiesOfWater: [
       { id: 'bow1', name: 'Main Pool', location: 'Clubhouse North', type: 'pool', completed: false },
-      { id: 'bow2', name: 'Kids Pool', location: 'Clubhouse South', type: 'pool', completed: false },
+      { id: 'bow2', name: 'Wader', location: 'Clubhouse South', type: 'pool', completed: false },
+      { id: 'bow10', name: 'Spa', location: 'Clubhouse North', type: 'spa', completed: false },
     ],
   },
   {
@@ -160,7 +161,7 @@ export const mockRouteStops: RouteStop[] = [
     gateCode: '3456#',
     bodiesOfWater: [
       { id: 'bow7', name: 'Olympic Pool', location: 'Main Clubhouse', type: 'pool', completed: false },
-      { id: 'bow8', name: 'Kiddie Pool', location: 'Main Clubhouse', type: 'pool', completed: false },
+      { id: 'bow8', name: 'Wader', location: 'Main Clubhouse', type: 'pool', completed: false },
       { id: 'bow9', name: 'Spa', location: 'Main Clubhouse', type: 'spa', completed: false },
     ],
   },

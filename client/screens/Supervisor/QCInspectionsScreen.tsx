@@ -12,6 +12,7 @@ import { BubbleBackground } from '@/components/BubbleBackground';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
 import { mockQCInspections, QCInspection, InspectionStatus } from '@/lib/inspectionChecklistData';
+import { NewInspectionModal } from '@/screens/Supervisor/Modals/NewInspectionModal';
 import type { SupervisorStackParamList } from '@/navigation/SupervisorStackNavigator';
 
 type FilterStatus = 'all' | InspectionStatus;
@@ -139,6 +140,7 @@ export default function QCInspectionsScreen() {
   const { theme } = useTheme();
   const navigation = useNavigation<NativeStackNavigationProp<SupervisorStackParamList>>();
   const [filter, setFilter] = useState<FilterStatus>('all');
+  const [showNewInspectionModal, setShowNewInspectionModal] = useState(false);
 
   const filters: { key: FilterStatus; label: string }[] = [
     { key: 'all', label: 'All' },
@@ -156,7 +158,15 @@ export default function QCInspectionsScreen() {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
-    navigation.navigate('InspectionDetail', { inspectionId: undefined });
+    setShowNewInspectionModal(true);
+  };
+
+  const handleStartInspection = (propertyId: string, propertyName: string) => {
+    navigation.navigate('InspectionDetail', { 
+      inspectionId: undefined,
+      propertyId,
+      propertyName,
+    });
   };
 
   const handleInspectionPress = (inspection: QCInspection) => {
@@ -266,6 +276,12 @@ export default function QCInspectionsScreen() {
           ))}
         </View>
       </ScrollView>
+
+      <NewInspectionModal
+        visible={showNewInspectionModal}
+        onClose={() => setShowNewInspectionModal(false)}
+        onStartInspection={handleStartInspection}
+      />
     </BubbleBackground>
   );
 }

@@ -162,10 +162,12 @@ export default function InspectionDetailScreen() {
   const route = useRoute<InspectionDetailRouteProp>();
   const navigation = useNavigation<NativeStackNavigationProp<SupervisorStackParamList>>();
   
-  const { inspectionId } = route.params;
+  const { inspectionId, propertyId, propertyName } = route.params;
   const existingInspection = inspectionId 
     ? mockQCInspections.find(i => i.id === inspectionId) 
     : null;
+  
+  const displayPropertyName = existingInspection?.propertyName || propertyName || 'New Inspection';
 
   const [itemStatuses, setItemStatuses] = useState<Map<string, ItemStatus>>(new Map());
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
@@ -250,15 +252,13 @@ export default function InspectionDetailScreen() {
         <Animated.View entering={FadeInDown.delay(100).springify()}>
           <View style={[styles.progressCard, { backgroundColor: theme.surface }]}>
             <View style={styles.progressHeader}>
-              <View>
+              <View style={{ flex: 1 }}>
                 <ThemedText style={styles.progressTitle}>
                   {existingInspection ? existingInspection.title : 'New Inspection'}
                 </ThemedText>
-                {existingInspection ? (
-                  <ThemedText style={[styles.progressSubtitle, { color: theme.textSecondary }]}>
-                    {existingInspection.propertyName}
-                  </ThemedText>
-                ) : null}
+                <ThemedText style={[styles.progressSubtitle, { color: theme.textSecondary }]}>
+                  {displayPropertyName}
+                </ThemedText>
               </View>
               <View style={[
                 styles.statusIndicator,

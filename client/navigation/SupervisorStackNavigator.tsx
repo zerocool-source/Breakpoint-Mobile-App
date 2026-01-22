@@ -9,7 +9,7 @@ import type { ChatChannel } from '@/screens/shared/ChatChannelsScreen';
 
 export type SupervisorStackParamList = {
   Main: undefined;
-  InspectionDetail: { inspectionId: string | undefined };
+  InspectionDetail: { inspectionId: string | undefined; propertyId?: string; propertyName?: string };
   ChatConversation: { channel: ChatChannel };
 };
 

@@ -1,20 +1,28 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Alert } from 'react-native';
+import { View, StyleSheet, Alert, Platform } from 'react-native';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 import { ThemedText } from '@/components/ThemedText';
 import { Avatar } from '@/components/Avatar';
 import { SettingsRow } from '@/components/SettingsRow';
 import { BPButton } from '@/components/BPButton';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth, UserRole } from '@/context/AuthContext';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
 
+const roleNames: Record<UserRole, string> = {
+  service_tech: 'Service Technician',
+  supervisor: 'Supervisor',
+  repair_tech: 'Repair Technician',
+  repair_foreman: 'Repair Foreman',
+};
+
 export default function ProfileScreen() {
-  const { user, logout } = useAuth();
+  const { user, logout, selectedRole } = useAuth();
   const { theme } = useTheme();
   const headerHeight = useHeaderHeight();
   const tabBarHeight = useBottomTabBarHeight();
@@ -22,6 +30,9 @@ export default function ProfileScreen() {
 
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [offlineMode, setOfflineMode] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const roleName = selectedRole ? roleNames[selectedRole] : 'Technician';
 
   const handleLogout = () => {
     Alert.alert(
@@ -29,7 +40,18 @@ export default function ProfileScreen() {
       'Are you sure you want to sign out?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Sign Out', style: 'destructive', onPress: logout },
+        { 
+          text: 'Sign Out', 
+          style: 'destructive', 
+          onPress: async () => {
+            if (Platform.OS !== 'web') {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            }
+            setIsLoggingOut(true);
+            await logout();
+            setIsLoggingOut(false);
+          } 
+        },
       ]
     );
   };
@@ -52,7 +74,7 @@ export default function ProfileScreen() {
             {user?.email || 'tech@breakpoint.com'}
           </ThemedText>
           <View style={styles.roleBadge}>
-            <ThemedText style={styles.roleText}>Repair Technician</ThemedText>
+            <ThemedText style={styles.roleText}>{roleName}</ThemedText>
           </View>
         </View>
       </View>
@@ -106,6 +128,7 @@ export default function ProfileScreen() {
         onPress={handleLogout}
         fullWidth
         icon="log-out"
+        loading={isLoggingOut}
         style={styles.logoutButton}
       >
         Sign Out

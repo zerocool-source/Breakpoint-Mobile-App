@@ -40,7 +40,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const savedUser = await storage.getUser();
         if (savedUser) {
           setUser(savedUser);
-          setSelectedRole(savedUser.role as UserRole);
+          if (savedUser.role) {
+            setSelectedRole(savedUser.role as UserRole);
+          }
         }
       }
     } catch (error) {
@@ -84,6 +86,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSelectedRole(null);
     } catch (error) {
       console.error('Logout failed:', error);
+      setUser(null);
+      setSelectedRole(null);
     } finally {
       setIsLoading(false);
     }

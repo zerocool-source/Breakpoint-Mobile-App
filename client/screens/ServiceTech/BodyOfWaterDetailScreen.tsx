@@ -9,6 +9,7 @@ import { useNavigation, useRoute, type RouteProp } from '@react-navigation/nativ
 
 import { ThemedText } from '@/components/ThemedText';
 import { BPButton } from '@/components/BPButton';
+import { VoiceRecorderButton } from '@/components/VoiceRecorderButton';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
 import type { BodyOfWater } from '@/lib/serviceTechMockData';
@@ -34,10 +35,8 @@ export default function BodyOfWaterDetailScreen() {
     }
   };
 
-  const handleRecordNote = () => {
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
+  const handleVoiceRecordingComplete = (uri: string, duration: number) => {
+    console.log('Voice recording saved:', uri, 'duration:', duration);
   };
 
   const handleComplete = () => {
@@ -106,10 +105,10 @@ export default function BodyOfWaterDetailScreen() {
                 <ThemedText style={styles.sectionTitle}>Voice Notes</ThemedText>
               </View>
             </View>
-            <Pressable style={styles.recordButton} onPress={handleRecordNote}>
-              <Feather name="mic" size={16} color="#FFFFFF" />
-              <ThemedText style={styles.recordButtonText}>Record Note</ThemedText>
-            </Pressable>
+            <VoiceRecorderButton 
+              label="Record Note"
+              onRecordingComplete={handleVoiceRecordingComplete}
+            />
             <TextInput
               style={[styles.voiceNoteInput, { 
                 backgroundColor: theme.backgroundSecondary,

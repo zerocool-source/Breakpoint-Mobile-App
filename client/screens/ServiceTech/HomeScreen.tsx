@@ -1,7 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { View, StyleSheet, Pressable, ScrollView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown, FadeInUp, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
@@ -10,6 +9,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { ThemedText } from '@/components/ThemedText';
 import { Avatar } from '@/components/Avatar';
+import { BubbleBackground } from '@/components/BubbleBackground';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
@@ -122,9 +122,8 @@ export default function ServiceTechHomeScreen() {
   }, [navigation]);
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.backgroundRoot }]}>
-      <LinearGradient
-        colors={['#3B5998', '#4A69BD', '#5D7ED3']}
+    <BubbleBackground bubbleCount={18}>
+      <View
         style={[styles.header, { paddingTop: insets.top + Spacing.md }]}
       >
         <View style={styles.headerContent}>
@@ -150,7 +149,7 @@ export default function ServiceTechHomeScreen() {
             <ThemedText style={styles.truckBadgeText}>Truck #{mockTruckInfo.number}</ThemedText>
           </View>
         </View>
-      </LinearGradient>
+      </View>
 
       <ScrollView
         style={styles.scrollView}
@@ -285,7 +284,7 @@ export default function ServiceTechHomeScreen() {
           </View>
         </Animated.View>
       </ScrollView>
-    </View>
+    </BubbleBackground>
   );
 }
 

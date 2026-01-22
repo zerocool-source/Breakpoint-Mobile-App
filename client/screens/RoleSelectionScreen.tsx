@@ -191,6 +191,11 @@ export default function RoleSelectionScreen({ onSelectRole }: RoleSelectionScree
           />
           <ThemedText style={styles.title}>Breakpoint Commercial Pools</ThemedText>
           <ThemedText style={styles.subtitle}>Select your role to continue</ThemedText>
+          <Image
+            source={require('../../assets/images/keeping-people-safe.png')}
+            style={styles.taglineLogo}
+            contentFit="contain"
+          />
         </Animated.View>
 
         <View style={styles.rolesContainer}>
@@ -243,6 +248,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: BrandColors.textSecondary,
     textAlign: 'center',
+  },
+  taglineLogo: {
+    width: 180,
+    height: 60,
+    marginTop: Spacing.lg,
   },
   rolesContainer: {
     flex: 1,

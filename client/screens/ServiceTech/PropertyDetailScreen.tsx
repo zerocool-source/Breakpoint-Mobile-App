@@ -178,6 +178,8 @@ export default function PropertyDetailScreen() {
       case 'service':
         setServiceRepairModalVisible(true);
         break;
+      case 'dropoff':
+        break;
     }
   };
 
@@ -431,6 +433,12 @@ export default function PropertyDetailScreen() {
                   label="Service Repairs"
                   color={BrandColors.vividTangerine}
                   onPress={() => handleQuickAction('service')}
+                />
+                <QuickAction
+                  icon="package"
+                  label="Chemicals Dropped Off"
+                  color={BrandColors.emerald}
+                  onPress={() => handleQuickAction('dropoff')}
                 />
               </View>
             )}

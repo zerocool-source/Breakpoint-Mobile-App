@@ -133,12 +133,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: Spacing.lg,
     borderRadius: BorderRadius.xl,
-    ...Shadows.cardElevated,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    elevation: 12,
+    ...Platform.select({
+      web: { boxShadow: '0px 6px 12px rgba(0, 0, 0, 0.35)' },
+      default: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.35,
+        shadowRadius: 12,
+        elevation: 12,
+      },
+    }),
   },
   iconContainer: {
     width: 52,

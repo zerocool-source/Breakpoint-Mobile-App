@@ -272,78 +272,77 @@ export const Typography = {
   },
 };
 
-// Premium Shadows - Softer, more depth
+// Cross-platform shadow helper
+const createShadow = (
+  color: string,
+  offsetY: number,
+  opacity: number,
+  radius: number,
+  elevation: number
+) => {
+  const alpha = Math.round(opacity * 255).toString(16).padStart(2, '0');
+  return Platform.select({
+    web: {
+      boxShadow: `0px ${offsetY}px ${radius}px rgba(15, 23, 42, ${opacity})`,
+    },
+    default: {
+      shadowColor: color,
+      shadowOffset: { width: 0, height: offsetY },
+      shadowOpacity: opacity,
+      shadowRadius: radius,
+      elevation: elevation,
+    },
+  });
+};
+
+// Premium Shadows - Softer, more depth (cross-platform)
 export const Shadows = {
-  none: {
-    shadowColor: "transparent",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0,
-    shadowRadius: 0,
-    elevation: 0,
-  },
-  subtle: {
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  card: {
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  cardHover: {
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  cardElevated: {
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.10,
-    shadowRadius: 16,
-    elevation: 6,
-  },
-  fab: {
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  modal: {
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 24,
-    elevation: 16,
-  },
-  header: {
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  button: {
-    shadowColor: "#0078D4",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  buttonPressed: {
-    shadowColor: "#0078D4",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.20,
-    shadowRadius: 4,
-    elevation: 2,
-  },
+  none: Platform.select({
+    web: { boxShadow: 'none' },
+    default: {
+      shadowColor: "transparent",
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0,
+      shadowRadius: 0,
+      elevation: 0,
+    },
+  }),
+  subtle: createShadow("#0F172A", 1, 0.04, 2, 1),
+  card: createShadow("#0F172A", 2, 0.06, 8, 3),
+  cardHover: createShadow("#0F172A", 4, 0.08, 12, 4),
+  cardElevated: createShadow("#0F172A", 6, 0.10, 16, 6),
+  fab: createShadow("#0F172A", 4, 0.15, 12, 8),
+  modal: Platform.select({
+    web: { boxShadow: '0px -4px 24px rgba(15, 23, 42, 0.12)' },
+    default: {
+      shadowColor: "#0F172A",
+      shadowOffset: { width: 0, height: -4 },
+      shadowOpacity: 0.12,
+      shadowRadius: 24,
+      elevation: 16,
+    },
+  }),
+  header: createShadow("#0F172A", 2, 0.04, 4, 2),
+  button: Platform.select({
+    web: { boxShadow: '0px 4px 8px rgba(0, 120, 212, 0.25)' },
+    default: {
+      shadowColor: "#0078D4",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.25,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+  }),
+  buttonPressed: Platform.select({
+    web: { boxShadow: '0px 2px 4px rgba(0, 120, 212, 0.20)' },
+    default: {
+      shadowColor: "#0078D4",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.20,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+  }),
 };
 
 export const Fonts = Platform.select({

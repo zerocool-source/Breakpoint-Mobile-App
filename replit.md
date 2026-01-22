@@ -151,6 +151,7 @@ client/
 - January 2026: Added Service Technician app with complete flow
 - January 2026: Updated logo to official Breakpoint "Keeping People Safe" branding
 - Role selection as landing page with 4 distinct role cards
+- Shimmer effects: Logo (continuous), Role cards (every 10 seconds)
 - Custom components: Badge, BPButton, JobCard, NextStopCard, MetricCard, EstimateCard, LightBubbleBackground
 
 ## User Preferences

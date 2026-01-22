@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, StyleSheet, Pressable, Dimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,7 +7,14 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
+  withRepeat,
+  withTiming,
+  withDelay,
+  withSequence,
+  Easing,
+  interpolate,
 } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
 import { Platform } from 'react-native';
@@ -16,6 +23,49 @@ import { ThemedText } from '@/components/ThemedText';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
 
 const { width } = Dimensions.get('window');
+const SHIMMER_DURATION = 1500;
+const SHIMMER_INTERVAL = 10000;
+
+const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
+
+function LogoShimmer() {
+  const shimmerPosition = useSharedValue(0);
+
+  useEffect(() => {
+    shimmerPosition.value = withRepeat(
+      withTiming(1, { duration: SHIMMER_DURATION * 2, easing: Easing.linear }),
+      -1,
+      false
+    );
+  }, []);
+
+  const shimmerStyle = useAnimatedStyle(() => {
+    const translateX = interpolate(shimmerPosition.value, [0, 1], [-200, 200]);
+    return {
+      transform: [{ translateX }],
+    };
+  });
+
+  return (
+    <View style={styles.logoContainer}>
+      <Image
+        source={require('../../assets/images/breakpoint-logo.png')}
+        style={styles.logo}
+        contentFit="contain"
+      />
+      <View style={styles.shimmerOverlay}>
+        <Animated.View style={[styles.shimmerGradient, shimmerStyle]}>
+          <LinearGradient
+            colors={['transparent', 'rgba(255,255,255,0.4)', 'transparent']}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={StyleSheet.absoluteFill}
+          />
+        </Animated.View>
+      </View>
+    </View>
+  );
+}
 
 export type Role = 'service_tech' | 'supervisor' | 'repair_tech' | 'repair_foreman';
 
@@ -72,6 +122,35 @@ interface RoleCardProps {
 
 function RoleCard({ role, index, onSelect }: RoleCardProps) {
   const scale = useSharedValue(1);
+  const shimmerPosition = useSharedValue(-1);
+
+  useEffect(() => {
+    const runShimmer = () => {
+      shimmerPosition.value = withTiming(1, { duration: SHIMMER_DURATION, easing: Easing.inOut(Easing.ease) }, () => {
+        shimmerPosition.value = -1;
+      });
+    };
+    
+    const initialDelay = setTimeout(() => {
+      runShimmer();
+    }, 1000 + index * 200);
+    
+    const interval = setInterval(() => {
+      runShimmer();
+    }, SHIMMER_INTERVAL);
+    
+    return () => {
+      clearTimeout(initialDelay);
+      clearInterval(interval);
+    };
+  }, [index]);
+
+  const shimmerStyle = useAnimatedStyle(() => {
+    const translateX = interpolate(shimmerPosition.value, [-1, 1], [-width, width]);
+    return {
+      transform: [{ translateX }],
+    };
+  });
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -162,6 +241,20 @@ function RoleCard({ role, index, onSelect }: RoleCardProps) {
           size={20}
           color={isHighlighted ? 'rgba(255,255,255,0.7)' : '#CCCCCC'}
         />
+        <View style={styles.cardShimmerOverlay}>
+          <Animated.View style={[styles.cardShimmerGradient, shimmerStyle]}>
+            <LinearGradient
+              colors={[
+                'transparent',
+                isHighlighted ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.6)',
+                'transparent',
+              ]}
+              start={{ x: 0, y: 0.5 }}
+              end={{ x: 1, y: 0.5 }}
+              style={StyleSheet.absoluteFill}
+            />
+          </Animated.View>
+        </View>
       </Pressable>
     </Animated.View>
   );
@@ -186,11 +279,7 @@ export default function RoleSelectionScreen({ onSelectRole }: RoleSelectionScree
         ]}
       >
         <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.header}>
-          <Image
-            source={require('../../assets/images/breakpoint-logo.png')}
-            style={styles.logo}
-            contentFit="contain"
-          />
+          <LogoShimmer />
           <ThemedText style={styles.title}>Breakpoint Commercial Pools</ThemedText>
           <ThemedText style={styles.subtitle}>Select your role to continue</ThemedText>
         </Animated.View>
@@ -304,5 +393,30 @@ const styles = StyleSheet.create({
   footerText: {
     fontSize: 13,
     color: BrandColors.textSecondary,
+  },
+  logoContainer: {
+    width: 180,
+    height: 180,
+    marginBottom: Spacing.md,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  shimmerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    overflow: 'hidden',
+    borderRadius: 90,
+  },
+  shimmerGradient: {
+    width: 200,
+    height: '100%',
+  },
+  cardShimmerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    overflow: 'hidden',
+    borderRadius: BorderRadius.md,
+  },
+  cardShimmerGradient: {
+    width: 100,
+    height: '100%',
   },
 });

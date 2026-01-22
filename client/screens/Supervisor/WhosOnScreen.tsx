@@ -8,6 +8,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -113,11 +114,19 @@ function TechnicianRow({ technician, index, onPress }: TechnicianRowProps) {
 export default function WhosOnScreen() {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
+  const navigation = useNavigation();
   const [filter, setFilter] = useState<FilterType>('all');
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(new Date());
 
   const technicians = mockTechnicians;
+
+  const handleBack = () => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    navigation.goBack();
+  };
 
   const filteredTechnicians = technicians.filter(tech => {
     if (filter === 'all') return true;
@@ -160,11 +169,19 @@ export default function WhosOnScreen() {
     <BubbleBackground bubbleCount={18}>
       <View style={[styles.header, { paddingTop: insets.top + Spacing.md }]}>
         <View style={styles.headerContent}>
-          <View>
-            <ThemedText style={styles.headerTitle}>Who's On</ThemedText>
-            <ThemedText style={styles.headerSubtitle}>
-              Active technicians in the field
-            </ThemedText>
+          <View style={styles.headerLeft}>
+            <Pressable
+              style={[styles.backButton, { backgroundColor: theme.surface }]}
+              onPress={handleBack}
+            >
+              <Feather name="arrow-left" size={22} color={theme.text} />
+            </Pressable>
+            <View>
+              <ThemedText style={styles.headerTitle}>Who's On</ThemedText>
+              <ThemedText style={styles.headerSubtitle}>
+                Active technicians in the field
+              </ThemedText>
+            </View>
           </View>
           <View style={styles.liveIndicator}>
             <View style={styles.liveDot} />
@@ -292,6 +309,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: BorderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: Spacing.md,
+    ...Shadows.card,
   },
   headerTitle: {
     fontSize: 28,

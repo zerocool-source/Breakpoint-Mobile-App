@@ -397,6 +397,7 @@ export default function HomeScreen() {
         onDismiss={() => setShowNotification(false)}
       />
       <DraggableFlatList
+        style={{ flex: 1 }}
         data={jobs}
         keyExtractor={(item) => item.id}
         renderItem={renderJob}
@@ -404,6 +405,7 @@ export default function HomeScreen() {
         ListHeaderComponent={renderHeader}
         contentContainerStyle={{
           paddingBottom: tabBarHeight + Spacing.fabSize + Spacing['2xl'],
+          flexGrow: 1,
         }}
         scrollIndicatorInsets={{ bottom: insets.bottom }}
         showsVerticalScrollIndicator={true}

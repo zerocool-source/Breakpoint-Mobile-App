@@ -1,0 +1,246 @@
+Repair Technician App
+What It Is
+The Repair Technician App is a job management and estimating tool for repair technicians who handle equipment repairs, create estimates/quotes, and complete assigned repair jobs at commercial pool properties.
+
+Who Uses It
+Repair Technicians - Field workers who:
+
+Diagnose and fix pool equipment (pumps, heaters, filters)
+Create repair estimates for customer approval
+Complete approved repair jobs
+Track parts and labor
+Bottom Navigation (5 Tabs)
+Tab	Icon	Name	Purpose
+🏠	Home	Home	Dashboard with today's overview
+📋	ClipboardList	Queue	Repair queue with all incoming repairs
+💰	DollarSign	Estimates	Created estimates and quotes
+🔧	Wrench	Jobs	Assigned jobs to complete
+👤	User	Profile	Account settings and logout
+1. HOME SCREEN (Dashboard)
+Header (Azure Blue)
+Greeting with technician name
+Avatar with initial
+Chat button (orange accent)
+Current time badge
+Truck ID badge (RT-007)
+Today's Progress
+Three stat cards showing:
+
+Stat	Color	Description
+Completed	Blue	Repairs finished today
+In Progress	Orange	Estimates being worked on
+Parts Ordered	Teal	Jobs waiting for parts
+Next Stop Card
+Property name and address
+Scheduled time
+Property type badge (HOA/Commercial)
+Pool count
+Navigate button (opens Google Maps)
+Quick Actions (4 Boxes)
+Action	Icon	Color	Purpose
+Create Estimate	Dollar	Blue	Start new estimate
+View Queue	Clipboard	Orange	See all pending repairs
+Parts Status	Package	Teal	Check ordered parts
+Emergency	Alert	Red	Report urgent issue
+Today's Jobs (Drag-to-Reorder)
+List of all assigned jobs for the day
+Grip handle to drag and reorder
+Blue left border accent
+Property name, address, time
+Type badge and pool count
+2. QUEUE SCREEN
+What It Shows
+All incoming repair requests from service technicians, organized by priority and status.
+
+Repair Card Information
+Field	Description
+Priority Badge	Low (gray), Normal (blue), High (orange), Urgent (red)
+Status Badge	Pending, Assigned, In Progress, Parts Ordered, Completed
+Property Name	Where the repair is needed
+Issue Title	Brief description of problem
+Full Description	Detailed issue notes
+Photos	Attached images from service tech
+Created Date	When request was submitted
+Actions Per Repair
+Create Estimate - Opens estimate builder for this repair
+View Photos - Expand attached images
+Change Status - Update repair status
+Filter Options
+By Priority (All, Low, Normal, High, Urgent)
+By Status (All, Pending, Assigned, In Progress, Parts Ordered, Completed)
+3. ESTIMATES SCREEN
+Estimates List
+Shows all created estimates with:
+
+Property name
+Total amount (bold green)
+Status (Draft, Sent, Approved, Declined)
+Item count
+Created date
+Actions
+Tap Estimate → View full details
++ Button → Create new estimate
+4. CREATE ESTIMATE SCREEN (QuickBooks-Style)
+Header Section
+Auto-generated estimate number (EST-YYMM-####)
+Displayed in blue pill badge
+Back button to cancel
+Estimate Header Fields
+Field	Description
+Estimate Number	Auto-generated, read-only
+Status	Draft, Sent, Approved
+Repair Tech	Who created the estimate
+Service Tech	Who reported the issue
+Reported Date	When issue was found
+Location	Property name
+Notes	Additional details
+Product Search & Categories
+Search Bar with voice input (mic icon)
+Category Filters: Pumps, Filters, Chemicals, Heaters, Parts, Labor
+Pool Brian API Integration (optional) for product catalog
+Line Items Table
+Each item shows:
+
+Column	Description
+Product Name	Item description
+SKU	Product code
+Quantity	Number of units
+Rate	Unit price
+Amount	Qty × Rate
+Taxable	Yes/No toggle
+Delete	Remove item button
+Totals Section
+Subtotal
+Tax (calculated)
+Grand Total (bold)
+Photo Attachments
+Camera capture
+Gallery upload
+Photo grid with delete option
+Save Options
+Save Draft - Save for later
+Send Estimate - Submit to customer
+5. JOBS SCREEN (Assigned Work)
+Job Cards
+Shows approved estimates that are now assigned jobs:
+
+Field	Description
+Property Name	Job location
+Address	Full address
+Scheduled Time	When to complete
+Priority	Urgency level
+Job Value	Dollar amount
+Pool Count	How many pools
+Job Statuses
+Status	Color	Meaning
+Assigned	Blue	Ready to start
+In Progress	Orange	Currently working
+Parts Ordered	Purple	Waiting for materials
+Completed	Green	Finished
+6. JOB DETAIL SCREEN (Completion Flow)
+Two View Modes
+Details View
+Full estimate information:
+
+Quote description
+Property & customer info
+Estimate/created dates
+Repair tech & service tech
+Complete line items list
+Attached photos
+Totals breakdown
+Complete View
+Job completion workflow:
+
+Before Photos - Document condition before work
+Work Performed - Text area for notes
+After Photos - Document completed work
+Parts Used - Confirm materials
+Customer Signature - Get sign-off
+Complete Job button
+Action Buttons
+Navigate - Opens Google Maps
+View Details - Toggle to details view
+Complete Job - Finish and submit
+7. PROFILE SCREEN
+Technician Info
+Avatar with initial
+Full name
+Role: "Repair Technician"
+Truck assignment
+Stats Summary
+Jobs Completed
+Estimates Created
+Parts Ordered
+Actions
+Logout button with confirmation modal
+8. CHAT SCREEN
+Team Communication
+Message office/dispatch
+Receive updates
+Send/receive timestamps
+Text input with send button
+Expandable Everything
+The app uses expandable/collapsible sections throughout:
+
+Component	Expands To Show
+Repair Cards	Full description, photos, action buttons
+Line Items	Product details, SKU, quantity controls
+Category Filters	Product list within each category
+Photo Grids	Full-size image preview
+Job Cards	Complete estimate details
+Activity Log	Full history of actions
+How It Works
+Tap section header or chevron to expand/collapse
+Chevron rotates to indicate state (▶ collapsed, ▼ expanded)
+Smooth animation transitions
+Only one major section expanded at a time (accordion style)
+Quick Actions (Home Screen)
+These 4 buttons provide fast access to common tasks:
+
+Button	What Happens
+Create Estimate	Opens blank estimate form, generates new EST number
+View Queue	Switches to Queue tab, shows all pending repairs
+Parts Status	Shows jobs with "Parts Ordered" status
+Emergency	Opens emergency report modal
+Design
+4-box horizontal layout
+Colored circular icon backgrounds
+Icon + 2-line centered label
+White card with shadow
+Equal width (flex: 1)
+Drag-to-Reorder
+Today's Jobs List
+Grip handle (⋮⋮) on left side
+Press and drag to new position
+Visual feedback (opacity change, shadow)
+Order persists during session
+How It's Built
+Uses @dnd-kit library
+PointerSensor for touch/mouse
+KeyboardSensor for accessibility
+Smooth CSS transforms
+Key Workflows
+1. Process New Repair Request
+Open Queue → See new repair
+Tap to expand → Review details/photos
+Tap "Create Estimate" → Build quote
+Add line items from product catalog
+Attach photos
+Save or Send estimate
+2. Complete Assigned Job
+Open Jobs → See assigned work
+Tap job → View details
+Navigate to property
+Take before photos
+Complete repair work
+Take after photos
+Add completion notes
+Get customer signature
+Tap "Complete Job"
+3. Reorder Daily Route
+Go to Home screen
+Find Today's Jobs list
+Grab grip handle
+Drag to new position
+Release to save order

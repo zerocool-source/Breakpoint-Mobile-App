@@ -406,7 +406,7 @@ export default function HomeScreen() {
           paddingBottom: tabBarHeight + Spacing.fabSize + Spacing['2xl'],
         }}
         scrollIndicatorInsets={{ bottom: insets.bottom }}
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={true}
       />
       <ChatFAB
         onPress={() => navigation.navigate('Chat')}

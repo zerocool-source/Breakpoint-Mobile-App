@@ -1,18 +1,16 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Feather } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
 import { Platform, StyleSheet } from 'react-native';
+import { BlurView } from 'expo-blur';
 
 import HomeScreen from '@/screens/RepairTech/HomeScreen';
 import QueueScreen from '@/screens/RepairTech/QueueScreen';
 import EstimatesScreen from '@/screens/RepairTech/EstimatesScreen';
 import JobsScreen from '@/screens/RepairTech/JobsScreen';
 import ProfileScreen from '@/screens/RepairTech/ProfileScreen';
-import { HeaderTitle } from '@/components/HeaderTitle';
 import { useTheme } from '@/hooks/useTheme';
-import { useScreenOptions } from '@/hooks/useScreenOptions';
-import { BrandColors } from '@/constants/theme';
+import { BrandColors, Spacing } from '@/constants/theme';
 
 export type RepairTechTabParamList = {
   Home: undefined;
@@ -26,23 +24,32 @@ const Tab = createBottomTabNavigator<RepairTechTabParamList>();
 
 export default function RepairTechTabNavigator() {
   const { theme, isDark } = useTheme();
-  const screenOptions = useScreenOptions();
 
   return (
     <Tab.Navigator
       initialRouteName="Home"
       screenOptions={{
-        ...screenOptions,
+        headerShown: false,
         tabBarActiveTintColor: BrandColors.azureBlue,
-        tabBarInactiveTintColor: theme.tabIconDefault,
+        tabBarInactiveTintColor: theme.textSecondary,
         tabBarStyle: {
           position: 'absolute',
           backgroundColor: Platform.select({
             ios: 'transparent',
-            android: theme.backgroundRoot,
+            android: theme.surface,
+            web: theme.surface,
           }),
-          borderTopWidth: 0,
+          borderTopColor: theme.border,
+          borderTopWidth: Platform.OS === 'ios' ? 0 : 1,
+          paddingTop: Spacing.sm,
+          paddingBottom: Platform.OS === 'web' ? Spacing.md : Platform.OS === 'ios' ? Spacing.lg : Spacing.md,
+          height: Platform.OS === 'web' ? 70 : Platform.OS === 'ios' ? 88 : 64,
           elevation: 0,
+        },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '500',
+          marginTop: 2,
         },
         tabBarBackground: () =>
           Platform.OS === 'ios' ? (
@@ -58,7 +65,6 @@ export default function RepairTechTabNavigator() {
         name="Home"
         component={HomeScreen}
         options={{
-          headerTitle: () => <HeaderTitle title="Breakpoint" />,
           tabBarIcon: ({ color, size }) => (
             <Feather name="home" size={size} color={color} />
           ),
@@ -68,9 +74,8 @@ export default function RepairTechTabNavigator() {
         name="Queue"
         component={QueueScreen}
         options={{
-          headerTitle: 'Queue',
           tabBarIcon: ({ color, size }) => (
-            <Feather name="layers" size={size} color={color} />
+            <Feather name="tool" size={size} color={color} />
           ),
         }}
       />
@@ -78,7 +83,6 @@ export default function RepairTechTabNavigator() {
         name="Estimates"
         component={EstimatesScreen}
         options={{
-          headerTitle: 'Estimates',
           tabBarIcon: ({ color, size }) => (
             <Feather name="file-text" size={size} color={color} />
           ),
@@ -88,9 +92,8 @@ export default function RepairTechTabNavigator() {
         name="Jobs"
         component={JobsScreen}
         options={{
-          headerTitle: 'Jobs',
           tabBarIcon: ({ color, size }) => (
-            <Feather name="tool" size={size} color={color} />
+            <Feather name="clipboard" size={size} color={color} />
           ),
         }}
       />
@@ -98,7 +101,6 @@ export default function RepairTechTabNavigator() {
         name="Profile"
         component={ProfileScreen}
         options={{
-          headerTitle: 'Profile',
           tabBarIcon: ({ color, size }) => (
             <Feather name="user" size={size} color={color} />
           ),

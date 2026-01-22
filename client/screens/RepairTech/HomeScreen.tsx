@@ -1,10 +1,11 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { View, StyleSheet, Pressable, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
+import { Swipeable } from 'react-native-gesture-handler';
 import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -72,44 +73,110 @@ interface RepairJobCardProps {
   drag?: () => void;
   isActive?: boolean;
   onPress: () => void;
+  onNavigate: () => void;
+  onComplete: () => void;
 }
 
-function RepairJobCard({ job, isFirst, drag, isActive, onPress }: RepairJobCardProps) {
+function RepairJobCard({ job, isFirst, drag, isActive, onPress, onNavigate, onComplete }: RepairJobCardProps) {
   const { theme } = useTheme();
+  const swipeableRef = useRef<Swipeable>(null);
+
+  const renderLeftActions = () => (
+    <Pressable
+      style={styles.swipeActionLeft}
+      onPress={() => {
+        if (Platform.OS !== 'web') {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        }
+        swipeableRef.current?.close();
+        onNavigate();
+      }}
+    >
+      <Feather name="navigation" size={20} color="#FFFFFF" />
+      <ThemedText style={styles.swipeActionText}>Navigate</ThemedText>
+    </Pressable>
+  );
+
+  const renderRightActions = () => (
+    <View style={styles.swipeActionsRight}>
+      <Pressable
+        style={styles.swipeActionDetails}
+        onPress={() => {
+          if (Platform.OS !== 'web') {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          }
+          swipeableRef.current?.close();
+          onPress();
+        }}
+      >
+        <Feather name="file-text" size={20} color="#FFFFFF" />
+        <ThemedText style={styles.swipeActionText}>Details</ThemedText>
+      </Pressable>
+      <Pressable
+        style={styles.swipeActionComplete}
+        onPress={() => {
+          if (Platform.OS !== 'web') {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          }
+          swipeableRef.current?.close();
+          onComplete();
+        }}
+      >
+        <Feather name="check-circle" size={20} color="#FFFFFF" />
+        <ThemedText style={styles.swipeActionText}>Complete</ThemedText>
+      </Pressable>
+    </View>
+  );
   
   return (
-    <Pressable
-      onLongPress={drag}
-      onPress={onPress}
-      style={[
-        styles.jobCard,
-        { backgroundColor: theme.surface },
-        isFirst && styles.jobCardFirst,
-        isActive && styles.jobCardActive,
-      ]}
+    <Swipeable
+      ref={swipeableRef}
+      renderLeftActions={renderLeftActions}
+      renderRightActions={renderRightActions}
+      friction={2}
+      leftThreshold={40}
+      rightThreshold={40}
+      overshootLeft={false}
+      overshootRight={false}
     >
-      <View style={[styles.jobCardBorder, { backgroundColor: isFirst ? BrandColors.vividTangerine : BrandColors.azureBlue }]} />
-      <View style={styles.jobCardContent}>
-        <View style={styles.jobCardHeader}>
-          <View style={styles.jobCardTitleRow}>
-            <ThemedText style={styles.jobCardTitle}>{job.property?.name}</ThemedText>
-            <ThemedText style={[styles.jobCardTime, { color: BrandColors.azureBlue }]}>{job.scheduledTime}</ThemedText>
+      <Pressable
+        onLongPress={drag}
+        onPress={onPress}
+        style={[
+          styles.jobCard,
+          { backgroundColor: theme.surface },
+          isFirst && styles.jobCardFirst,
+          isActive && styles.jobCardActive,
+        ]}
+      >
+        <View style={[styles.jobCardBorder, { backgroundColor: isFirst ? BrandColors.vividTangerine : BrandColors.azureBlue }]} />
+        <View style={styles.jobCardContent}>
+          <View style={styles.jobCardHeader}>
+            <View style={styles.jobCardTitleRow}>
+              <ThemedText style={styles.jobCardTitle}>{job.property?.name}</ThemedText>
+              <ThemedText style={[styles.jobCardTime, { color: BrandColors.azureBlue }]}>{job.scheduledTime}</ThemedText>
+            </View>
+            <ThemedText style={[styles.jobCardType, { color: BrandColors.vividTangerine }]}>{job.title}</ThemedText>
           </View>
-          <ThemedText style={[styles.jobCardType, { color: BrandColors.vividTangerine }]}>{job.title}</ThemedText>
-        </View>
-        <View style={styles.jobCardAddress}>
-          <Feather name="map-pin" size={12} color={theme.textSecondary} />
-          <ThemedText style={[styles.jobCardAddressText, { color: theme.textSecondary }]} numberOfLines={1}>
-            {job.property?.address}
-          </ThemedText>
-        </View>
-        {isFirst ? (
-          <View style={styles.jobCardBadge}>
-            <ThemedText style={styles.jobCardBadgeText}>NEXT STOP</ThemedText>
+          <View style={styles.jobCardAddress}>
+            <Feather name="map-pin" size={12} color={theme.textSecondary} />
+            <ThemedText style={[styles.jobCardAddressText, { color: theme.textSecondary }]} numberOfLines={1}>
+              {job.property?.address}
+            </ThemedText>
           </View>
-        ) : null}
-      </View>
-    </Pressable>
+          <View style={styles.swipeHint}>
+            <Feather name="chevrons-left" size={14} color={theme.textSecondary} />
+            <ThemedText style={[styles.swipeHintText, { color: theme.textSecondary }]}>Swipe for actions</ThemedText>
+            <Feather name="chevrons-right" size={14} color={theme.textSecondary} />
+          </View>
+          {isFirst ? (
+            <View style={styles.jobCardBadge}>
+              <ThemedText style={styles.jobCardBadgeText}>NEXT STOP</ThemedText>
+            </View>
+          ) : null}
+        </View>
+      </Pressable>
+    </Swipeable>
   );
 }
 
@@ -276,6 +343,20 @@ export default function HomeScreen() {
     </View>
   );
 
+  const handleNavigateToJob = (job: Job) => {
+    if (Platform.OS !== 'web') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+    console.log('Navigate to:', job.property?.address);
+  };
+
+  const handleCompleteJob = (jobId: string) => {
+    if (Platform.OS !== 'web') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+    setJobs(prev => prev.filter(j => j.id !== jobId));
+  };
+
   const renderJob = useCallback(
     ({ item, drag, isActive, getIndex }: RenderItemParams<Job>) => {
       const index = getIndex() ?? 0;
@@ -286,12 +367,14 @@ export default function HomeScreen() {
             isFirst={index === 0}
             drag={drag}
             isActive={isActive}
-            onPress={() => {}}
+            onPress={() => console.log('Job details:', item.id)}
+            onNavigate={() => handleNavigateToJob(item)}
+            onComplete={() => handleCompleteJob(item.id)}
           />
         </ScaleDecorator>
       );
     },
-    []
+    [navigation]
   );
 
   return (
@@ -607,5 +690,51 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 0.5,
+  },
+  swipeActionLeft: {
+    backgroundColor: BrandColors.azureBlue,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 90,
+    marginVertical: Spacing.xs,
+    marginLeft: Spacing.screenPadding,
+    borderRadius: BorderRadius.md,
+  },
+  swipeActionsRight: {
+    flexDirection: 'row',
+    marginVertical: Spacing.xs,
+    marginRight: Spacing.screenPadding,
+    gap: Spacing.xs,
+  },
+  swipeActionDetails: {
+    backgroundColor: BrandColors.tropicalTeal,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 80,
+    borderRadius: BorderRadius.md,
+  },
+  swipeActionComplete: {
+    backgroundColor: BrandColors.emerald,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 80,
+    borderRadius: BorderRadius.md,
+  },
+  swipeActionText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: Spacing.xs,
+  },
+  swipeHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: Spacing.sm,
+    gap: Spacing.xs,
+  },
+  swipeHintText: {
+    fontSize: 11,
+    fontWeight: '500',
   },
 });

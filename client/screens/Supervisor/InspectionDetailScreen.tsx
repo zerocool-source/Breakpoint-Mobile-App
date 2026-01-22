@@ -7,7 +7,6 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import Checkbox from 'expo-checkbox';
 
 import { ThemedText } from '@/components/ThemedText';
 import { useTheme } from '@/hooks/useTheme';
@@ -22,25 +21,31 @@ import type { SupervisorStackParamList } from '@/navigation/SupervisorStackNavig
 
 type InspectionDetailRouteProp = RouteProp<SupervisorStackParamList, 'InspectionDetail'>;
 
+type ItemStatus = 'unchecked' | 'pass' | 'fail';
+
 interface CategorySectionProps {
   category: ChecklistCategory;
-  checkedItems: Set<string>;
+  itemStatuses: Map<string, ItemStatus>;
   expandedCategories: Set<string>;
   onToggleCategory: (categoryId: string) => void;
-  onToggleItem: (itemId: string) => void;
+  onSetItemStatus: (itemId: string, status: ItemStatus) => void;
 }
 
 function CategorySection({ 
   category, 
-  checkedItems, 
+  itemStatuses, 
   expandedCategories,
   onToggleCategory,
-  onToggleItem,
+  onSetItemStatus,
 }: CategorySectionProps) {
   const { theme } = useTheme();
   const isExpanded = expandedCategories.has(category.id);
-  const completedCount = category.items.filter(item => checkedItems.has(item.id)).length;
-  const allCompleted = completedCount === category.items.length;
+  
+  const passedCount = category.items.filter(item => itemStatuses.get(item.id) === 'pass').length;
+  const failedCount = category.items.filter(item => itemStatuses.get(item.id) === 'fail').length;
+  const checkedCount = passedCount + failedCount;
+  const allChecked = checkedCount === category.items.length;
+  const hasFails = failedCount > 0;
 
   return (
     <View style={[styles.categoryCard, { backgroundColor: theme.surface }]}>
@@ -51,19 +56,39 @@ function CategorySection({
         <View style={styles.categoryTitleRow}>
           <View style={[
             styles.categoryIcon,
-            { backgroundColor: allCompleted ? BrandColors.emerald + '20' : BrandColors.azureBlue + '20' }
+            { backgroundColor: hasFails ? BrandColors.danger + '20' : allChecked ? BrandColors.emerald + '20' : BrandColors.azureBlue + '20' }
           ]}>
             <Feather 
-              name={allCompleted ? 'check-circle' : 'clipboard'} 
+              name={hasFails ? 'alert-circle' : allChecked ? 'check-circle' : 'clipboard'} 
               size={18} 
-              color={allCompleted ? BrandColors.emerald : BrandColors.azureBlue} 
+              color={hasFails ? BrandColors.danger : allChecked ? BrandColors.emerald : BrandColors.azureBlue} 
             />
           </View>
           <View style={styles.categoryInfo}>
             <ThemedText style={styles.categoryName}>{category.name}</ThemedText>
-            <ThemedText style={[styles.categoryProgress, { color: theme.textSecondary }]}>
-              {completedCount}/{category.items.length} items
-            </ThemedText>
+            <View style={styles.categoryStatusRow}>
+              {passedCount > 0 ? (
+                <View style={[styles.statusBadge, { backgroundColor: BrandColors.emerald + '20' }]}>
+                  <Feather name="check" size={10} color={BrandColors.emerald} />
+                  <ThemedText style={[styles.statusBadgeText, { color: BrandColors.emerald }]}>
+                    {passedCount} Pass
+                  </ThemedText>
+                </View>
+              ) : null}
+              {failedCount > 0 ? (
+                <View style={[styles.statusBadge, { backgroundColor: BrandColors.danger + '20' }]}>
+                  <Feather name="x" size={10} color={BrandColors.danger} />
+                  <ThemedText style={[styles.statusBadgeText, { color: BrandColors.danger }]}>
+                    {failedCount} Fail
+                  </ThemedText>
+                </View>
+              ) : null}
+              {checkedCount === 0 ? (
+                <ThemedText style={[styles.categoryProgress, { color: theme.textSecondary }]}>
+                  {category.items.length} items
+                </ThemedText>
+              ) : null}
+            </View>
           </View>
         </View>
         <Feather 
@@ -76,31 +101,53 @@ function CategorySection({
       {isExpanded ? (
         <View style={[styles.categoryItems, { borderTopColor: theme.border }]}>
           {category.items.map((item, index) => {
-            const isChecked = checkedItems.has(item.id);
+            const status = itemStatuses.get(item.id) || 'unchecked';
             return (
-              <Pressable 
+              <View 
                 key={item.id}
                 style={[
                   styles.checklistItem,
                   index < category.items.length - 1 && { borderBottomColor: theme.border, borderBottomWidth: 1 }
                 ]}
-                onPress={() => onToggleItem(item.id)}
               >
-                <View style={styles.checkboxContainer} pointerEvents="none">
-                  <Checkbox
-                    value={isChecked}
-                    color={isChecked ? BrandColors.emerald : undefined}
-                    style={styles.checkbox}
-                  />
-                </View>
                 <ThemedText style={[
                   styles.itemLabel,
-                  isChecked && styles.itemLabelChecked,
-                  isChecked && { color: theme.textSecondary }
+                  status === 'pass' && { color: BrandColors.emerald },
+                  status === 'fail' && { color: BrandColors.danger },
                 ]}>
                   {item.label}
                 </ThemedText>
-              </Pressable>
+                <View style={styles.passFailButtons}>
+                  <Pressable
+                    style={[
+                      styles.passButton,
+                      status === 'pass' && styles.passButtonActive,
+                      { borderColor: BrandColors.emerald },
+                    ]}
+                    onPress={() => onSetItemStatus(item.id, status === 'pass' ? 'unchecked' : 'pass')}
+                  >
+                    <Feather 
+                      name="check" 
+                      size={14} 
+                      color={status === 'pass' ? '#FFFFFF' : BrandColors.emerald} 
+                    />
+                  </Pressable>
+                  <Pressable
+                    style={[
+                      styles.failButton,
+                      status === 'fail' && styles.failButtonActive,
+                      { borderColor: BrandColors.danger },
+                    ]}
+                    onPress={() => onSetItemStatus(item.id, status === 'fail' ? 'unchecked' : 'fail')}
+                  >
+                    <Feather 
+                      name="x" 
+                      size={14} 
+                      color={status === 'fail' ? '#FFFFFF' : BrandColors.danger} 
+                    />
+                  </Pressable>
+                </View>
+              </View>
             );
           })}
         </View>
@@ -120,14 +167,22 @@ export default function InspectionDetailScreen() {
     ? mockQCInspections.find(i => i.id === inspectionId) 
     : null;
 
-  const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
+  const [itemStatuses, setItemStatuses] = useState<Map<string, ItemStatus>>(new Map());
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set([inspectionChecklist[0].id])
   );
 
   const totalItems = getTotalChecklistItems();
-  const completedItems = checkedItems.size;
-  const progressPercent = Math.round((completedItems / totalItems) * 100);
+  
+  const stats = useMemo(() => {
+    let passed = 0;
+    let failed = 0;
+    itemStatuses.forEach((status) => {
+      if (status === 'pass') passed++;
+      if (status === 'fail') failed++;
+    });
+    return { passed, failed, checked: passed + failed };
+  }, [itemStatuses]);
 
   const handleToggleCategory = (categoryId: string) => {
     if (Platform.OS !== 'web') {
@@ -144,16 +199,16 @@ export default function InspectionDetailScreen() {
     });
   };
 
-  const handleToggleItem = (itemId: string) => {
+  const handleSetItemStatus = (itemId: string, status: ItemStatus) => {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
-    setCheckedItems(prev => {
-      const next = new Set(prev);
-      if (next.has(itemId)) {
+    setItemStatuses(prev => {
+      const next = new Map(prev);
+      if (status === 'unchecked') {
         next.delete(itemId);
       } else {
-        next.add(itemId);
+        next.set(itemId, status);
       }
       return next;
     });
@@ -180,6 +235,8 @@ export default function InspectionDetailScreen() {
     navigation.goBack();
   };
 
+  const inspectionStatus = stats.failed > 0 ? 'failed' : stats.checked === totalItems ? 'passed' : 'in_progress';
+
   return (
     <View style={[styles.container, { backgroundColor: theme.backgroundRoot }]}>
       <ScrollView
@@ -203,25 +260,49 @@ export default function InspectionDetailScreen() {
                   </ThemedText>
                 ) : null}
               </View>
-              <View style={styles.progressStats}>
-                <ThemedText style={[styles.progressPercent, { color: BrandColors.azureBlue }]}>
-                  {progressPercent}%
-                </ThemedText>
-                <ThemedText style={[styles.progressCount, { color: theme.textSecondary }]}>
-                  {completedItems}/{totalItems}
+              <View style={[
+                styles.statusIndicator,
+                { backgroundColor: inspectionStatus === 'failed' ? BrandColors.danger : inspectionStatus === 'passed' ? BrandColors.emerald : BrandColors.azureBlue }
+              ]}>
+                <Feather 
+                  name={inspectionStatus === 'failed' ? 'x-circle' : inspectionStatus === 'passed' ? 'check-circle' : 'clock'} 
+                  size={14} 
+                  color="#FFFFFF" 
+                />
+                <ThemedText style={styles.statusText}>
+                  {inspectionStatus === 'failed' ? 'Failed' : inspectionStatus === 'passed' ? 'Passed' : 'In Progress'}
                 </ThemedText>
               </View>
             </View>
-            <View style={[styles.progressBar, { backgroundColor: theme.border }]}>
-              <View 
-                style={[
-                  styles.progressFill, 
-                  { 
-                    width: `${progressPercent}%`,
-                    backgroundColor: progressPercent === 100 ? BrandColors.emerald : BrandColors.azureBlue,
-                  }
-                ]} 
-              />
+
+            <View style={styles.statsRow}>
+              <View style={[styles.statCard, { backgroundColor: BrandColors.emerald + '15' }]}>
+                <Feather name="check-circle" size={20} color={BrandColors.emerald} />
+                <ThemedText style={[styles.statNumber, { color: BrandColors.emerald }]}>
+                  {stats.passed}
+                </ThemedText>
+                <ThemedText style={[styles.statLabel, { color: BrandColors.emerald }]}>
+                  Passed
+                </ThemedText>
+              </View>
+              <View style={[styles.statCard, { backgroundColor: BrandColors.danger + '15' }]}>
+                <Feather name="x-circle" size={20} color={BrandColors.danger} />
+                <ThemedText style={[styles.statNumber, { color: BrandColors.danger }]}>
+                  {stats.failed}
+                </ThemedText>
+                <ThemedText style={[styles.statLabel, { color: BrandColors.danger }]}>
+                  Failed
+                </ThemedText>
+              </View>
+              <View style={[styles.statCard, { backgroundColor: theme.backgroundSecondary }]}>
+                <Feather name="minus-circle" size={20} color={theme.textSecondary} />
+                <ThemedText style={[styles.statNumber, { color: theme.text }]}>
+                  {totalItems - stats.checked}
+                </ThemedText>
+                <ThemedText style={[styles.statLabel, { color: theme.textSecondary }]}>
+                  Unchecked
+                </ThemedText>
+              </View>
             </View>
           </View>
         </Animated.View>
@@ -254,7 +335,7 @@ export default function InspectionDetailScreen() {
             Breakpoint Commercial Pool Inspection Checklist
           </ThemedText>
           <ThemedText style={[styles.sectionSubtitle, { color: theme.textSecondary }]}>
-            {totalItems} items across {inspectionChecklist.length} categories
+            Tap Pass or Fail for each item you inspect
           </ThemedText>
 
           {inspectionChecklist.map((category, index) => (
@@ -264,10 +345,10 @@ export default function InspectionDetailScreen() {
             >
               <CategorySection
                 category={category}
-                checkedItems={checkedItems}
+                itemStatuses={itemStatuses}
                 expandedCategories={expandedCategories}
                 onToggleCategory={handleToggleCategory}
-                onToggleItem={handleToggleItem}
+                onSetItemStatus={handleSetItemStatus}
               />
             </Animated.View>
           ))}
@@ -280,24 +361,38 @@ export default function InspectionDetailScreen() {
         borderTopColor: theme.border,
       }]}>
         <View style={styles.bottomStats}>
-          <ThemedText style={[styles.bottomStatsText, { color: theme.textSecondary }]}>
-            {completedItems} of {totalItems} items checked
-          </ThemedText>
+          <View style={styles.bottomStatsRow}>
+            <View style={styles.bottomStatItem}>
+              <Feather name="check" size={14} color={BrandColors.emerald} />
+              <ThemedText style={[styles.bottomStatsText, { color: BrandColors.emerald }]}>
+                {stats.passed} Pass
+              </ThemedText>
+            </View>
+            <View style={styles.bottomStatItem}>
+              <Feather name="x" size={14} color={BrandColors.danger} />
+              <ThemedText style={[styles.bottomStatsText, { color: BrandColors.danger }]}>
+                {stats.failed} Fail
+              </ThemedText>
+            </View>
+            <ThemedText style={[styles.bottomStatsText, { color: theme.textSecondary }]}>
+              {totalItems - stats.checked} remaining
+            </ThemedText>
+          </View>
         </View>
         <Pressable 
           style={[
             styles.submitButton, 
-            { backgroundColor: completedItems === totalItems ? BrandColors.emerald : BrandColors.azureBlue }
+            { backgroundColor: stats.failed > 0 ? BrandColors.danger : stats.checked > 0 ? BrandColors.emerald : BrandColors.azureBlue }
           ]}
           onPress={handleSubmit}
         >
           <Feather 
-            name={completedItems === totalItems ? 'check-circle' : 'save'} 
+            name={stats.failed > 0 ? 'alert-circle' : 'save'} 
             size={20} 
             color="#FFFFFF" 
           />
           <ThemedText style={styles.submitButtonText}>
-            {completedItems === totalItems ? 'Complete Inspection' : 'Save Progress'}
+            {stats.failed > 0 ? 'Submit Failed Inspection' : stats.checked > 0 ? 'Save Inspection' : 'Save Progress'}
           </ThemedText>
         </Pressable>
       </View>
@@ -323,7 +418,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.lg,
   },
   progressTitle: {
     fontSize: 18,
@@ -333,24 +428,37 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 2,
   },
-  progressStats: {
-    alignItems: 'flex-end',
+  statusIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.full,
   },
-  progressPercent: {
+  statusText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  statCard: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
+    gap: Spacing.xs,
+  },
+  statNumber: {
     fontSize: 24,
     fontWeight: '700',
   },
-  progressCount: {
-    fontSize: 12,
-  },
-  progressBar: {
-    height: 8,
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 4,
+  statLabel: {
+    fontSize: 11,
+    fontWeight: '600',
   },
   actionsRow: {
     flexDirection: 'row',
@@ -415,9 +523,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  categoryStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    marginTop: 4,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingHorizontal: Spacing.xs,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.xs,
+  },
+  statusBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+  },
   categoryProgress: {
     fontSize: 12,
-    marginTop: 2,
   },
   categoryItems: {
     borderTopWidth: 1,
@@ -429,32 +554,61 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
     gap: Spacing.md,
   },
-  checkboxContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 4,
-  },
   itemLabel: {
     fontSize: 14,
     flex: 1,
   },
-  itemLabelChecked: {
-    textDecorationLine: 'line-through',
+  passFailButtons: {
+    flexDirection: 'row',
+    gap: Spacing.xs,
+  },
+  passButton: {
+    width: 36,
+    height: 36,
+    borderRadius: BorderRadius.sm,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  passButtonActive: {
+    backgroundColor: BrandColors.emerald,
+    borderColor: BrandColors.emerald,
+  },
+  failButton: {
+    width: 36,
+    height: 36,
+    borderRadius: BorderRadius.sm,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  failButtonActive: {
+    backgroundColor: BrandColors.danger,
+    borderColor: BrandColors.danger,
   },
   bottomBar: {
     padding: Spacing.md,
     borderTopWidth: 1,
   },
   bottomStats: {
-    alignItems: 'center',
     marginBottom: Spacing.sm,
+  },
+  bottomStatsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: Spacing.lg,
+  },
+  bottomStatItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
   },
   bottomStatsText: {
     fontSize: 13,
+    fontWeight: '500',
   },
   submitButton: {
     flexDirection: 'row',

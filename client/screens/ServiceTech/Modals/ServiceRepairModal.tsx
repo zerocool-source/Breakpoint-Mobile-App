@@ -14,7 +14,7 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { ThemedText } from '@/components/ThemedText';
-import { VoiceRecorderButton } from '@/components/VoiceRecorderButton';
+import { DualVoiceInput } from '@/components/DualVoiceInput';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing } from '@/constants/theme';
 
@@ -133,25 +133,13 @@ export function ServiceRepairModal({
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.inputSection}>
-              <View style={styles.labelRow}>
-                <ThemedText style={styles.inputLabel}>ISSUE DESCRIPTION</ThemedText>
-                <VoiceRecorderButton 
-                  compact 
-                  onRecordingComplete={handleVoiceRecordingComplete}
-                />
-              </View>
-              <View style={[styles.textAreaContainer, { borderColor: theme.border }]}>
-                <TextInput
-                  style={[styles.textArea, { color: theme.text }]}
-                  placeholder="Describe the issue found, what needs repair, observations from inspection..."
-                  placeholderTextColor={theme.textSecondary}
-                  value={issueDescription}
-                  onChangeText={setIssueDescription}
-                  multiline
-                  numberOfLines={6}
-                  textAlignVertical="top"
-                />
-              </View>
+              <ThemedText style={styles.inputLabel}>ISSUE DESCRIPTION</ThemedText>
+              <DualVoiceInput
+                value={issueDescription}
+                onTextChange={setIssueDescription}
+                onAudioRecorded={handleVoiceRecordingComplete}
+                placeholder="Describe the issue found, what needs repair..."
+              />
             </View>
 
             <View style={styles.photosSection}>

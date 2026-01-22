@@ -14,6 +14,7 @@ import { Picker } from '@react-native-picker/picker';
 import * as Haptics from 'expo-haptics';
 
 import { ThemedText } from '@/components/ThemedText';
+import { DualVoiceInput } from '@/components/DualVoiceInput';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing } from '@/constants/theme';
 
@@ -254,18 +255,11 @@ export function ChemicalOrderModal({
               <ThemedText style={[styles.notesLabel, { color: theme.textSecondary }]}>
                 Order Notes (Optional)
               </ThemedText>
-              <View style={[styles.textAreaContainer, { borderColor: theme.border }]}>
-                <TextInput
-                  style={[styles.textArea, { color: theme.text }]}
-                  placeholder="Add delivery notes, timing preferences, or special instructions..."
-                  placeholderTextColor={theme.textSecondary}
-                  value={notes}
-                  onChangeText={setNotes}
-                  multiline
-                  numberOfLines={3}
-                  textAlignVertical="top"
-                />
-              </View>
+              <DualVoiceInput
+                value={notes}
+                onTextChange={setNotes}
+                placeholder="Add delivery notes, timing preferences, or special instructions..."
+              />
             </View>
           </ScrollView>
 

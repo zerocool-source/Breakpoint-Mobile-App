@@ -13,7 +13,7 @@ import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 
 import { ThemedText } from '@/components/ThemedText';
-import { VoiceRecorderButton } from '@/components/VoiceRecorderButton';
+import { DualVoiceInput } from '@/components/DualVoiceInput';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing } from '@/constants/theme';
 
@@ -118,25 +118,13 @@ export function WindyDayCleanupModal({
             </View>
 
             <View style={styles.inputSection}>
-              <View style={styles.labelRow}>
-                <ThemedText style={styles.inputLabel}>Notes (Optional)</ThemedText>
-                <VoiceRecorderButton 
-                  compact 
-                  onRecordingComplete={handleVoiceRecordingComplete}
-                />
-              </View>
-              <View style={[styles.textAreaContainer, { borderColor: theme.border }]}>
-                <TextInput
-                  style={[styles.textArea, { color: theme.text }]}
-                  placeholder="Describe the cleanup work done (e.g., leaves removed, debris cleared, skimmed pool)..."
-                  placeholderTextColor={theme.textSecondary}
-                  value={notes}
-                  onChangeText={setNotes}
-                  multiline
-                  numberOfLines={6}
-                  textAlignVertical="top"
-                />
-              </View>
+              <ThemedText style={styles.inputLabel}>Notes (Optional)</ThemedText>
+              <DualVoiceInput
+                value={notes}
+                onTextChange={setNotes}
+                onAudioRecorded={handleVoiceRecordingComplete}
+                placeholder="Describe the cleanup work done (e.g., leaves removed, debris cleared, skimmed pool)..."
+              />
             </View>
 
             <View style={styles.photosSection}>

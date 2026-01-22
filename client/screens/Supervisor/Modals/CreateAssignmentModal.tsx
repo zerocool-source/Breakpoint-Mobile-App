@@ -15,6 +15,7 @@ import * as Haptics from 'expo-haptics';
 
 import { ThemedText } from '@/components/ThemedText';
 import { BPButton } from '@/components/BPButton';
+import { DualVoiceInput } from '@/components/DualVoiceInput';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing } from '@/constants/theme';
 import { mockTechnicians, mockProperties, type AssignmentPriority } from '@/lib/supervisorMockData';
@@ -181,18 +182,11 @@ export function CreateAssignmentModal({ visible, onClose }: CreateAssignmentModa
 
             <View style={styles.inputSection}>
               <ThemedText style={styles.inputLabel}>Notes</ThemedText>
-              <View style={[styles.textAreaContainer, { borderColor: theme.border }]}>
-                <TextInput
-                  style={[styles.textArea, { color: theme.text }]}
-                  placeholder="Add any notes or instructions..."
-                  placeholderTextColor={theme.textSecondary}
-                  value={notes}
-                  onChangeText={setNotes}
-                  multiline
-                  numberOfLines={4}
-                  textAlignVertical="top"
-                />
-              </View>
+              <DualVoiceInput
+                value={notes}
+                onTextChange={setNotes}
+                placeholder="Add any notes or instructions..."
+              />
             </View>
 
             <View style={styles.photosSection}>

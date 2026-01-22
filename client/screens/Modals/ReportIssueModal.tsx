@@ -11,6 +11,7 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { ThemedText } from '@/components/ThemedText';
 import { BPButton } from '@/components/BPButton';
+import { DualVoiceInput } from '@/components/DualVoiceInput';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
 import { mockProperties } from '@/lib/mockData';
@@ -168,15 +169,10 @@ export default function ReportIssueModal() {
 
         <View style={styles.field}>
           <ThemedText style={styles.label}>Description *</ThemedText>
-          <TextInput
-            style={[styles.textArea, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }]}
-            placeholder="Describe the issue in detail..."
-            placeholderTextColor={theme.textSecondary}
+          <DualVoiceInput
             value={description}
-            onChangeText={setDescription}
-            multiline
-            numberOfLines={4}
-            textAlignVertical="top"
+            onTextChange={setDescription}
+            placeholder="Describe the issue in detail..."
           />
         </View>
 

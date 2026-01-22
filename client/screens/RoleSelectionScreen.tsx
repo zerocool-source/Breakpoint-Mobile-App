@@ -23,8 +23,8 @@ import { ThemedText } from '@/components/ThemedText';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
 
 const { width } = Dimensions.get('window');
-const SHIMMER_DURATION = 1200;
-const SHIMMER_INTERVAL = 12000;
+const SHIMMER_DURATION = 1800;
+const SHIMMER_INTERVAL = 25000;
 
 const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
 
@@ -59,7 +59,7 @@ function LogoShimmer() {
       <View style={styles.shimmerOverlay}>
         <Animated.View style={[styles.shimmerGradient, shimmerStyle]}>
           <LinearGradient
-            colors={['transparent', 'rgba(255,255,255,0.15)', 'transparent']}
+            colors={['transparent', 'rgba(255,255,255,0.08)', 'transparent']}
             start={{ x: 0, y: 0.5 }}
             end={{ x: 1, y: 0.5 }}
             style={StyleSheet.absoluteFill}
@@ -249,7 +249,7 @@ function RoleCard({ role, index, onSelect }: RoleCardProps) {
             <LinearGradient
               colors={[
                 'transparent',
-                isHighlighted ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.6)',
+                isHighlighted ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.25)',
                 'transparent',
               ]}
               start={{ x: 0, y: 0.5 }}

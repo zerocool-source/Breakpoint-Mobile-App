@@ -1,0 +1,184 @@
+Fix Mobile Layout Issues (Expo Go / React Native)
+
+ROLE: You are a senior React Native + Expo engineer specializing in responsive mobile UI. Your job is to fix all layout issues across iOS + Android phones (small and large), including safe areas, status bar overlap, keyboard overlap, scrolling bugs, and inconsistent spacing. Keep compatibility with Expo Go.
+
+1) Baseline checks (do these first)
+
+Read package.json and determine:
+
+Expo SDK version
+
+Navigation approach (expo-router vs react-navigation)
+
+Styling approach (StyleSheet, NativeWind, styled-components, etc.)
+
+Run:
+
+npx expo start --clear
+
+Fix any immediate redbox/layout warnings before continuing.
+
+2) Create a consistent screen foundation (required)
+
+Implement a reusable wrapper component and refactor all screens to use it.
+
+Create: components/Screen.tsx (or app/components/Screen.tsx depending on structure)
+
+Screen must support:
+
+Safe areas (notch + home indicator)
+
+Status bar spacing
+
+flex: 1 always
+
+Optional scrolling mode
+
+Optional keyboard-avoiding mode (for forms)
+
+Consistent background + horizontal padding
+
+Rules:
+
+Use SafeAreaView (from react-native-safe-area-context if installed, otherwise use react-native SafeAreaView).
+
+For scrolling screens: use ScrollView with contentContainerStyle={{ flexGrow: 1 }}.
+
+For forms: wrap content in KeyboardAvoidingView + dismiss keyboard on tap outside input.
+
+3) Fix the most common mobile layout breakpoints (must do all)
+
+Search the codebase and fix:
+
+A) Safe area + status bar
+
+Any screen where content touches the notch/status bar
+
+Any header overlapping content
+
+Ensure consistent top padding behavior across iOS + Android
+
+B) Flex and container bugs
+
+Missing flex: 1 on main containers
+
+height: "100%" misuse
+
+Broken nested ScrollView issues
+
+Absolute positioning used for core layout (replace with flex where possible)
+
+C) Keyboard overlap
+
+Inputs hidden behind keyboard
+
+Add KeyboardAvoidingView for screens with inputs
+
+Ensure scroll-to-input works where needed
+
+D) Text overflow + wrapping
+
+Long titles/buttons overflowing on small screens
+
+Add:
+
+numberOfLines
+
+ellipsizeMode="tail"
+
+proper flexShrink: 1
+
+responsive font sizing only if needed (do NOT overcomplicate)
+
+E) Images and fixed dimensions
+
+Replace hard-coded widths/heights that break on small devices
+
+Use useWindowDimensions() to scale responsibly
+
+Preserve aspect ratio (resizeMode="contain" or correct choice)
+
+4) Make spacing responsive and consistent
+
+Create a tiny spacing system (do not add libraries).
+
+Add: constants/layout.ts (or similar)
+
+spacing scale: xs=4, sm=8, md=12, lg=16, xl=24, xxl=32
+
+helper for responsive width checks:
+
+isSmallDevice = width < 360
+
+isTablet = width >= 768 (optional)
+
+Refactor screens to replace random padding/margin numbers with this spacing scale.
+
+5) Navigation/layout specific fixes
+
+If expo-router:
+
+Verify correct layout files (app/_layout.tsx, nested layouts)
+
+Ensure headers do not stack incorrectly with safe areas
+
+Fix any content “jumping” between routes
+
+If react-navigation:
+
+Ensure only one NavigationContainer
+
+Fix header insets and safe-area padding conflicts
+
+6) Test matrix (required)
+
+After fixes, test these sizes (simulate by changing device profiles if available):
+
+Small phone (iPhone SE / small Android)
+
+Normal phone (iPhone 14 / Pixel)
+
+Large phone (Pro Max style)
+Ensure:
+
+No clipped content
+
+No overlap with notch/status bar
+
+Keyboard never hides inputs
+
+Scroll works and doesn’t trap
+
+7) Deliverables (required)
+
+Output:
+
+List of layout issues found
+
+File-by-file changes (what and why)
+
+Screens verified
+
+Remaining risks (if any) and how to test them
+
+Constraints
+
+Keep Expo Go compatibility.
+
+Do not install new UI libraries unless absolutely required.
+
+Prefer flexbox + safe-area correctness over absolute positioning.
+
+Now implement the Screen wrapper, refactor screens, fix layout issues, and report results.
+
+Bonus: “If you see THIS, fix it” cheat list (for the agent)
+
+Content under notch → safe area wrapper missing
+
+Screen not filling height → missing flex: 1
+
+Buttons floating weird → absolute positioning, replace with flex
+
+Form unusable → keyboard avoidance missing
+
+Scroll doesn’t scroll → contentContainerStyle wrong / nested scroll views

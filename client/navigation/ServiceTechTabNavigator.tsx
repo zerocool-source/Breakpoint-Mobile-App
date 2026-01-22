@@ -1,0 +1,75 @@
+import React from 'react';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Feather } from '@expo/vector-icons';
+import { Platform } from 'react-native';
+
+import ServiceTechHomeScreen from '@/screens/ServiceTech/HomeScreen';
+import ChatScreen from '@/screens/ServiceTech/ChatScreen';
+import ProfileScreen from '@/screens/ServiceTech/ProfileScreen';
+import TruckScreen from '@/screens/ServiceTech/TruckScreen';
+import { useTheme } from '@/hooks/useTheme';
+import { BrandColors, Spacing, BorderRadius } from '@/constants/theme';
+
+const Tab = createBottomTabNavigator();
+
+export default function ServiceTechTabNavigator() {
+  const { theme } = useTheme();
+
+  return (
+    <Tab.Navigator
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: BrandColors.azureBlue,
+        tabBarInactiveTintColor: theme.textSecondary,
+        tabBarStyle: {
+          backgroundColor: theme.surface,
+          borderTopColor: theme.border,
+          paddingTop: Spacing.sm,
+          paddingBottom: Platform.OS === 'ios' ? Spacing.lg : Spacing.md,
+          height: Platform.OS === 'ios' ? 88 : 64,
+        },
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: '500',
+        },
+      }}
+    >
+      <Tab.Screen
+        name="Home"
+        component={ServiceTechHomeScreen}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="home" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Chat"
+        component={ChatScreen}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="message-square" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="user" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Truck"
+        component={TruckScreen}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="truck" size={size} color={color} />
+          ),
+        }}
+      />
+    </Tab.Navigator>
+  );
+}

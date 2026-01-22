@@ -1,0 +1,78 @@
+Service Technician App
+What It Is
+The Service Technician App is a daily route management tool for pool service technicians who visit multiple properties each day to perform routine pool maintenance, chemical testing, and cleaning services.
+
+Who Uses It
+Service Technicians - Field workers who drive to commercial properties (HOAs, apartment complexes, hotels, etc.) to maintain their pools on a regular schedule.
+
+Home Screen Features (What You See)
+1. Header Section
+Greeting - "Good Evening" + technician name (Demo)
+Avatar - Green circle with initial "M"
+Current Time - 6:09 PM badge
+Truck ID - "Truck #T-14" (identifies which service vehicle)
+Sync Button - Green refresh icon to sync data with office
+2. Assignments Card (Orange)
+Shows pending special assignments from supervisors
+Badge showing "4 pending" tasks
+Each assignment shows:
+Type (pool)
+Property name (SUNNYMEAD RANCH PCA)
+Notes ("yes")
+Date/time assigned
+Who assigned it ("by Demo Supervisor")
+Expandable/collapsible section
+Tap to view assignment details
+3. Next Stop Card
+Highlighted upcoming destination
+Shows scheduled time (8:15 AM)
+Property name: SUNNYMEAD RANCH PCA
+Full address with location pin
+Property type badge (HOA)
+Pool count (2 pools)
+4. Today's Progress
+Visual tracker showing completion: "0/5 stops"
+Three metric boxes:
+Metric	Count	Meaning
+Chemicals	0	Chemical treatments done
+Repairs	0	Minor repairs completed
+Drop-offs	0	Chemical deliveries made
+5. Today's Route
+"Drag to reorder" badge - allows rearranging stop order
+List of all properties to visit (scrollable below)
+6. Bottom Navigation
+Icon	Tab	Purpose
+Home	House	Main dashboard (current screen)
+Chat	Message	Message the office
+Profile	Person	Account settings
+More	Grid	Additional options
+Complete Feature List
+Route Management
+View daily route with all stops
+Drag-and-drop to reorder stops
+See property details before arriving
+Track completion progress
+Property Service
+Gate codes for access
+Contact information
+Property notes/history
+Bodies of water list (pools, spas, fountains)
+Service Recording
+Voice notes with speech-to-text
+Photo capture
+Service activity logging
+Pump room checklists
+Quick Actions
+Report repairs needed
+Order chemicals
+Log windy day cleanup
+Request service repairs
+Emergency reporting
+Time Tracking
+Active timer at each property
+Total time tracking
+Route efficiency metrics
+Communication
+Chat with office
+Receive supervisor assignments
+Sync data to cloud

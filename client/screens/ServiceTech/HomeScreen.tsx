@@ -161,7 +161,7 @@ export default function ServiceTechHomeScreen() {
     return () => clearTimeout(timer);
   }, []);
   
-  const nextStop = routeStops.find(stop => !stop.completed) || routeStops[0];
+  const nextStop = routeStops.find(stop => !stop.completed) || routeStops[0] || null;
   const progress = mockDailyProgress;
 
   const handleMoveUp = useCallback((index: number) => {
@@ -280,39 +280,51 @@ export default function ServiceTechHomeScreen() {
           </Pressable>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(200).springify()}>
-          <Pressable 
-            style={[styles.nextStopCard, { backgroundColor: theme.surface }]}
-            onPress={() => handleStopPress(nextStop)}
-          >
-            <View style={styles.nextStopHeader}>
-              <View style={styles.nextStopHeaderLeft}>
-                <ThemedText style={styles.nextStopLabel}>NEXT STOP</ThemedText>
+        {nextStop ? (
+          <Animated.View entering={FadeInDown.delay(200).springify()}>
+            <Pressable 
+              style={[styles.nextStopCard, { backgroundColor: theme.surface }]}
+              onPress={() => handleStopPress(nextStop)}
+            >
+              <View style={styles.nextStopHeader}>
+                <View style={styles.nextStopHeaderLeft}>
+                  <ThemedText style={styles.nextStopLabel}>NEXT STOP</ThemedText>
+                </View>
+                <View style={styles.nextStopTimeBadge}>
+                  <ThemedText style={styles.nextStopTimeText}>{nextStop.scheduledTime}</ThemedText>
+                </View>
               </View>
-              <View style={styles.nextStopTimeBadge}>
-                <ThemedText style={styles.nextStopTimeText}>{nextStop.scheduledTime}</ThemedText>
-              </View>
-            </View>
-            <ThemedText style={styles.nextStopName}>{nextStop.propertyName}</ThemedText>
-            <View style={styles.nextStopAddress}>
-              <Feather name="map-pin" size={14} color={BrandColors.danger} />
-              <ThemedText style={[styles.nextStopAddressText, { color: theme.textSecondary }]}>
-                {nextStop.address}
-              </ThemedText>
-            </View>
-            <View style={styles.nextStopMeta}>
-              <View style={[styles.propertyTypeBadge, { backgroundColor: BrandColors.vividTangerine + '20' }]}>
-                <ThemedText style={[styles.propertyTypeBadgeText, { color: BrandColors.vividTangerine }]}>
-                  {nextStop.propertyType}
+              <ThemedText style={styles.nextStopName}>{nextStop.propertyName}</ThemedText>
+              <View style={styles.nextStopAddress}>
+                <Feather name="map-pin" size={14} color={BrandColors.danger} />
+                <ThemedText style={[styles.nextStopAddressText, { color: theme.textSecondary }]}>
+                  {nextStop.address}
                 </ThemedText>
               </View>
-              <View style={styles.poolCountBadge}>
-                <Feather name="droplet" size={12} color={BrandColors.azureBlue} />
-                <ThemedText style={styles.poolCountText}>{nextStop.poolCount} pools</ThemedText>
+              <View style={styles.nextStopMeta}>
+                <View style={[styles.propertyTypeBadge, { backgroundColor: BrandColors.vividTangerine + '20' }]}>
+                  <ThemedText style={[styles.propertyTypeBadgeText, { color: BrandColors.vividTangerine }]}>
+                    {nextStop.propertyType}
+                  </ThemedText>
+                </View>
+                <View style={styles.poolCountBadge}>
+                  <Feather name="droplet" size={12} color={BrandColors.azureBlue} />
+                  <ThemedText style={styles.poolCountText}>{nextStop.poolCount} pools</ThemedText>
+                </View>
+              </View>
+            </Pressable>
+          </Animated.View>
+        ) : (
+          <Animated.View entering={FadeInDown.delay(200).springify()}>
+            <View style={[styles.nextStopCard, { backgroundColor: theme.surface }]}>
+              <View style={styles.emptyStateContainer}>
+                <Feather name="map-pin" size={32} color={BrandColors.textSecondary} />
+                <ThemedText style={styles.emptyStateTitle}>No Stops Scheduled</ThemedText>
+                <ThemedText style={styles.emptyStateText}>Your route will appear here once assigned</ThemedText>
               </View>
             </View>
-          </Pressable>
-        </Animated.View>
+          </Animated.View>
+        )}
 
         <Animated.View entering={FadeInDown.delay(300).springify()}>
           <View style={styles.progressSection}>
@@ -950,5 +962,22 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: BrandColors.azureBlue,
     fontWeight: '600',
+  },
+  emptyStateContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing['2xl'],
+    gap: Spacing.sm,
+  },
+  emptyStateTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: BrandColors.textPrimary,
+    marginTop: Spacing.sm,
+  },
+  emptyStateText: {
+    fontSize: 14,
+    color: BrandColors.textSecondary,
+    textAlign: 'center',
   },
 });

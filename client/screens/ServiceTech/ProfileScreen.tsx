@@ -28,6 +28,7 @@ export default function ServiceTechProfileScreen() {
 
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [offlineMode, setOfflineMode] = useState(false);
+  const [batterySaver, setBatterySaver] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const roleName = selectedRole ? roleNames[selectedRole] : 'Service Technician';
@@ -86,6 +87,15 @@ export default function ServiceTechProfileScreen() {
           switchValue={offlineMode}
           onSwitchChange={setOfflineMode}
           color={BrandColors.vividTangerine}
+        />
+        <View style={[styles.divider, { backgroundColor: theme.border }]} />
+        <SettingsRow
+          icon="battery-charging"
+          label="Save Battery 50%"
+          isSwitch
+          switchValue={batterySaver}
+          onSwitchChange={setBatterySaver}
+          color={BrandColors.emerald}
         />
       </View>
 

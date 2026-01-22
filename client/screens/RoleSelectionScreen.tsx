@@ -23,8 +23,8 @@ import { ThemedText } from '@/components/ThemedText';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
 
 const { width } = Dimensions.get('window');
-const SHIMMER_DURATION = 1500;
-const SHIMMER_INTERVAL = 10000;
+const SHIMMER_DURATION = 1200;
+const SHIMMER_INTERVAL = 12000;
 
 const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
 
@@ -33,7 +33,10 @@ function LogoShimmer() {
 
   useEffect(() => {
     shimmerPosition.value = withRepeat(
-      withTiming(1, { duration: SHIMMER_DURATION * 2, easing: Easing.linear }),
+      withSequence(
+        withTiming(1, { duration: SHIMMER_DURATION, easing: Easing.inOut(Easing.ease) }),
+        withDelay(SHIMMER_INTERVAL, withTiming(0, { duration: 0 }))
+      ),
       -1,
       false
     );

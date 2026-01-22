@@ -40,13 +40,17 @@ interface LoginScreenProps {
 
 export default function LoginScreen({ onBack }: LoginScreenProps) {
   const insets = useSafeAreaInsets();
-  const { login, isLoading, selectedRole } = useAuth();
+  const { login, register, isLoading, selectedRole } = useAuth();
 
-  const [email, setEmail] = useState('demo@breakpoint.com');
-  const [password, setPassword] = useState('demo123');
+  const [isRegisterMode, setIsRegisterMode] = useState(false);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   const emailFocus = useSharedValue(0);
   const passwordFocus = useSharedValue(0);
+  const nameFocus = useSharedValue(0);
 
   const roleColor = selectedRole ? roleColors[selectedRole] : BrandColors.azureBlue;
   const roleName = selectedRole ? roleNames[selectedRole] : 'User';
@@ -61,17 +65,46 @@ export default function LoginScreen({ onBack }: LoginScreenProps) {
     borderWidth: passwordFocus.value === 1 ? 2 : 1,
   }));
 
-  const handleLogin = async () => {
+  const nameBorderStyle = useAnimatedStyle(() => ({
+    borderColor: nameFocus.value === 1 ? roleColor : BrandColors.border,
+    borderWidth: nameFocus.value === 1 ? 2 : 1,
+  }));
+
+  const handleSubmit = async () => {
+    setError(null);
+    
     if (!email.trim() || !password.trim()) {
       if (Platform.OS !== 'web') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
-      Alert.alert('Error', 'Please enter your email and password');
+      setError('Please enter your email and password');
       return;
     }
 
-    const success = await login(email, password);
-    if (success) {
+    if (isRegisterMode && !name.trim()) {
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
+      setError('Please enter your name');
+      return;
+    }
+
+    if (password.length < 6) {
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
+      setError('Password must be at least 6 characters');
+      return;
+    }
+
+    let result;
+    if (isRegisterMode) {
+      result = await register(email, password, name);
+    } else {
+      result = await login(email, password);
+    }
+
+    if (result.success) {
       if (Platform.OS !== 'web') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
@@ -79,7 +112,7 @@ export default function LoginScreen({ onBack }: LoginScreenProps) {
       if (Platform.OS !== 'web') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
-      Alert.alert('Error', 'Invalid credentials. Please try again.');
+      setError(result.error || 'Authentication failed. Please try again.');
     }
   };
 
@@ -88,6 +121,14 @@ export default function LoginScreen({ onBack }: LoginScreenProps) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
     onBack?.();
+  };
+
+  const toggleMode = () => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    setIsRegisterMode(!isRegisterMode);
+    setError(null);
   };
 
   return (
@@ -116,7 +157,9 @@ export default function LoginScreen({ onBack }: LoginScreenProps) {
             style={styles.logo}
             contentFit="contain"
           />
-          <ThemedText style={styles.title}>Sign In</ThemedText>
+          <ThemedText style={styles.title}>
+            {isRegisterMode ? 'Create Account' : 'Sign In'}
+          </ThemedText>
           <View style={[styles.roleBadge, { backgroundColor: roleColor + '30' }]}>
             <ThemedText style={[styles.roleText, { color: roleColor }]}>
               {roleName}
@@ -125,6 +168,26 @@ export default function LoginScreen({ onBack }: LoginScreenProps) {
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(200).springify()} style={styles.form}>
+          {isRegisterMode ? (
+            <View style={styles.inputWrapper}>
+              <ThemedText style={styles.label}>Full Name</ThemedText>
+              <Animated.View style={[styles.inputContainer, nameBorderStyle]}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter your full name"
+                  placeholderTextColor={BrandColors.textSecondary}
+                  value={name}
+                  onChangeText={setName}
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  onFocus={() => { nameFocus.value = withSpring(1); }}
+                  onBlur={() => { nameFocus.value = withSpring(0); }}
+                  testID="input-name"
+                />
+              </Animated.View>
+            </View>
+          ) : null}
+
           <View style={styles.inputWrapper}>
             <ThemedText style={styles.label}>Email</ThemedText>
             <Animated.View style={[styles.inputContainer, emailBorderStyle]}>
@@ -149,7 +212,7 @@ export default function LoginScreen({ onBack }: LoginScreenProps) {
             <Animated.View style={[styles.inputContainer, passwordBorderStyle]}>
               <TextInput
                 style={styles.input}
-                placeholder="Enter your password"
+                placeholder={isRegisterMode ? 'Create a password (min 6 chars)' : 'Enter your password'}
                 placeholderTextColor={BrandColors.textSecondary}
                 value={password}
                 onChangeText={setPassword}
@@ -161,21 +224,35 @@ export default function LoginScreen({ onBack }: LoginScreenProps) {
             </Animated.View>
           </View>
 
+          {error ? (
+            <View style={styles.errorContainer}>
+              <Feather name="alert-circle" size={16} color={BrandColors.danger} />
+              <ThemedText style={styles.errorText}>{error}</ThemedText>
+            </View>
+          ) : null}
+
           <BPButton
-            onPress={handleLogin}
+            onPress={handleSubmit}
             loading={isLoading}
             fullWidth
             size="large"
             style={[styles.loginButton, { backgroundColor: roleColor }]}
           >
-            Sign In as {roleName}
+            {isRegisterMode ? `Create ${roleName} Account` : `Sign In as ${roleName}`}
           </BPButton>
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(300).springify()} style={styles.footer}>
-          <ThemedText style={styles.footerText}>
-            Demo credentials pre-filled - just tap Sign In
-          </ThemedText>
+          <Pressable onPress={toggleMode} style={styles.toggleButton}>
+            <ThemedText style={styles.footerText}>
+              {isRegisterMode
+                ? 'Already have an account? '
+                : "Don't have an account? "}
+              <ThemedText style={[styles.footerLink, { color: roleColor }]}>
+                {isRegisterMode ? 'Sign In' : 'Create Account'}
+              </ThemedText>
+            </ThemedText>
+          </Pressable>
         </Animated.View>
       </KeyboardAwareScrollViewCompat>
     </BubbleBackground>
@@ -250,14 +327,35 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: BrandColors.textPrimary,
   },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: BrandColors.danger + '15',
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.sm,
+    marginBottom: Spacing.md,
+  },
+  errorText: {
+    fontSize: 14,
+    color: BrandColors.danger,
+    marginLeft: Spacing.sm,
+    flex: 1,
+  },
   loginButton: {
     marginTop: Spacing.lg,
   },
   footer: {
     alignItems: 'center',
   },
+  toggleButton: {
+    padding: Spacing.sm,
+  },
   footerText: {
-    fontSize: 13,
+    fontSize: 14,
     color: BrandColors.textSecondary,
+  },
+  footerLink: {
+    fontWeight: '600',
   },
 });

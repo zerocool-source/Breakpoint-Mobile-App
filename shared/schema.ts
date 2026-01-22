@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { sql, relations } from "drizzle-orm";
 import { pgTable, text, varchar, timestamp, integer, boolean, decimal, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -133,6 +133,84 @@ export const sessions = pgTable("sessions", {
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
+
+export const usersRelations = relations(users, ({ many }) => ({
+  jobs: many(jobs),
+  assignments: many(assignments),
+  estimates: many(estimates),
+  routeStops: many(routeStops),
+  sessions: many(sessions),
+}));
+
+export const propertiesRelations = relations(properties, ({ many }) => ({
+  jobs: many(jobs),
+  assignments: many(assignments),
+  estimates: many(estimates),
+  routeStops: many(routeStops),
+}));
+
+export const jobsRelations = relations(jobs, ({ one }) => ({
+  property: one(properties, {
+    fields: [jobs.propertyId],
+    references: [properties.id],
+  }),
+  assignedTo: one(users, {
+    fields: [jobs.assignedToId],
+    references: [users.id],
+  }),
+}));
+
+export const assignmentsRelations = relations(assignments, ({ one }) => ({
+  property: one(properties, {
+    fields: [assignments.propertyId],
+    references: [properties.id],
+  }),
+  technician: one(users, {
+    fields: [assignments.technicianId],
+    references: [users.id],
+  }),
+  assignedBy: one(users, {
+    fields: [assignments.assignedById],
+    references: [users.id],
+  }),
+}));
+
+export const estimatesRelations = relations(estimates, ({ one, many }) => ({
+  property: one(properties, {
+    fields: [estimates.propertyId],
+    references: [properties.id],
+  }),
+  technician: one(users, {
+    fields: [estimates.technicianId],
+    references: [users.id],
+  }),
+  items: many(estimateItems),
+}));
+
+export const estimateItemsRelations = relations(estimateItems, ({ one }) => ({
+  estimate: one(estimates, {
+    fields: [estimateItems.estimateId],
+    references: [estimates.id],
+  }),
+}));
+
+export const routeStopsRelations = relations(routeStops, ({ one }) => ({
+  technician: one(users, {
+    fields: [routeStops.technicianId],
+    references: [users.id],
+  }),
+  property: one(properties, {
+    fields: [routeStops.propertyId],
+    references: [properties.id],
+  }),
+}));
+
+export const sessionsRelations = relations(sessions, ({ one }) => ({
+  user: one(users, {
+    fields: [sessions.userId],
+    references: [users.id],
+  }),
+}));
 
 export const insertUserSchema = createInsertSchema(users).pick({
   email: true,

@@ -74,54 +74,9 @@ export interface TechnicianAssignmentStats {
   needHelp: number;
 }
 
-export const mockTechnicians: Technician[] = [
-  {
-    id: '1',
-    name: 'Mike Rodriguez',
-    role: 'service_tech',
-    status: 'active',
-    currentStop: 'SUNNYMEAD RANCH PCA',
-    progress: { completed: 4, total: 11 },
-    phone: '(951) 555-0123',
-    email: 'mike.rodriguez@breakpoint.com',
-  },
-  {
-    id: '2',
-    name: 'Jorge Martinez',
-    role: 'service_tech',
-    status: 'active',
-    currentStop: 'RIVERSIDE PALMS HOA',
-    progress: { completed: 6, total: 9 },
-    phone: '(951) 555-0124',
-    email: 'jorge.martinez@breakpoint.com',
-  },
-  {
-    id: '3',
-    name: 'Sarah Chen',
-    role: 'repair_tech',
-    status: 'active',
-    currentStop: 'HOLIDAY INN EXPRESS',
-    progress: { completed: 3, total: 8 },
-    phone: '(951) 555-0125',
-    email: 'sarah.chen@breakpoint.com',
-  },
-  {
-    id: '4',
-    name: 'Alex Johnson',
-    role: 'service_tech',
-    status: 'inactive',
-    progress: { completed: 0, total: 5 },
-    phone: '(951) 555-0126',
-    email: 'alex.johnson@breakpoint.com',
-  },
-];
+export const mockTechnicians: Technician[] = [];
 
-export const mockTechnicianAssignmentStats: Record<string, TechnicianAssignmentStats> = {
-  '1': { total: 12, completed: 7, notDone: 3, needHelp: 2 },
-  '2': { total: 8, completed: 5, notDone: 2, needHelp: 1 },
-  '3': { total: 10, completed: 6, notDone: 3, needHelp: 1 },
-  '4': { total: 5, completed: 2, notDone: 2, needHelp: 1 },
-};
+export const mockTechnicianAssignmentStats: Record<string, TechnicianAssignmentStats> = {};
 
 export interface TechnicianRouteStop {
   id: string;
@@ -131,266 +86,24 @@ export interface TechnicianRouteStop {
   scheduledTime: string;
 }
 
-export const mockTechnicianRoutes: Record<string, TechnicianRouteStop[]> = {
-  '1': [
-    { id: 'r1-1', propertyName: 'RIVERSIDE PALMS HOA', address: '1234 Palm Ave, Riverside', status: 'completed', scheduledTime: '7:30 AM' },
-    { id: 'r1-2', propertyName: 'CORONA HILLS ESTATES', address: '5678 Hill Dr, Corona', status: 'completed', scheduledTime: '8:30 AM' },
-    { id: 'r1-3', propertyName: 'SUNNYMEAD RANCH PCA', address: '9012 Ranch Rd, Moreno Valley', status: 'in_progress', scheduledTime: '10:00 AM' },
-    { id: 'r1-4', propertyName: 'PARKVIEW APARTMENTS', address: '3456 Park Blvd, Riverside', status: 'pending', scheduledTime: '11:30 AM' },
-    { id: 'r1-5', propertyName: 'MARRIOTT COURTYARD', address: '7890 Hotel Way, Corona', status: 'pending', scheduledTime: '1:00 PM' },
-  ],
-  '2': [
-    { id: 'r2-1', propertyName: 'HOLIDAY INN EXPRESS', address: '2345 Express Dr, Riverside', status: 'completed', scheduledTime: '7:00 AM' },
-    { id: 'r2-2', propertyName: 'RIVERSIDE PALMS HOA', address: '1234 Palm Ave, Riverside', status: 'in_progress', scheduledTime: '9:00 AM' },
-    { id: 'r2-3', propertyName: 'CANYON SPRINGS HOA', address: '6789 Canyon Rd, Moreno Valley', status: 'pending', scheduledTime: '11:00 AM' },
-  ],
-  '3': [
-    { id: 'r3-1', propertyName: 'SUNNYMEAD RANCH PCA', address: '9012 Ranch Rd, Moreno Valley', status: 'completed', scheduledTime: '8:00 AM' },
-    { id: 'r3-2', propertyName: 'HOLIDAY INN EXPRESS', address: '2345 Express Dr, Riverside', status: 'in_progress', scheduledTime: '10:30 AM' },
-    { id: 'r3-3', propertyName: 'HILTON GARDEN INN', address: '4567 Garden Blvd, Corona', status: 'pending', scheduledTime: '1:00 PM' },
-    { id: 'r3-4', propertyName: 'CORONA HILLS ESTATES', address: '5678 Hill Dr, Corona', status: 'pending', scheduledTime: '3:00 PM' },
-  ],
-  '4': [
-    { id: 'r4-1', propertyName: 'PARKVIEW APARTMENTS', address: '3456 Park Blvd, Riverside', status: 'pending', scheduledTime: '8:00 AM' },
-    { id: 'r4-2', propertyName: 'RIVERSIDE PALMS HOA', address: '1234 Palm Ave, Riverside', status: 'pending', scheduledTime: '10:00 AM' },
-  ],
-};
+export const mockTechnicianRoutes: Record<string, TechnicianRouteStop[]> = {};
 
-export const mockQCInspections: QCInspection[] = [
-  {
-    id: '1',
-    propertyName: 'SUNNYMEAD RANCH PCA',
-    technicianName: 'John Smith',
-    time: '9:00 AM',
-    date: 'Today',
-    status: 'PENDING',
-    poolName: 'Main Pool',
-    categories: [
-      {
-        id: 'c1',
-        name: 'Water Quality',
-        items: [
-          { id: 'i1', label: 'pH levels within range', checked: false },
-          { id: 'i2', label: 'Chlorine levels adequate', checked: false },
-          { id: 'i3', label: 'Water clarity acceptable', checked: false },
-        ],
-      },
-      {
-        id: 'c2',
-        name: 'Equipment',
-        items: [
-          { id: 'i4', label: 'Pump operating correctly', checked: false },
-          { id: 'i5', label: 'Filter pressure normal', checked: false },
-          { id: 'i6', label: 'Skimmer baskets clean', checked: false },
-        ],
-      },
-      {
-        id: 'c3',
-        name: 'Safety',
-        items: [
-          { id: 'i7', label: 'Safety equipment present', checked: false },
-          { id: 'i8', label: 'Signage visible', checked: false },
-          { id: 'i9', label: 'Barriers intact', checked: false },
-        ],
-      },
-      {
-        id: 'c4',
-        name: 'Cleanliness',
-        items: [
-          { id: 'i10', label: 'Deck area clean', checked: false },
-          { id: 'i11', label: 'Restrooms stocked', checked: false },
-          { id: 'i12', label: 'Trash removed', checked: false },
-        ],
-      },
-      {
-        id: 'c5',
-        name: 'Documentation',
-        items: [
-          { id: 'i13', label: 'Log book updated', checked: false },
-          { id: 'i14', label: 'Photos taken', checked: false },
-          { id: 'i15', label: 'Notes added', checked: false },
-        ],
-      },
-    ],
-  },
-  {
-    id: '2',
-    propertyName: 'RIVERSIDE PALMS HOA',
-    technicianName: 'Maria Garcia',
-    time: '10:30 AM',
-    date: 'Today',
-    status: 'SCHEDULED',
-    poolName: 'Community Pool',
-  },
-  {
-    id: '3',
-    propertyName: 'HOLIDAY INN EXPRESS',
-    technicianName: 'David Chen',
-    time: '2:00 PM',
-    date: 'Today',
-    status: 'PENDING',
-    poolName: 'Outdoor Pool',
-  },
-  {
-    id: '4',
-    propertyName: 'CORONA HILLS ESTATES',
-    technicianName: 'John Smith',
-    time: '8:30 AM',
-    date: 'Tomorrow',
-    status: 'SCHEDULED',
-    poolName: 'Olympic Pool',
-  },
-  {
-    id: '5',
-    propertyName: 'PARKVIEW APARTMENTS',
-    technicianName: 'Sarah Johnson',
-    time: '11:00 AM',
-    date: 'Tomorrow',
-    status: 'PENDING',
-    poolName: 'Resident Pool',
-  },
-  {
-    id: '6',
-    propertyName: 'MARRIOTT COURTYARD',
-    technicianName: 'Mike Wilson',
-    time: '3:30 PM',
-    date: 'Tomorrow',
-    status: 'SCHEDULED',
-    poolName: 'Guest Pool',
-  },
-];
+export const mockQCInspections: QCInspection[] = [];
 
-export const mockSupervisorAssignments: SupervisorAssignment[] = [
-  {
-    id: '1',
-    title: 'TESTING 1',
-    type: 'Chemical Balance',
-    propertyName: 'SUNNYMEAD RANCH PCA',
-    technicianName: 'John Smith',
-    priority: 'MEDIUM',
-    status: 'COMPLETED',
-    assignedDate: 'Jan 20, 2026',
-    completedDate: 'Jan 21, 2026',
-    notes: 'pH levels were adjusted. All readings now within normal range.',
-  },
-  {
-    id: '2',
-    title: 'Filter Inspection',
-    type: 'Equipment Check',
-    propertyName: 'RIVERSIDE PALMS HOA',
-    technicianName: 'Maria Garcia',
-    priority: 'HIGH',
-    status: 'COMPLETED',
-    assignedDate: 'Jan 19, 2026',
-    completedDate: 'Jan 20, 2026',
-  },
-  {
-    id: '3',
-    title: 'Pump Repair',
-    type: 'Repair',
-    propertyName: 'HOLIDAY INN EXPRESS',
-    technicianName: 'David Chen',
-    priority: 'HIGH',
-    status: 'NOT_COMPLETED',
-    assignedDate: 'Jan 21, 2026',
-    notes: 'Waiting for replacement parts.',
-  },
-  {
-    id: '4',
-    title: 'Weekly Service',
-    type: 'Routine Maintenance',
-    propertyName: 'CORONA HILLS ESTATES',
-    technicianName: 'John Smith',
-    priority: 'MEDIUM',
-    status: 'COMPLETED',
-    assignedDate: 'Jan 18, 2026',
-    completedDate: 'Jan 18, 2026',
-  },
-  {
-    id: '5',
-    title: 'Heater Check',
-    type: 'Equipment Check',
-    propertyName: 'PARKVIEW APARTMENTS',
-    technicianName: 'Sarah Johnson',
-    priority: 'LOW',
-    status: 'NEED_ASSISTANCE',
-    assignedDate: 'Jan 20, 2026',
-    notes: 'Need supervisor approval for replacement.',
-  },
-  {
-    id: '6',
-    title: 'Emergency Cleanup',
-    type: 'Cleanup',
-    propertyName: 'MARRIOTT COURTYARD',
-    technicianName: 'Mike Wilson',
-    priority: 'HIGH',
-    status: 'COMPLETED',
-    assignedDate: 'Jan 19, 2026',
-    completedDate: 'Jan 19, 2026',
-  },
-  {
-    id: '7',
-    title: 'Chemical Delivery',
-    type: 'Delivery',
-    propertyName: 'SUNNYMEAD RANCH PCA',
-    technicianName: 'Maria Garcia',
-    priority: 'MEDIUM',
-    status: 'COMPLETED',
-    assignedDate: 'Jan 17, 2026',
-    completedDate: 'Jan 17, 2026',
-  },
-  {
-    id: '8',
-    title: 'Leak Investigation',
-    type: 'Repair',
-    propertyName: 'RIVERSIDE PALMS HOA',
-    technicianName: 'David Chen',
-    priority: 'HIGH',
-    status: 'NOT_COMPLETED',
-    assignedDate: 'Jan 21, 2026',
-  },
-  {
-    id: '9',
-    title: 'Tile Repair',
-    type: 'Repair',
-    propertyName: 'HOLIDAY INN EXPRESS',
-    technicianName: 'Mike Wilson',
-    priority: 'LOW',
-    status: 'COMPLETED',
-    assignedDate: 'Jan 16, 2026',
-    completedDate: 'Jan 18, 2026',
-  },
-  {
-    id: '10',
-    title: 'Safety Inspection',
-    type: 'Inspection',
-    propertyName: 'CORONA HILLS ESTATES',
-    technicianName: 'Sarah Johnson',
-    priority: 'MEDIUM',
-    status: 'NOT_COMPLETED',
-    assignedDate: 'Jan 22, 2026',
-  },
-];
+export const mockSupervisorAssignments: SupervisorAssignment[] = [];
 
-export const mockProperties: Property[] = [
-  { id: '1', name: 'SUNNYMEAD RANCH PCA', address: '24100 Sunnymead Blvd, Moreno Valley', type: 'HOA' },
-  { id: '2', name: 'RIVERSIDE PALMS HOA', address: '15800 Palm Canyon Dr, Riverside', type: 'HOA' },
-  { id: '3', name: 'HOLIDAY INN EXPRESS', address: '3400 Market St, Riverside', type: 'Hotel' },
-  { id: '4', name: 'PARKVIEW APARTMENTS', address: '2200 University Ave, Riverside', type: 'Apartment' },
-  { id: '5', name: 'CORONA HILLS ESTATES', address: '1500 Foothill Pkwy, Corona', type: 'HOA' },
-  { id: '6', name: 'MARRIOTT COURTYARD', address: '1510 University Ave, Riverside', type: 'Hotel' },
-];
+export const mockProperties: Property[] = [];
 
 export const mockWeeklyMetrics: WeeklyMetrics = {
-  assignmentsCreated: 12,
-  propertiesInspected: 8,
-  pendingResponses: 3,
-  qcInspections: 5,
+  assignmentsCreated: 0,
+  propertiesInspected: 0,
+  pendingResponses: 0,
+  qcInspections: 0,
 };
 
 export const supervisorInfo = {
-  name: 'Demo Supervisor',
-  region: 'Inland Empire',
-  email: 'supervisor@breakpoint.com',
-  phone: '(951) 555-0100',
+  name: '',
+  region: '',
+  email: '',
+  phone: '',
 };

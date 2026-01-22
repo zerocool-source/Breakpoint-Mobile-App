@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { storage } from '@/lib/storage';
-import { mockUser } from '@/lib/mockData';
+import { authApiRequest, getApiUrl } from '@/lib/query-client';
 import type { User } from '@/types';
 
 export type UserRole = 'service_tech' | 'supervisor' | 'repair_tech' | 'repair_foreman';
@@ -11,7 +11,8 @@ interface AuthContextType {
   isAuthenticated: boolean;
   selectedRole: UserRole | null;
   setSelectedRole: (role: UserRole | null) => void;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  register: (email: string, password: string, name: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
 }
 
@@ -30,40 +31,92 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
 
   useEffect(() => {
-    // Clear any cached auth data on app start so users always see role selection
-    const initAuth = async () => {
+    const checkAuth = async () => {
       try {
-        await storage.clearAll();
+        const token = await storage.getAuthToken();
+        if (token) {
+          const baseUrl = getApiUrl();
+          const res = await fetch(`${baseUrl}api/auth/me`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+          
+          if (res.ok) {
+            const userData = await res.json();
+            setUser(userData);
+            setSelectedRole(userData.role);
+          } else {
+            await storage.clearAll();
+          }
+        }
       } catch (error) {
-        console.error('Failed to clear auth:', error);
+        console.error('Auth check failed:', error);
+        await storage.clearAll();
       } finally {
         setIsLoading(false);
       }
     };
-    initAuth();
+    checkAuth();
   }, []);
 
-  const login = useCallback(async (email: string, password: string): Promise<boolean> => {
+  const login = useCallback(async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
       setIsLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 800));
       
-      if (email && password && selectedRole) {
-        const loggedInUser: User = {
-          ...mockUser,
-          email,
-          name: `Demo ${roleNames[selectedRole]}`,
-          role: selectedRole,
-        };
-        await storage.setAuthToken('mock_token_' + Date.now());
-        await storage.setUser(loggedInUser);
-        setUser(loggedInUser);
-        return true;
+      const res = await authApiRequest('POST', '/api/auth/login', { email, password });
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        return { success: false, error: errorData.error || 'Login failed' };
       }
-      return false;
+      
+      const data = await res.json();
+      
+      await storage.setAuthToken(data.token);
+      await storage.setUser(data.user);
+      setUser(data.user);
+      setSelectedRole(data.user.role);
+      
+      return { success: true };
     } catch (error) {
       console.error('Login failed:', error);
-      return false;
+      return { success: false, error: 'Network error. Please try again.' };
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const register = useCallback(async (email: string, password: string, name: string): Promise<{ success: boolean; error?: string }> => {
+    if (!selectedRole) {
+      return { success: false, error: 'Please select a role first' };
+    }
+    
+    try {
+      setIsLoading(true);
+      
+      const res = await authApiRequest('POST', '/api/auth/register', { 
+        email, 
+        password, 
+        name,
+        role: selectedRole,
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        return { success: false, error: errorData.error || 'Registration failed' };
+      }
+      
+      const data = await res.json();
+      
+      await storage.setAuthToken(data.token);
+      await storage.setUser(data.user);
+      setUser(data.user);
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Registration failed:', error);
+      return { success: false, error: 'Network error. Please try again.' };
     } finally {
       setIsLoading(false);
     }
@@ -72,6 +125,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     try {
       setIsLoading(true);
+      const token = await storage.getAuthToken();
+      if (token) {
+        try {
+          await authApiRequest('POST', '/api/auth/logout');
+        } catch (e) {
+          // Ignore logout API errors
+        }
+      }
       await storage.clearAll();
       setUser(null);
       setSelectedRole(null);
@@ -93,6 +154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         selectedRole,
         setSelectedRole,
         login,
+        register,
         logout,
       }}
     >

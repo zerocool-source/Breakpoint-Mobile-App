@@ -13,13 +13,6 @@ import { BubbleBackground } from '@/components/BubbleBackground';
 import { NotificationBanner } from '@/components/NotificationBanner';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { BatterySaverBanner } from '@/components/BatterySaverBanner';
-import { QuickActionButton } from '@/components/QuickActionButton';
-import emergencyIcon from '../../../assets/images/emergency-icon.png';
-import repairsNeededIcon from '../../../assets/images/repairs-needed-icon.png';
-import chemicalOrderIcon from '../../../assets/images/chemical-order-icon.png';
-import windyCleanupIcon from '../../../assets/images/windy-cleanup-icon.png';
-import serviceRepairsIcon from '../../../assets/images/service-repairs-icon.png';
-import chemicalsDropoffIcon from '../../../assets/images/chemicals-dropoff-icon.png';
 import { useAuth } from '@/context/AuthContext';
 import { useNetwork } from '@/context/NetworkContext';
 import { useBattery } from '@/context/BatteryContext';
@@ -425,79 +418,6 @@ export default function ServiceTechHomeScreen() {
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(350).springify()}>
-          <View style={styles.quickActionsSection}>
-            <ThemedText style={styles.quickActionsTitle}>Quick Actions</ThemedText>
-            <View style={styles.quickActionsGrid}>
-              <View style={styles.quickActionsRow}>
-                <QuickActionButton
-                  imageSource={emergencyIcon}
-                  label="Emergency"
-                  color={BrandColors.danger}
-                  onPress={() => {
-                    if (Platform.OS !== 'web') {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-                    }
-                    navigation.getParent()?.navigate('Emergency');
-                  }}
-                />
-                <QuickActionButton
-                  imageSource={repairsNeededIcon}
-                  label="Repairs Needed"
-                  color={BrandColors.vividTangerine}
-                  onPress={() => {
-                    if (Platform.OS !== 'web') {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                    }
-                  }}
-                />
-                <QuickActionButton
-                  imageSource={chemicalOrderIcon}
-                  label="Chemical Order"
-                  color={BrandColors.azureBlue}
-                  onPress={() => {
-                    if (Platform.OS !== 'web') {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                    }
-                  }}
-                />
-              </View>
-              <View style={styles.quickActionsRow}>
-                <QuickActionButton
-                  imageSource={windyCleanupIcon}
-                  label="Windy Day Clean Up"
-                  color={BrandColors.tropicalTeal}
-                  onPress={() => {
-                    if (Platform.OS !== 'web') {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                    }
-                  }}
-                />
-                <QuickActionButton
-                  imageSource={serviceRepairsIcon}
-                  label="Service Repairs"
-                  color={BrandColors.vividTangerine}
-                  onPress={() => {
-                    if (Platform.OS !== 'web') {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                    }
-                  }}
-                />
-                <QuickActionButton
-                  imageSource={chemicalsDropoffIcon}
-                  label="Chemicals Drop-Off"
-                  color="#FF6B6B"
-                  onPress={() => {
-                    if (Platform.OS !== 'web') {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                    }
-                  }}
-                />
-              </View>
-            </View>
-          </View>
-        </Animated.View>
-
-        <Animated.View entering={FadeInDown.delay(400).springify()}>
           <View style={[styles.commissionSection, { backgroundColor: theme.surface }]}>
             <View style={styles.commissionHeader}>
               <View style={styles.commissionHeaderLeft}>
@@ -585,7 +505,7 @@ export default function ServiceTechHomeScreen() {
           </View>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(500).springify()}>
+        <Animated.View entering={FadeInDown.delay(400).springify()}>
           <View style={styles.routeSection}>
             <View style={styles.routeDateRow}>
               <ThemedText style={styles.routeDate}>
@@ -1113,22 +1033,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: BrandColors.textSecondary,
     textAlign: 'center',
-  },
-  quickActionsSection: {
-    paddingHorizontal: Spacing.screenPadding,
-    marginBottom: Spacing.lg,
-  },
-  quickActionsTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: Spacing.md,
-  },
-  quickActionsGrid: {
-    gap: Spacing.md,
-  },
-  quickActionsRow: {
-    flexDirection: 'row',
-    gap: Spacing.md,
   },
 });

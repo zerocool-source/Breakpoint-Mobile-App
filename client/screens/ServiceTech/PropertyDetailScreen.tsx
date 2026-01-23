@@ -7,11 +7,17 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
+import { Image } from 'expo-image';
 import { ThemedText } from '@/components/ThemedText';
 import { BPButton } from '@/components/BPButton';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
 import type { RouteStop, BodyOfWater } from '@/lib/serviceTechMockData';
+import repairsNeededIcon from '../../../assets/images/repairs-needed-icon.png';
+import chemicalOrderIcon from '../../../assets/images/chemical-order-icon.png';
+import windyCleanupIcon from '../../../assets/images/windy-cleanup-icon.png';
+import serviceRepairsIcon from '../../../assets/images/service-repairs-icon.png';
+import chemicalsDropoffIcon from '../../../assets/images/chemicals-dropoff-icon.png';
 import {
   RepairsNeededModal,
   ChemicalOrderModal,
@@ -25,19 +31,19 @@ type ServiceTechStackParamList = {
 };
 
 interface QuickActionProps {
-  icon: keyof typeof Feather.glyphMap;
+  imageSource: any;
   label: string;
   color: string;
   onPress: () => void;
 }
 
-function QuickAction({ icon, label, color, onPress }: QuickActionProps) {
+function QuickAction({ imageSource, label, color, onPress }: QuickActionProps) {
   const { theme } = useTheme();
   
   return (
     <Pressable style={[styles.quickAction, { backgroundColor: theme.surface }]} onPress={onPress}>
       <View style={[styles.quickActionIcon, { backgroundColor: color + '15' }]}>
-        <Feather name={icon} size={24} color={color} />
+        <Image source={imageSource} style={styles.quickActionImage} contentFit="contain" />
       </View>
       <ThemedText style={styles.quickActionLabel}>{label}</ThemedText>
     </Pressable>
@@ -411,31 +417,31 @@ export default function PropertyDetailScreen() {
             {quickActionsExpanded && (
               <View style={styles.quickActionsGrid}>
                 <QuickAction
-                  icon="tool"
+                  imageSource={repairsNeededIcon}
                   label="Repairs Needed"
                   color={BrandColors.vividTangerine}
                   onPress={() => handleQuickAction('repairs')}
                 />
                 <QuickAction
-                  icon="droplet"
+                  imageSource={chemicalOrderIcon}
                   label="Chemical Order"
                   color={BrandColors.azureBlue}
                   onPress={() => handleQuickAction('chemical')}
                 />
                 <QuickAction
-                  icon="wind"
+                  imageSource={windyCleanupIcon}
                   label="Windy Cleanup"
                   color={BrandColors.tropicalTeal}
                   onPress={() => handleQuickAction('windy')}
                 />
                 <QuickAction
-                  icon="tool"
+                  imageSource={serviceRepairsIcon}
                   label="Service Repairs"
                   color={BrandColors.vividTangerine}
                   onPress={() => handleQuickAction('service')}
                 />
                 <QuickAction
-                  icon="package"
+                  imageSource={chemicalsDropoffIcon}
                   label="Chemicals Dropped Off"
                   color={BrandColors.emerald}
                   onPress={() => handleQuickAction('dropoff')}
@@ -712,6 +718,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.sm,
+  },
+  quickActionImage: {
+    width: 32,
+    height: 32,
   },
   quickActionLabel: {
     fontSize: 11,

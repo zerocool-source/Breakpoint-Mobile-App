@@ -157,14 +157,14 @@ export default function PropertyDetailScreen() {
 
   useEffect(() => {
     shimmerValue.value = withRepeat(
-      withTiming(1, { duration: 2000 }),
+      withTiming(1, { duration: 4000 }),
       -1,
       false
     );
   }, []);
 
   const shimmerStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: interpolate(shimmerValue.value, [0, 1], [-200, 400]) }],
+    transform: [{ translateX: interpolate(shimmerValue.value, [0, 1], [-100, 350]) }],
   }));
 
   useEffect(() => {
@@ -247,7 +247,7 @@ export default function PropertyDetailScreen() {
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 100 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom }]}
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={FadeInDown.delay(100).springify()}>
@@ -826,23 +826,21 @@ const styles = StyleSheet.create({
     marginLeft: -Spacing.screenPadding,
     marginRight: -Spacing.screenPadding,
     overflow: 'hidden',
+    marginBottom: 0,
   },
   completePropertyImage: {
-    width: '110%',
-    marginLeft: '-5%',
-    height: 150,
+    width: '100%',
+    height: 140,
   },
   shimmerOverlay: {
     position: 'absolute',
     top: 0,
-    left: 0,
-    right: 0,
     bottom: 0,
-    width: 100,
+    width: 80,
   },
   shimmerGradient: {
     flex: 1,
-    width: 100,
+    width: 80,
   },
   addTaskRow: {
     flexDirection: 'row',

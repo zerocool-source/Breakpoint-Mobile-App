@@ -19,6 +19,7 @@ import windyCleanupIcon from '../../../assets/images/windy-cleanup-icon.png';
 import emergencyIcon from '../../../assets/images/emergency-icon.png';
 import truckInspectionIcon from '../../../assets/images/truck-inspection-icon.png';
 import chemicalsDropoffIcon from '../../../assets/images/chemicals-dropoff-icon.png';
+import supportiveActionsIcon from '../../../assets/images/supportive-actions-icon.png';
 import { BubbleBackground } from '@/components/BubbleBackground';
 import { QuickActionButton } from '@/components/QuickActionButton';
 import { ActivityTicker } from '@/components/ActivityTicker';
@@ -731,7 +732,7 @@ export default function SupervisorHomeScreen() {
                   onPress={() => navigation.navigate('TruckInspection')}
                 />
                 <QuickActionButton
-                  icon="heart"
+                  imageSource={supportiveActionsIcon}
                   label="Supportive Actions"
                   color="#9C27B0"
                   onPress={() => navigation.navigate('SupportiveActions')}

@@ -813,10 +813,10 @@ const styles = StyleSheet.create({
     height: 220,
   },
   completePropertyButton: {
-    marginTop: Spacing.lg,
+    marginTop: Spacing.xl,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: Spacing.md,
+    marginBottom: 0,
   },
   completePropertyImage: {
     width: '100%',

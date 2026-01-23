@@ -164,7 +164,7 @@ export default function PropertyDetailScreen() {
   }, []);
 
   const shimmerStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: interpolate(shimmerValue.value, [0, 1], [-100, 350]) }],
+    transform: [{ translateX: interpolate(shimmerValue.value, [0, 1], [-50, 450]) }],
   }));
 
   useEffect(() => {
@@ -823,24 +823,24 @@ const styles = StyleSheet.create({
   },
   completePropertyButton: {
     marginTop: Spacing.md,
-    marginLeft: -Spacing.screenPadding,
-    marginRight: -Spacing.screenPadding,
+    marginLeft: -Spacing.screenPadding - 4,
+    marginRight: -Spacing.screenPadding - 4,
     overflow: 'hidden',
     marginBottom: 0,
   },
   completePropertyImage: {
     width: '100%',
-    height: 140,
+    height: 180,
   },
   shimmerOverlay: {
     position: 'absolute',
     top: 0,
     bottom: 0,
-    width: 80,
+    width: 30,
   },
   shimmerGradient: {
     flex: 1,
-    width: 80,
+    width: 30,
   },
   addTaskRow: {
     flexDirection: 'row',

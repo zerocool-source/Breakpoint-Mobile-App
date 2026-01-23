@@ -7,6 +7,7 @@ import ChatConversationScreen from '@/screens/shared/ChatConversationScreen';
 import TruckInspectionScreen from '@/screens/Supervisor/TruckInspectionScreen';
 import SupportiveActionsScreen from '@/screens/Supervisor/SupportiveActionsScreen';
 import WhosOnScreen from '@/screens/Supervisor/WhosOnScreen';
+import RosterScreen from '@/screens/Supervisor/RosterScreen';
 import { useScreenOptions } from '@/hooks/useScreenOptions';
 import type { ChatChannel } from '@/screens/shared/ChatChannelsScreen';
 
@@ -17,6 +18,7 @@ export type SupervisorStackParamList = {
   TruckInspection: undefined;
   SupportiveActions: undefined;
   WhosOn: undefined;
+  Roster: undefined;
 };
 
 const Stack = createNativeStackNavigator<SupervisorStackParamList>();
@@ -64,6 +66,13 @@ export default function SupervisorStackNavigator() {
       <Stack.Screen
         name="WhosOn"
         component={WhosOnScreen}
+        options={{ 
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="Roster"
+        component={RosterScreen}
         options={{ 
           headerShown: false,
         }}

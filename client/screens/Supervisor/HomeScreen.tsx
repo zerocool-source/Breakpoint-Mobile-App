@@ -47,6 +47,13 @@ import {
 import { CreateAssignmentModal } from '@/screens/Supervisor/Modals/CreateAssignmentModal';
 import { RepairsNeededModal, ChemicalOrderModal } from '@/screens/ServiceTech/Modals';
 import type { ChatChannel } from '@/screens/shared/ChatChannelsScreen';
+import type { County } from '@/types';
+
+const COUNTY_LABELS: Record<County, string> = {
+  north_county: 'North County',
+  south_county: 'South County',
+  mid_county: 'Mid County',
+};
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -565,7 +572,9 @@ export default function SupervisorHomeScreen() {
         
         <View style={styles.regionBadge}>
           <Feather name="map-pin" size={14} color="#FFFFFF" />
-          <ThemedText style={styles.regionText}>{supervisorInfo.region}</ThemedText>
+          <ThemedText style={styles.regionText}>
+            {user?.county ? COUNTY_LABELS[user.county] : 'Set County in Profile'}
+          </ThemedText>
         </View>
       </View>
 
@@ -738,7 +747,12 @@ export default function SupervisorHomeScreen() {
                   color="#9C27B0"
                   onPress={() => navigation.navigate('SupportiveActions')}
                 />
-                <View style={styles.quickActionPlaceholder} />
+                <QuickActionButton
+                  icon="clipboard"
+                  label="My Roster"
+                  color={BrandColors.tropicalTeal}
+                  onPress={() => navigation.navigate('Roster')}
+                />
               </View>
             </View>
           ) : null}

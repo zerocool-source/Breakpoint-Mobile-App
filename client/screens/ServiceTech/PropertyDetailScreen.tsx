@@ -18,6 +18,7 @@ import chemicalOrderIcon from '../../../assets/images/chemical-order-icon.png';
 import windyCleanupIcon from '../../../assets/images/windy-cleanup-icon.png';
 import serviceRepairsIcon from '../../../assets/images/service-repairs-icon.png';
 import chemicalsDropoffIcon from '../../../assets/images/chemicals-dropoff-icon.png';
+import completePropertyButton from '../../../assets/images/complete-property-button.png';
 import {
   RepairsNeededModal,
   ChemicalOrderModal,
@@ -476,14 +477,13 @@ export default function PropertyDetailScreen() {
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + Spacing.md }]}>
-        <BPButton
-          variant="success"
-          onPress={handleCompleteProperty}
-          fullWidth
-          icon="check"
-        >
-          Complete Property
-        </BPButton>
+        <Pressable onPress={handleCompleteProperty} style={styles.completePropertyButton}>
+          <Image
+            source={completePropertyButton}
+            style={styles.completePropertyImage}
+            contentFit="contain"
+          />
+        </Pressable>
       </View>
 
       <RepairsNeededModal
@@ -805,6 +805,14 @@ const styles = StyleSheet.create({
     right: 0,
     padding: Spacing.screenPadding,
     backgroundColor: 'rgba(255,255,255,0.95)',
+  },
+  completePropertyButton: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  completePropertyImage: {
+    width: '100%',
+    height: 70,
   },
   addTaskRow: {
     flexDirection: 'row',

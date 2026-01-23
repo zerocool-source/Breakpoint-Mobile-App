@@ -820,7 +820,7 @@ const styles = StyleSheet.create({
   },
   completePropertyImage: {
     width: '100%',
-    height: 200,
+    height: 240,
   },
   addTaskRow: {
     flexDirection: 'row',

@@ -98,12 +98,14 @@ export function QuickActionButton({ icon, imageSource, label, color, onPress, si
           {icon ? <Feather name={icon} size={config.iconSize} color="#FFFFFF" /> : null}
         </View>
       )}
-      <ThemedText 
-        style={[styles.label, { fontSize: config.labelSize }]} 
-        numberOfLines={2}
-      >
-        {label}
-      </ThemedText>
+      {!imageSource ? (
+        <ThemedText 
+          style={[styles.label, { fontSize: config.labelSize }]} 
+          numberOfLines={2}
+        >
+          {label}
+        </ThemedText>
+      ) : null}
     </AnimatedPressable>
   );
 }

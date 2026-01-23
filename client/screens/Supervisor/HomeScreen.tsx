@@ -15,6 +15,7 @@ import { Avatar } from '@/components/Avatar';
 import supervisorAvatarImage from '../../../assets/images/supervisor-avatar.png';
 import repairsNeededIcon from '../../../assets/images/repairs-needed-icon.png';
 import chemicalOrderIcon from '../../../assets/images/chemical-order-icon.png';
+import windyCleanupIcon from '../../../assets/images/windy-cleanup-icon.png';
 import { BubbleBackground } from '@/components/BubbleBackground';
 import { QuickActionButton } from '@/components/QuickActionButton';
 import { ActivityTicker } from '@/components/ActivityTicker';
@@ -681,7 +682,7 @@ export default function SupervisorHomeScreen() {
               </View>
               <View style={styles.quickActionsRow}>
                 <QuickActionButton
-                  icon="wind"
+                  imageSource={windyCleanupIcon}
                   label="Windy Day Clean Up"
                   color={BrandColors.tropicalTeal}
                   onPress={() => handleQuickAction('windy')}

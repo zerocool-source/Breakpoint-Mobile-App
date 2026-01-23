@@ -17,6 +17,7 @@ import repairsNeededIcon from '../../../assets/images/repairs-needed-icon.png';
 import chemicalOrderIcon from '../../../assets/images/chemical-order-icon.png';
 import windyCleanupIcon from '../../../assets/images/windy-cleanup-icon.png';
 import emergencyIcon from '../../../assets/images/emergency-icon.png';
+import truckInspectionIcon from '../../../assets/images/truck-inspection-icon.png';
 import { BubbleBackground } from '@/components/BubbleBackground';
 import { QuickActionButton } from '@/components/QuickActionButton';
 import { ActivityTicker } from '@/components/ActivityTicker';
@@ -723,7 +724,7 @@ export default function SupervisorHomeScreen() {
               </View>
               <View style={styles.quickActionsRow}>
                 <QuickActionButton
-                  icon="truck"
+                  imageSource={truckInspectionIcon}
                   label="Truck Inspection"
                   color={BrandColors.vividTangerine}
                   onPress={() => navigation.navigate('TruckInspection')}

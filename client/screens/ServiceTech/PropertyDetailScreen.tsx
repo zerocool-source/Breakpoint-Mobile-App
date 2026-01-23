@@ -473,18 +473,16 @@ export default function PropertyDetailScreen() {
               ))}
             </View>
           </View>
+
+          <Pressable onPress={handleCompleteProperty} style={styles.completePropertyButton}>
+            <Image
+              source={completePropertyButton}
+              style={styles.completePropertyImage}
+              contentFit="contain"
+            />
+          </Pressable>
         </Animated.View>
       </ScrollView>
-
-      <View style={[styles.footer, { paddingBottom: insets.bottom + Spacing.md }]}>
-        <Pressable onPress={handleCompleteProperty} style={styles.completePropertyButton}>
-          <Image
-            source={completePropertyButton}
-            style={styles.completePropertyImage}
-            contentFit="contain"
-          />
-        </Pressable>
-      </View>
 
       <RepairsNeededModal
         visible={repairsModalVisible}
@@ -798,14 +796,10 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
   },
-  footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
   completePropertyButton: {
     width: '100%',
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.xl,
   },
   completePropertyImage: {
     width: '100%',

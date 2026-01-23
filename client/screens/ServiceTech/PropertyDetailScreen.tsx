@@ -803,14 +803,13 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    paddingHorizontal: Spacing.sm,
   },
   completePropertyButton: {
     width: '100%',
   },
   completePropertyImage: {
     width: '100%',
-    height: 100,
+    height: 140,
   },
   addTaskRow: {
     flexDirection: 'row',

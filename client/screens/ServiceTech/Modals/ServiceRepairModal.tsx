@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
+import { Picker } from '@react-native-picker/picker';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -19,11 +20,18 @@ import { DualVoiceInput } from '@/components/DualVoiceInput';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing } from '@/constants/theme';
 
+interface PropertyOption {
+  id: string;
+  name: string;
+  address: string;
+}
+
 interface ServiceRepairModalProps {
   visible: boolean;
   onClose: () => void;
   propertyName: string;
   propertyAddress: string;
+  properties?: PropertyOption[];
 }
 
 interface Product {
@@ -46,6 +54,7 @@ export function ServiceRepairModal({
   onClose,
   propertyName,
   propertyAddress,
+  properties,
 }: ServiceRepairModalProps) {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
@@ -53,6 +62,11 @@ export function ServiceRepairModal({
 
   const [issueDescription, setIssueDescription] = useState('');
   const [products, setProducts] = useState(AVAILABLE_PRODUCTS);
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
+
+  const selectedProperty = properties?.find(p => p.id === selectedPropertyId);
+  const displayPropertyName = properties ? (selectedProperty?.name || 'Select Property') : propertyName;
+  const displayPropertyAddress = properties ? (selectedProperty?.address || '') : propertyAddress;
 
   const handleSubmit = () => {
     if (Platform.OS !== 'web') {
@@ -125,8 +139,27 @@ export function ServiceRepairModal({
             colors={['#5B9FE8', '#6BADE8']}
             style={styles.propertyHeader}
           >
-            <ThemedText style={styles.propertyName}>{propertyName}</ThemedText>
-            <ThemedText style={styles.propertyAddress}>{propertyAddress}</ThemedText>
+            <ThemedText style={styles.sectionLabel}>Select Property</ThemedText>
+            {properties ? (
+              <View style={[styles.propertyPickerContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                <Picker
+                  selectedValue={selectedPropertyId}
+                  onValueChange={(value) => setSelectedPropertyId(value)}
+                  style={styles.propertyPicker}
+                  dropdownIconColor={theme.text}
+                >
+                  <Picker.Item label="Select a property..." value="" />
+                  {properties.map((prop) => (
+                    <Picker.Item key={prop.id} label={prop.name} value={prop.id} />
+                  ))}
+                </Picker>
+              </View>
+            ) : (
+              <>
+                <ThemedText style={styles.propertyName}>{displayPropertyName}</ThemedText>
+                <ThemedText style={styles.propertyAddress}>{displayPropertyAddress}</ThemedText>
+              </>
+            )}
           </LinearGradient>
 
           <ScrollView
@@ -442,5 +475,19 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  sectionLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: Spacing.sm,
+  },
+  propertyPickerContainer: {
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    overflow: 'hidden',
+  },
+  propertyPicker: {
+    height: 50,
   },
 });

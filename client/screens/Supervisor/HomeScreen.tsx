@@ -14,6 +14,7 @@ import { Avatar } from '@/components/Avatar';
 
 import supervisorAvatarImage from '../../../assets/images/supervisor-avatar.png';
 import repairsNeededIcon from '../../../assets/images/repairs-needed-icon.png';
+import chemicalOrderIcon from '../../../assets/images/chemical-order-icon.png';
 import { BubbleBackground } from '@/components/BubbleBackground';
 import { QuickActionButton } from '@/components/QuickActionButton';
 import { ActivityTicker } from '@/components/ActivityTicker';
@@ -666,7 +667,7 @@ export default function SupervisorHomeScreen() {
                   onPress={() => handleQuickAction('repairs')}
                 />
                 <QuickActionButton
-                  icon="droplet"
+                  imageSource={chemicalOrderIcon}
                   label="Chemical Order"
                   color={BrandColors.azureBlue}
                   onPress={() => handleQuickAction('chemical')}

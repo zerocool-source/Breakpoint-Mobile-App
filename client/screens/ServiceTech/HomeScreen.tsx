@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { View, StyleSheet, Pressable, ScrollView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -18,10 +18,10 @@ import { useNetwork } from '@/context/NetworkContext';
 import { useBattery } from '@/context/BatteryContext';
 import { useUrgentAlerts } from '@/context/UrgentAlertsContext';
 import { useTheme } from '@/hooks/useTheme';
+import { usePropertyChannels } from '@/context/PropertyChannelsContext';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
 import {
   mockAssignments,
-  mockRouteStops,
   mockDailyProgress,
   mockTruckInfo,
   mockCommissionTracker,
@@ -153,8 +153,43 @@ export default function ServiceTechHomeScreen() {
   
   const [assignmentsExpanded, setAssignmentsExpanded] = useState(true);
   const [currentTime] = useState(getCurrentTime());
-  const [routeStops, setRouteStops] = useState(mockRouteStops);
   const [showNotification, setShowNotification] = useState(false);
+  const { channels: propertyChannels, isLoading: channelsLoading } = usePropertyChannels();
+  const [completedStops, setCompletedStops] = useState<Set<string>>(new Set());
+
+  const channelRouteStops: RouteStop[] = useMemo(() => {
+    return propertyChannels.map((channel, index) => {
+      const property = channel.property;
+      const typeMap: Record<string, 'HOA' | 'Apartment' | 'Hotel' | 'Commercial'> = {
+        'HOA': 'HOA',
+        'Apartment': 'Apartment',
+        'Hotel': 'Hotel',
+        'Commercial': 'Commercial',
+        'Resort': 'Hotel',
+        'Winery': 'Commercial',
+      };
+      return {
+        id: property.id,
+        propertyName: property.name,
+        address: property.address || 'Address TBD',
+        propertyType: typeMap[property.type] || 'Commercial',
+        poolCount: property.poolCount || 1,
+        scheduledTime: `${8 + Math.floor(index / 2)}:${index % 2 === 0 ? '00' : '30'} AM`,
+        completed: completedStops.has(property.id),
+        gateCode: property.gateCode || undefined,
+        contactName: property.contactName || undefined,
+        contactPhone: property.contactPhone || undefined,
+        notes: undefined,
+        bodiesOfWater: [],
+      };
+    });
+  }, [propertyChannels, completedStops]);
+
+  const [routeStops, setRouteStops] = useState<RouteStop[]>([]);
+
+  useEffect(() => {
+    setRouteStops(channelRouteStops);
+  }, [channelRouteStops]);
 
   const demoAlert = {
     title: 'Urgent Pool Service Required',
@@ -173,7 +208,11 @@ export default function ServiceTechHomeScreen() {
   }, []);
   
   const nextStop = routeStops.find(stop => !stop.completed) || routeStops[0] || null;
-  const progress = mockDailyProgress;
+  const progress = {
+    ...mockDailyProgress,
+    stopsCompleted: routeStops.filter(s => s.completed).length,
+    totalStops: routeStops.length,
+  };
 
   const handleMoveUp = useCallback((index: number) => {
     if (index === 0) return;

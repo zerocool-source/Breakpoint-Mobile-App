@@ -800,7 +800,7 @@ const styles = StyleSheet.create({
   },
   bodiesOfWaterImage: {
     width: '100%',
-    height: 180,
+    height: 220,
   },
   completePropertyButton: {
     marginTop: Spacing.md,

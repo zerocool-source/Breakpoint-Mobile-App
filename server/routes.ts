@@ -231,7 +231,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const roster = await db.query.users.findMany({
         where: and(
-          eq(users.supervisorId, req.user!.id),
+          eq(users.supervisorId, req.user!.id as string),
           eq(users.isActive, true)
         ),
         columns: {
@@ -271,7 +271,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.user!.role !== "supervisor") {
         return res.status(403).json({ error: "Unauthorized" });
       }
-      const { technicianId } = req.params;
+      const technicianId = req.params.technicianId as string;
       const [updated] = await db.update(users)
         .set({ supervisorId: req.user!.id, updatedAt: new Date() })
         .where(eq(users.id, technicianId))
@@ -295,12 +295,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.user!.role !== "supervisor") {
         return res.status(403).json({ error: "Unauthorized" });
       }
-      const { technicianId } = req.params;
+      const technicianId = req.params.technicianId as string;
       await db.update(users)
         .set({ supervisorId: null, updatedAt: new Date() })
         .where(and(
           eq(users.id, technicianId),
-          eq(users.supervisorId, req.user!.id)
+          eq(users.supervisorId, req.user!.id as string)
         ));
       res.json({ success: true });
     } catch (error) {
@@ -314,7 +314,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.user!.role !== "supervisor") {
         return res.status(403).json({ error: "Unauthorized" });
       }
-      const { technicianId } = req.params;
+      const technicianId = req.params.technicianId as string;
       const { county } = req.body;
       if (!county || !['north_county', 'south_county', 'mid_county'].includes(county)) {
         return res.status(400).json({ error: "Valid county is required" });
@@ -324,7 +324,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .set({ county, updatedAt: new Date() })
         .where(and(
           eq(users.id, technicianId),
-          eq(users.supervisorId, req.user!.id)
+          eq(users.supervisorId, req.user!.id as string)
         ))
         .returning({
           id: users.id,

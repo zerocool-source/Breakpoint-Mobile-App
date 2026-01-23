@@ -1,11 +1,15 @@
 export type UserRole = 'repair_tech' | 'service_tech' | 'supervisor' | 'repair_foreman';
 
+export type County = 'north_county' | 'south_county' | 'mid_county';
+
 export interface User {
   id: string;
   name: string;
   email: string;
   role: UserRole;
   avatar?: string;
+  county?: County;
+  supervisorId?: string;
 }
 
 export interface Property {

@@ -7,6 +7,7 @@ export type UserRole = 'service_tech' | 'supervisor' | 'repair_tech' | 'repair_f
 
 interface AuthContextType {
   user: User | null;
+  token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   selectedRole: UserRole | null;
@@ -27,18 +28,20 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const token = await storage.getAuthToken();
-        if (token) {
+        const storedToken = await storage.getAuthToken();
+        if (storedToken) {
+          setToken(storedToken);
           const baseUrl = getApiUrl();
           const res = await fetch(`${baseUrl}api/auth/me`, {
             headers: {
-              'Authorization': `Bearer ${token}`,
+              'Authorization': `Bearer ${storedToken}`,
             },
           });
           
@@ -75,6 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       await storage.setAuthToken(data.token);
       await storage.setUser(data.user);
+      setToken(data.token);
       setUser(data.user);
       setSelectedRole(data.user.role);
       
@@ -111,6 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       await storage.setAuthToken(data.token);
       await storage.setUser(data.user);
+      setToken(data.token);
       setUser(data.user);
       
       return { success: true };
@@ -134,10 +139,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
       await storage.clearAll();
+      setToken(null);
       setUser(null);
       setSelectedRole(null);
     } catch (error) {
       console.error('Logout failed:', error);
+      setToken(null);
       setUser(null);
       setSelectedRole(null);
     } finally {
@@ -149,6 +156,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         user,
+        token,
         isLoading,
         isAuthenticated: !!user,
         selectedRole,

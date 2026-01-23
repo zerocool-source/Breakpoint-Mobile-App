@@ -20,6 +20,7 @@ import emergencyIcon from '../../../assets/images/emergency-icon.png';
 import truckInspectionIcon from '../../../assets/images/truck-inspection-icon.png';
 import chemicalsDropoffIcon from '../../../assets/images/chemicals-dropoff-icon.png';
 import supportiveActionsIcon from '../../../assets/images/supportive-actions-icon.png';
+import serviceRepairsIcon from '../../../assets/images/service-repairs-icon.png';
 import { BubbleBackground } from '@/components/BubbleBackground';
 import { QuickActionButton } from '@/components/QuickActionButton';
 import { ActivityTicker } from '@/components/ActivityTicker';
@@ -692,7 +693,7 @@ export default function SupervisorHomeScreen() {
                   onPress={() => handleQuickAction('windy')}
                 />
                 <QuickActionButton
-                  icon="settings"
+                  imageSource={serviceRepairsIcon}
                   label="Service Repairs"
                   color={BrandColors.vividTangerine}
                   onPress={() => handleQuickAction('service')}

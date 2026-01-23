@@ -1,0 +1,78 @@
+You are working in the repo "zerocool-source/Breakpoint-Mobile-App".
+
+GOAL:
+Implement the missing Assignments API endpoints in the existing Express backend so the Expo mobile app can:
+1) Supervisor (and later Admin) can CREATE assignments.
+2) Service Tech can UPDATE assignment status (complete / need assistance / etc).
+3) Supervisor can LIST assignments they created (assignedById).
+
+CONSTRAINTS:
+- Do NOT refactor the project structure.
+- Keep all routes in `server/routes.ts` (same style as existing routes).
+- Use existing `authMiddleware` and `AuthenticatedRequest` from `server/auth.ts`.
+- Use Drizzle `db` from `server/db`.
+- Use `assignments` schema and `insertAssignmentSchema` from `@shared/schema`.
+- Follow existing authorization patterns already used in routes.ts (e.g., jobs/all, technicians, roster).
+- Return JSON errors with { error: "..." } consistently like the existing code.
+- Ensure status values match `assignmentStatusEnum` in shared/schema.ts.
+
+FILES TO EDIT:
+- server/routes.ts (only; unless small helper types are needed)
+
+IMPLEMENT THESE ENDPOINTS:
+
+1) POST /api/assignments
+- authMiddleware required
+- Authorization: only allow req.user.role === "supervisor" OR "repair_foreman" (and also allow "admin" if it exists later, but do not change the enum right now)
+- Body fields expected (minimum):
+  - propertyId (string, required)
+  - technicianId (string, required)
+  - title (string, required)
+  - type (string, required)
+  - priority (string optional; default MEDIUM)
+  - scheduledDate (optional; accept ISO string/date)
+  - scheduledTime (optional; string)
+  - notes (optional; string)
+- assignedById must be set to req.user.id on the server, not trusted from the client.
+- status should default to 'pending' if not provided.
+- Validate input using `insertAssignmentSchema` from @shared/schema where possible.
+- Insert into db and return the created assignment including related property (like GET /api/assignments does).
+- On missing/invalid fields return 400 with { error: "..." }.
+
+2) PATCH /api/assignments/:id
+(Use PATCH, not PUT, to update status/notes/etc.)
+- authMiddleware required
+- Allowed roles:
+  - service_tech can update ONLY assignments where assignments.technicianId === req.user.id
+  - supervisor/repair_foreman can update assignments they created (assignments.assignedById === req.user.id) OR assignments belonging to their roster is optional (do not implement roster lookup unless already available)
+- Allowed updates:
+  - status (pending|in_progress|completed|need_assistance)
+  - notes (optional)
+  - completedAt:
+      - If status becomes "completed", set completedAt = new Date()
+      - If status changes away from "completed", do NOT automatically wipe completedAt unless explicitly requested (keep simple)
+- Return updated assignment (include property relation).
+- If not found return 404 { error: "Assignment not found" }
+- If unauthorized return 403 { error: "Unauthorized" }
+
+3) GET /api/assignments/created
+- authMiddleware required
+- Only supervisor/repair_foreman roles
+- Return assignments where assignedById === req.user.id
+- Order by createdAt desc
+- Include property relation, and include technician relation if easy (optional)
+
+NOTES:
+- Existing GET /api/assignments already returns assignments for the logged-in technician; keep it unchanged.
+- Use drizzle-orm helpers already imported (eq, and, desc). Add others only if needed.
+- Keep code style consistent with current routes.ts.
+
+ACCEPTANCE CRITERIA:
+- `POST /api/assignments` creates a row in the assignments table with assignedById set from JWT user.
+- `PATCH /api/assignments/:id` updates status correctly with authorization checks.
+- `GET /api/assignments/created` returns supervisor-created assignments.
+- All endpoints are protected by authMiddleware and return clear JSON errors.
+
+After implementing, show:
+- The final code diff (or the full updated `server/routes.ts` sections)
+- Example curl requests for each endpoint (with Authorization header placeholder)

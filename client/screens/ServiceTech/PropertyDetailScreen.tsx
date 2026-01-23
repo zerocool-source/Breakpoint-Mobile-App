@@ -3,8 +3,7 @@ import { View, StyleSheet, Pressable, ScrollView, Platform, TextInput } from 're
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withRepeat, withTiming, interpolate } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -20,6 +19,7 @@ import windyCleanupIcon from '../../../assets/images/windy-cleanup-icon.png';
 import serviceRepairsIcon from '../../../assets/images/service-repairs-icon.png';
 import chemicalsDropoffIcon from '../../../assets/images/chemicals-dropoff-icon.png';
 import completePropertyButton from '../../../assets/images/complete-property-button.png';
+import bodiesOfWaterButton from '../../../assets/images/bodies-of-water-button.png';
 import {
   RepairsNeededModal,
   ChemicalOrderModal,
@@ -152,20 +152,6 @@ export default function PropertyDetailScreen() {
   const [chemicalModalVisible, setChemicalModalVisible] = useState(false);
   const [windyModalVisible, setWindyModalVisible] = useState(false);
   const [serviceRepairModalVisible, setServiceRepairModalVisible] = useState(false);
-
-  const shimmerValue = useSharedValue(0);
-
-  useEffect(() => {
-    shimmerValue.value = withRepeat(
-      withTiming(1, { duration: 4000 }),
-      -1,
-      false
-    );
-  }, []);
-
-  const shimmerStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: interpolate(shimmerValue.value, [0, 1], [-50, 450]) }],
-  }));
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -415,28 +401,21 @@ export default function PropertyDetailScreen() {
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(400).springify()}>
-          <View style={[styles.bodiesSection, { backgroundColor: theme.surface }]}>
-            <View style={styles.bodiesHeader}>
-              <View style={styles.bodiesHeaderLeft}>
-                <Feather name="droplet" size={20} color={BrandColors.azureBlue} />
-                <ThemedText style={styles.bodiesSectionTitle}>Bodies of Water</ThemedText>
-              </View>
-              <View style={styles.bodiesCountBadge}>
-                <ThemedText style={styles.bodiesCountText}>
-                  {bodiesCompleted}/{stop.bodiesOfWater.length}
-                </ThemedText>
-              </View>
-              <Feather name="chevron-down" size={18} color={BrandColors.textSecondary} />
-            </View>
-            <View style={styles.bodiesList}>
-              {stop.bodiesOfWater.map((body) => (
-                <BodyOfWaterCard
-                  key={body.id}
-                  body={body}
-                  onPress={() => handleBodyOfWaterPress(body)}
-                />
-              ))}
-            </View>
+          <Pressable style={styles.bodiesOfWaterButton}>
+            <Image
+              source={bodiesOfWaterButton}
+              style={styles.bodiesOfWaterImage}
+              contentFit="cover"
+            />
+          </Pressable>
+          <View style={styles.bodiesList}>
+            {stop.bodiesOfWater.map((body) => (
+              <BodyOfWaterCard
+                key={body.id}
+                body={body}
+                onPress={() => handleBodyOfWaterPress(body)}
+              />
+            ))}
           </View>
         </Animated.View>
 
@@ -497,14 +476,6 @@ export default function PropertyDetailScreen() {
               style={styles.completePropertyImage}
               contentFit="cover"
             />
-            <Animated.View style={[styles.shimmerOverlay, shimmerStyle]}>
-              <LinearGradient
-                colors={['transparent', 'rgba(255,255,255,0.3)', 'transparent']}
-                start={{ x: 0, y: 0.5 }}
-                end={{ x: 1, y: 0.5 }}
-                style={styles.shimmerGradient}
-              />
-            </Animated.View>
           </Pressable>
         </Animated.View>
       </ScrollView>
@@ -821,6 +792,16 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
   },
+  bodiesOfWaterButton: {
+    marginLeft: -Spacing.screenPadding - 4,
+    marginRight: -Spacing.screenPadding - 4,
+    overflow: 'hidden',
+    marginBottom: Spacing.md,
+  },
+  bodiesOfWaterImage: {
+    width: '100%',
+    height: 180,
+  },
   completePropertyButton: {
     marginTop: Spacing.md,
     marginLeft: -Spacing.screenPadding - 4,
@@ -831,16 +812,6 @@ const styles = StyleSheet.create({
   completePropertyImage: {
     width: '100%',
     height: 180,
-  },
-  shimmerOverlay: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    width: 30,
-  },
-  shimmerGradient: {
-    flex: 1,
-    width: 30,
   },
   addTaskRow: {
     flexDirection: 'row',

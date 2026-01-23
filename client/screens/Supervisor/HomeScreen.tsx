@@ -22,6 +22,7 @@ import chemicalsDropoffIcon from '../../../assets/images/chemicals-dropoff-icon.
 import supportiveActionsIcon from '../../../assets/images/supportive-actions-icon.png';
 import serviceRepairsIcon from '../../../assets/images/service-repairs-icon.png';
 import reportIssuesIcon from '../../../assets/images/report-issues-icon.png';
+import myRosterIcon from '../../../assets/images/my-roster-icon.png';
 import { BubbleBackground } from '@/components/BubbleBackground';
 import { QuickActionButton } from '@/components/QuickActionButton';
 import { ActivityTicker } from '@/components/ActivityTicker';
@@ -749,8 +750,8 @@ export default function SupervisorHomeScreen() {
                   onPress={() => navigation.navigate('SupportiveActions')}
                 />
                 <QuickActionButton
-                  icon="clipboard"
-                  label="My Roster"
+                  imageSource={myRosterIcon}
+                  label=""
                   color={BrandColors.tropicalTeal}
                   onPress={() => navigation.navigate('Roster')}
                 />

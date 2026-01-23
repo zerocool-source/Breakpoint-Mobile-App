@@ -16,6 +16,7 @@ import supervisorAvatarImage from '../../../assets/images/supervisor-avatar.png'
 import repairsNeededIcon from '../../../assets/images/repairs-needed-icon.png';
 import chemicalOrderIcon from '../../../assets/images/chemical-order-icon.png';
 import windyCleanupIcon from '../../../assets/images/windy-cleanup-icon.png';
+import emergencyIcon from '../../../assets/images/emergency-icon.png';
 import { BubbleBackground } from '@/components/BubbleBackground';
 import { QuickActionButton } from '@/components/QuickActionButton';
 import { ActivityTicker } from '@/components/ActivityTicker';
@@ -708,7 +709,7 @@ export default function SupervisorHomeScreen() {
                   onPress={() => handleQuickAction('notes')}
                 />
                 <QuickActionButton
-                  icon="alert-circle"
+                  imageSource={emergencyIcon}
                   label="Emergency"
                   color={BrandColors.danger}
                   onPress={() => handleQuickAction('emergency')}

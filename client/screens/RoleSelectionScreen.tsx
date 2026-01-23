@@ -96,7 +96,7 @@ const roles: RoleOption[] = [
     id: 'supervisor',
     title: 'Supervisor',
     subtitle: 'Team overview, assignments',
-    avatar: require('../../assets/images/avatar-supervisor.png'),
+    avatar: require('../../assets/images/supervisor-team-icon.png'),
   },
   {
     id: 'repair_tech',

@@ -18,6 +18,7 @@ import chemicalOrderIcon from '../../../assets/images/chemical-order-icon.png';
 import windyCleanupIcon from '../../../assets/images/windy-cleanup-icon.png';
 import emergencyIcon from '../../../assets/images/emergency-icon.png';
 import truckInspectionIcon from '../../../assets/images/truck-inspection-icon.png';
+import chemicalsDropoffIcon from '../../../assets/images/chemicals-dropoff-icon.png';
 import { BubbleBackground } from '@/components/BubbleBackground';
 import { QuickActionButton } from '@/components/QuickActionButton';
 import { ActivityTicker } from '@/components/ActivityTicker';
@@ -676,7 +677,7 @@ export default function SupervisorHomeScreen() {
                   onPress={() => handleQuickAction('chemical')}
                 />
                 <QuickActionButton
-                  icon="truck"
+                  imageSource={chemicalsDropoffIcon}
                   label="Chemicals Drop-Off"
                   color="#FF6B6B"
                   onPress={() => handleQuickAction('dropoff')}

@@ -37,15 +37,12 @@ interface QuickActionProps {
   onPress: () => void;
 }
 
-function QuickAction({ imageSource, label, color, onPress }: QuickActionProps) {
+function QuickAction({ imageSource, color, onPress }: QuickActionProps) {
   const { theme } = useTheme();
   
   return (
     <Pressable style={[styles.quickAction, { backgroundColor: theme.surface }]} onPress={onPress}>
-      <View style={[styles.quickActionIcon, { backgroundColor: color + '15' }]}>
-        <Image source={imageSource} style={styles.quickActionImage} contentFit="contain" />
-      </View>
-      <ThemedText style={styles.quickActionLabel}>{label}</ThemedText>
+      <Image source={imageSource} style={styles.quickActionImage} contentFit="contain" />
     </Pressable>
   );
 }
@@ -705,28 +702,17 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   quickAction: {
-    width: '22%',
-    alignItems: 'center',
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-    ...Shadows.card,
-  },
-  quickActionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: BorderRadius.md,
+    width: 72,
+    height: 72,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: Spacing.sm,
+    padding: Spacing.sm,
+    borderRadius: BorderRadius.lg,
+    ...Shadows.card,
   },
   quickActionImage: {
-    width: 32,
-    height: 32,
-  },
-  quickActionLabel: {
-    fontSize: 11,
-    textAlign: 'center',
-    fontWeight: '500',
+    width: 56,
+    height: 56,
   },
   bodiesSection: {
     borderRadius: BorderRadius.lg,

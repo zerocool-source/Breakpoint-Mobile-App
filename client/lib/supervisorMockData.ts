@@ -92,7 +92,16 @@ export const mockQCInspections: QCInspection[] = [];
 
 export const mockSupervisorAssignments: SupervisorAssignment[] = [];
 
-export const mockProperties: Property[] = [];
+export const mockProperties: Property[] = [
+  { id: 'p1', name: 'Desert Springs HOA', address: '1245 Desert Springs Dr, Phoenix, AZ', type: 'HOA' },
+  { id: 'p2', name: 'Sunridge Community Center', address: '8732 Sunridge Blvd, Scottsdale, AZ', type: 'Commercial' },
+  { id: 'p3', name: 'Palm Valley Resort', address: '4521 Palm Valley Pkwy, Goodyear, AZ', type: 'Hotel' },
+  { id: 'p4', name: 'Mountain View Athletic Club', address: '6789 Mountain View Rd, Mesa, AZ', type: 'Commercial' },
+  { id: 'p5', name: 'Oasis Water Park', address: '3456 Oasis Way, Tempe, AZ', type: 'Commercial' },
+  { id: 'p6', name: 'Canyon Creek Apartments', address: '2100 Canyon Creek Dr, Chandler, AZ', type: 'Apartment' },
+  { id: 'p7', name: 'Lakeside Country Club', address: '9800 Lakeside Lane, Gilbert, AZ', type: 'Commercial' },
+  { id: 'p8', name: 'Sunrise Senior Living', address: '5555 Sunrise Blvd, Peoria, AZ', type: 'Apartment' },
+];
 
 export const mockWeeklyMetrics: WeeklyMetrics = {
   assignmentsCreated: 0,

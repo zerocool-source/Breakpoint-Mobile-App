@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
+import { Picker } from '@react-native-picker/picker';
 import * as Haptics from 'expo-haptics';
 
 import { ThemedText } from '@/components/ThemedText';
@@ -18,12 +19,19 @@ import { DualVoiceInput } from '@/components/DualVoiceInput';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing } from '@/constants/theme';
 
+interface PropertyOption {
+  id: string;
+  name: string;
+  address: string;
+}
+
 interface RepairsNeededModalProps {
   visible: boolean;
   onClose: () => void;
   propertyName: string;
   propertyAddress: string;
   technicianName?: string;
+  properties?: PropertyOption[];
 }
 
 export function RepairsNeededModal({
@@ -32,6 +40,7 @@ export function RepairsNeededModal({
   propertyName,
   propertyAddress,
   technicianName = 'Service Technician',
+  properties,
 }: RepairsNeededModalProps) {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
@@ -39,6 +48,17 @@ export function RepairsNeededModal({
 
   const [isUrgent, setIsUrgent] = useState(false);
   const [issueDescription, setIssueDescription] = useState('');
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
+
+  const selectedProperty = properties?.find(p => p.id === selectedPropertyId);
+  const displayPropertyName = properties ? (selectedProperty?.name || 'Select Property') : propertyName;
+  const displayPropertyAddress = properties ? (selectedProperty?.address || '') : propertyAddress;
+
+  useEffect(() => {
+    if (visible && properties && properties.length > 0 && !selectedPropertyId) {
+      setSelectedPropertyId('');
+    }
+  }, [visible, properties]);
 
   const handleSubmit = () => {
     if (Platform.OS !== 'web') {
@@ -107,10 +127,29 @@ export function RepairsNeededModal({
             keyboardShouldPersistTaps="handled"
           >
             <View style={styles.propertySection}>
-              <ThemedText style={styles.propertyName}>{propertyName}</ThemedText>
-              <ThemedText style={[styles.propertyAddress, { color: theme.textSecondary }]}>
-                {propertyAddress}
-              </ThemedText>
+              <ThemedText style={styles.sectionLabel}>Select Property</ThemedText>
+              {properties ? (
+                <View style={[styles.pickerContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                  <Picker
+                    selectedValue={selectedPropertyId}
+                    onValueChange={(value) => setSelectedPropertyId(value)}
+                    style={styles.picker}
+                    dropdownIconColor={theme.text}
+                  >
+                    <Picker.Item label="Select a property..." value="" />
+                    {properties.map((prop) => (
+                      <Picker.Item key={prop.id} label={prop.name} value={prop.id} />
+                    ))}
+                  </Picker>
+                </View>
+              ) : (
+                <>
+                  <ThemedText style={styles.propertyName}>{propertyName}</ThemedText>
+                  <ThemedText style={[styles.propertyAddress, { color: theme.textSecondary }]}>
+                    {propertyAddress}
+                  </ThemedText>
+                </>
+              )}
             </View>
 
             <View style={styles.metaRow}>
@@ -393,5 +432,19 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  sectionLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: BrandColors.azureBlue,
+    marginBottom: Spacing.sm,
+  },
+  pickerContainer: {
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    overflow: 'hidden',
+  },
+  picker: {
+    height: 50,
   },
 });

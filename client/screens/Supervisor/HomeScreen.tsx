@@ -21,6 +21,7 @@ import truckInspectionIcon from '../../../assets/images/truck-inspection-icon.pn
 import chemicalsDropoffIcon from '../../../assets/images/chemicals-dropoff-icon.png';
 import supportiveActionsIcon from '../../../assets/images/supportive-actions-icon.png';
 import serviceRepairsIcon from '../../../assets/images/service-repairs-icon.png';
+import reportIssuesIcon from '../../../assets/images/report-issues-icon.png';
 import { BubbleBackground } from '@/components/BubbleBackground';
 import { QuickActionButton } from '@/components/QuickActionButton';
 import { ActivityTicker } from '@/components/ActivityTicker';
@@ -708,7 +709,7 @@ export default function SupervisorHomeScreen() {
                   onPress={() => handleQuickAction('service')}
                 />
                 <QuickActionButton
-                  icon="alert-triangle"
+                  imageSource={reportIssuesIcon}
                   label="Report Issue"
                   color={BrandColors.danger}
                   onPress={() => handleQuickAction('report')}

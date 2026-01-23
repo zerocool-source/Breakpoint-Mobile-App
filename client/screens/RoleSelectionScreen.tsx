@@ -299,11 +299,6 @@ export default function RoleSelectionScreen({ onSelectRole }: RoleSelectionScree
         </View>
 
         <Animated.View entering={FadeInDown.delay(700).springify()} style={styles.footer}>
-          <Image
-            source={require('../../assets/images/keeping-people-safe.png')}
-            style={styles.taglineLogo}
-            contentFit="contain"
-          />
           <ThemedText style={styles.footerText}>
             Quick demo access - no password required
           </ThemedText>

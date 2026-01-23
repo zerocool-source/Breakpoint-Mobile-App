@@ -47,7 +47,7 @@ import {
   type TechnicianRouteStop,
 } from '@/lib/supervisorMockData';
 import { CreateAssignmentModal } from '@/screens/Supervisor/Modals/CreateAssignmentModal';
-import { RepairsNeededModal, ChemicalOrderModal } from '@/screens/ServiceTech/Modals';
+import { RepairsNeededModal, ChemicalOrderModal, ServiceRepairModal } from '@/screens/ServiceTech/Modals';
 import type { ChatChannel } from '@/screens/shared/ChatChannelsScreen';
 import type { County } from '@/types';
 
@@ -468,6 +468,7 @@ export default function SupervisorHomeScreen() {
   const [showBreakdownModal, setShowBreakdownModal] = useState(false);
   const [showRepairsModal, setShowRepairsModal] = useState(false);
   const [showChemicalModal, setShowChemicalModal] = useState(false);
+  const [showServiceRepairModal, setShowServiceRepairModal] = useState(false);
   const [showChatModal, setShowChatModal] = useState(false);
   const [showCreateAssignmentModal, setShowCreateAssignmentModal] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
@@ -527,6 +528,8 @@ export default function SupervisorHomeScreen() {
       setShowRepairsModal(true);
     } else if (action === 'chemical') {
       setShowChemicalModal(true);
+    } else if (action === 'service') {
+      setShowServiceRepairModal(true);
     }
   };
 
@@ -797,6 +800,7 @@ export default function SupervisorHomeScreen() {
         propertyName={defaultProperty.name}
         propertyAddress={defaultProperty.address}
         technicianName="Supervisor"
+        properties={mockProperties}
       />
 
       <ChemicalOrderModal
@@ -804,6 +808,15 @@ export default function SupervisorHomeScreen() {
         onClose={() => setShowChemicalModal(false)}
         propertyName={defaultProperty.name}
         propertyAddress={defaultProperty.address}
+        properties={mockProperties}
+      />
+
+      <ServiceRepairModal
+        visible={showServiceRepairModal}
+        onClose={() => setShowServiceRepairModal(false)}
+        propertyName={defaultProperty.name}
+        propertyAddress={defaultProperty.address}
+        properties={mockProperties}
       />
 
       <TeamChatModal

@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Pressable, View, Platform } from 'react-native';
+import { StyleSheet, Pressable, View, Platform, Image, ImageSourcePropType } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -12,7 +12,8 @@ import { ThemedText } from '@/components/ThemedText';
 import { BorderRadius, Spacing, Shadows, SpringConfigs } from '@/constants/theme';
 
 interface QuickActionButtonProps {
-  icon: keyof typeof Feather.glyphMap;
+  icon?: keyof typeof Feather.glyphMap;
+  imageSource?: ImageSourcePropType;
   label: string;
   color: string;
   onPress: () => void;
@@ -27,7 +28,7 @@ const sizeConfigs = {
   large: { iconContainer: 60, iconSize: 30, padding: Spacing.xl, labelSize: 14, borderRadius: BorderRadius['2xl'] },
 };
 
-export function QuickActionButton({ icon, label, color, onPress, size = 'medium' }: QuickActionButtonProps) {
+export function QuickActionButton({ icon, imageSource, label, color, onPress, size = 'medium' }: QuickActionButtonProps) {
   const scale = useSharedValue(1);
   const config = sizeConfigs[size];
 
@@ -51,6 +52,7 @@ export function QuickActionButton({ icon, label, color, onPress, size = 'medium'
   };
 
   const bgColor = color + '12';
+  const imageSize = config.iconContainer * 1.6;
 
   return (
     <AnimatedPressable
@@ -60,27 +62,42 @@ export function QuickActionButton({ icon, label, color, onPress, size = 'medium'
       style={[
         styles.container, 
         { 
-          backgroundColor: bgColor,
+          backgroundColor: imageSource ? 'transparent' : bgColor,
           padding: config.padding,
           borderRadius: config.borderRadius,
         }, 
         animatedStyle
       ]}
     >
-      <View 
-        style={[
-          styles.iconContainer, 
-          { 
-            backgroundColor: color,
-            width: config.iconContainer,
-            height: config.iconContainer,
-            borderRadius: config.iconContainer / 2.5,
-          },
-          Shadows.card,
-        ]}
-      >
-        <Feather name={icon} size={config.iconSize} color="#FFFFFF" />
-      </View>
+      {imageSource ? (
+        <Image 
+          source={imageSource}
+          style={[
+            styles.imageIcon,
+            { 
+              width: imageSize, 
+              height: imageSize,
+              borderRadius: BorderRadius.lg,
+            }
+          ]}
+          resizeMode="contain"
+        />
+      ) : (
+        <View 
+          style={[
+            styles.iconContainer, 
+            { 
+              backgroundColor: color,
+              width: config.iconContainer,
+              height: config.iconContainer,
+              borderRadius: config.iconContainer / 2.5,
+            },
+            Shadows.card,
+          ]}
+        >
+          {icon ? <Feather name={icon} size={config.iconSize} color="#FFFFFF" /> : null}
+        </View>
+      )}
       <ThemedText 
         style={[styles.label, { fontSize: config.labelSize }]} 
         numberOfLines={2}
@@ -102,6 +119,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.sm,
+  },
+  imageIcon: {
+    alignSelf: 'center',
   },
   label: {
     fontWeight: '600',

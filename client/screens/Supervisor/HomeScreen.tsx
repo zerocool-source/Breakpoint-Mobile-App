@@ -13,6 +13,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { Avatar } from '@/components/Avatar';
 
 import supervisorAvatarImage from '../../../assets/images/supervisor-avatar.png';
+import repairsNeededIcon from '../../../assets/images/repairs-needed-icon.png';
 import { BubbleBackground } from '@/components/BubbleBackground';
 import { QuickActionButton } from '@/components/QuickActionButton';
 import { ActivityTicker } from '@/components/ActivityTicker';
@@ -659,7 +660,7 @@ export default function SupervisorHomeScreen() {
             <View style={styles.quickActionsGrid}>
               <View style={styles.quickActionsRow}>
                 <QuickActionButton
-                  icon="tool"
+                  imageSource={repairsNeededIcon}
                   label="Repairs Needed"
                   color={BrandColors.vividTangerine}
                   onPress={() => handleQuickAction('repairs')}

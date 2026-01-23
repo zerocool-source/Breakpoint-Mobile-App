@@ -702,8 +702,8 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   quickAction: {
-    width: 72,
-    height: 72,
+    width: 90,
+    height: 90,
     alignItems: 'center',
     justifyContent: 'center',
     padding: Spacing.sm,
@@ -711,8 +711,8 @@ const styles = StyleSheet.create({
     ...Shadows.card,
   },
   quickActionImage: {
-    width: 56,
-    height: 56,
+    width: 74,
+    height: 74,
   },
   bodiesSection: {
     borderRadius: BorderRadius.lg,

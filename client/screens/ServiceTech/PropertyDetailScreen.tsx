@@ -12,6 +12,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { BPButton } from '@/components/BPButton';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
+import { BubbleBackground } from '@/components/BubbleBackground';
 import type { RouteStop, BodyOfWater } from '@/lib/serviceTechMockData';
 import repairsNeededIcon from '../../../assets/images/repairs-needed-icon.png';
 import chemicalOrderIcon from '../../../assets/images/chemical-order-icon.png';
@@ -221,8 +222,9 @@ export default function PropertyDetailScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.backgroundRoot }]}>
-      <View style={[styles.header, { paddingTop: insets.top + Spacing.md }]}>
+    <BubbleBackground bubbleCount={12}>
+      <View style={[styles.container, { backgroundColor: 'transparent' }]}>
+        <View style={[styles.header, { paddingTop: insets.top + Spacing.md }]}>
         <Pressable style={styles.backButton} onPress={() => navigation.goBack()}>
           <Feather name="chevron-left" size={24} color={BrandColors.textPrimary} />
         </Pressable>
@@ -511,7 +513,8 @@ export default function PropertyDetailScreen() {
         propertyName={stop.propertyName}
         propertyAddress={stop.address}
       />
-    </View>
+      </View>
+    </BubbleBackground>
   );
 }
 

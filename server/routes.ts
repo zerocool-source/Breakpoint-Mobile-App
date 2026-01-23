@@ -200,6 +200,146 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/user/county", authMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { county } = req.body;
+      if (!county || !['north_county', 'south_county', 'mid_county'].includes(county)) {
+        return res.status(400).json({ error: "Valid county is required" });
+      }
+
+      const [updated] = await db.update(users)
+        .set({ county, updatedAt: new Date() })
+        .where(eq(users.id, req.user!.id))
+        .returning({
+          id: users.id,
+          name: users.name,
+          email: users.email,
+          role: users.role,
+          county: users.county,
+        });
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating county:", error);
+      res.status(500).json({ error: "Failed to update county" });
+    }
+  });
+
+  app.get("/api/roster", authMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (req.user!.role !== "supervisor") {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+      const roster = await db.query.users.findMany({
+        where: and(
+          eq(users.supervisorId, req.user!.id),
+          eq(users.isActive, true)
+        ),
+        columns: {
+          password: false,
+        },
+      });
+      res.json(roster);
+    } catch (error) {
+      console.error("Error fetching roster:", error);
+      res.status(500).json({ error: "Failed to fetch roster" });
+    }
+  });
+
+  app.get("/api/available-technicians", authMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (req.user!.role !== "supervisor") {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+      const available = await db.query.users.findMany({
+        where: and(
+          eq(users.role, 'service_tech'),
+          eq(users.isActive, true)
+        ),
+        columns: {
+          password: false,
+        },
+      });
+      res.json(available);
+    } catch (error) {
+      console.error("Error fetching available technicians:", error);
+      res.status(500).json({ error: "Failed to fetch available technicians" });
+    }
+  });
+
+  app.post("/api/roster/:technicianId", authMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (req.user!.role !== "supervisor") {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+      const { technicianId } = req.params;
+      const [updated] = await db.update(users)
+        .set({ supervisorId: req.user!.id, updatedAt: new Date() })
+        .where(eq(users.id, technicianId))
+        .returning({
+          id: users.id,
+          name: users.name,
+          email: users.email,
+          role: users.role,
+          county: users.county,
+          supervisorId: users.supervisorId,
+        });
+      res.json(updated);
+    } catch (error) {
+      console.error("Error adding to roster:", error);
+      res.status(500).json({ error: "Failed to add to roster" });
+    }
+  });
+
+  app.delete("/api/roster/:technicianId", authMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (req.user!.role !== "supervisor") {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+      const { technicianId } = req.params;
+      await db.update(users)
+        .set({ supervisorId: null, updatedAt: new Date() })
+        .where(and(
+          eq(users.id, technicianId),
+          eq(users.supervisorId, req.user!.id)
+        ));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error removing from roster:", error);
+      res.status(500).json({ error: "Failed to remove from roster" });
+    }
+  });
+
+  app.put("/api/roster/:technicianId/county", authMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (req.user!.role !== "supervisor") {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+      const { technicianId } = req.params;
+      const { county } = req.body;
+      if (!county || !['north_county', 'south_county', 'mid_county'].includes(county)) {
+        return res.status(400).json({ error: "Valid county is required" });
+      }
+
+      const [updated] = await db.update(users)
+        .set({ county, updatedAt: new Date() })
+        .where(and(
+          eq(users.id, technicianId),
+          eq(users.supervisorId, req.user!.id)
+        ))
+        .returning({
+          id: users.id,
+          name: users.name,
+          email: users.email,
+          role: users.role,
+          county: users.county,
+        });
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating technician county:", error);
+      res.status(500).json({ error: "Failed to update county" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

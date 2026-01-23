@@ -4,6 +4,7 @@ import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
 export const userRoleEnum = pgEnum('user_role', ['service_tech', 'supervisor', 'repair_tech', 'repair_foreman']);
+export const countyEnum = pgEnum('county', ['north_county', 'south_county', 'mid_county']);
 export const jobStatusEnum = pgEnum('job_status', ['pending', 'in_progress', 'completed', 'cancelled']);
 export const jobPriorityEnum = pgEnum('job_priority', ['low', 'normal', 'high', 'urgent']);
 export const propertyTypeEnum = pgEnum('property_type', ['HOA', 'Apartment', 'Hotel', 'Commercial', 'Municipal']);
@@ -19,6 +20,8 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   role: userRoleEnum("role").notNull(),
   phone: text("phone"),
+  county: countyEnum("county"),
+  supervisorId: varchar("supervisor_id", { length: 36 }),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -255,7 +258,10 @@ export const registerSchema = z.object({
   name: z.string().min(2),
   role: z.enum(['service_tech', 'supervisor', 'repair_tech', 'repair_foreman']),
   phone: z.string().optional(),
+  county: z.enum(['north_county', 'south_county', 'mid_county']).optional(),
 });
+
+export type County = 'north_county' | 'south_county' | 'mid_county';
 
 export const insertPropertySchema = createInsertSchema(properties).omit({
   id: true,

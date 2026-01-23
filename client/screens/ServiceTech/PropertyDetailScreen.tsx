@@ -480,7 +480,7 @@ export default function PropertyDetailScreen() {
             <Image
               source={completePropertyButton}
               style={styles.completePropertyImage}
-              contentFit="contain"
+              contentFit="cover"
             />
           </Pressable>
         </Animated.View>
@@ -800,12 +800,13 @@ const styles = StyleSheet.create({
   },
   completePropertyButton: {
     width: '100%',
-    marginTop: Spacing.lg,
-    marginBottom: Spacing.xl,
+    marginTop: Spacing.md,
+    marginHorizontal: -Spacing.screenPadding,
+    paddingHorizontal: 0,
   },
   completePropertyImage: {
     width: '100%',
-    height: 200,
+    height: 120,
   },
   addTaskRow: {
     flexDirection: 'row',

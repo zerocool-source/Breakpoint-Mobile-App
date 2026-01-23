@@ -3,7 +3,8 @@ import { View, StyleSheet, Pressable, ScrollView, Platform, TextInput } from 're
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withRepeat, withTiming, interpolate } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -151,6 +152,20 @@ export default function PropertyDetailScreen() {
   const [chemicalModalVisible, setChemicalModalVisible] = useState(false);
   const [windyModalVisible, setWindyModalVisible] = useState(false);
   const [serviceRepairModalVisible, setServiceRepairModalVisible] = useState(false);
+
+  const shimmerValue = useSharedValue(0);
+
+  useEffect(() => {
+    shimmerValue.value = withRepeat(
+      withTiming(1, { duration: 2000 }),
+      -1,
+      false
+    );
+  }, []);
+
+  const shimmerStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: interpolate(shimmerValue.value, [0, 1], [-200, 400]) }],
+  }));
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -482,6 +497,14 @@ export default function PropertyDetailScreen() {
               style={styles.completePropertyImage}
               contentFit="cover"
             />
+            <Animated.View style={[styles.shimmerOverlay, shimmerStyle]}>
+              <LinearGradient
+                colors={['transparent', 'rgba(255,255,255,0.3)', 'transparent']}
+                start={{ x: 0, y: 0.5 }}
+                end={{ x: 1, y: 0.5 }}
+                style={styles.shimmerGradient}
+              />
+            </Animated.View>
           </Pressable>
         </Animated.View>
       </ScrollView>
@@ -799,14 +822,27 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   completePropertyButton: {
-    width: '100%',
     marginTop: Spacing.md,
-    marginHorizontal: -Spacing.screenPadding,
-    paddingHorizontal: 0,
+    marginLeft: -Spacing.screenPadding,
+    marginRight: -Spacing.screenPadding,
+    overflow: 'hidden',
   },
   completePropertyImage: {
-    width: '100%',
-    height: 120,
+    width: '110%',
+    marginLeft: '-5%',
+    height: 150,
+  },
+  shimmerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: 100,
+  },
+  shimmerGradient: {
+    flex: 1,
+    width: 100,
   },
   addTaskRow: {
     flexDirection: 'row',

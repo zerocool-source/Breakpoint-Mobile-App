@@ -401,21 +401,28 @@ export default function PropertyDetailScreen() {
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(400).springify()}>
-          <Pressable style={styles.bodiesOfWaterButton}>
-            <Image
-              source={bodiesOfWaterButton}
-              style={styles.bodiesOfWaterImage}
-              contentFit="cover"
-            />
-          </Pressable>
-          <View style={styles.bodiesList}>
-            {stop.bodiesOfWater.map((body) => (
-              <BodyOfWaterCard
-                key={body.id}
-                body={body}
-                onPress={() => handleBodyOfWaterPress(body)}
-              />
-            ))}
+          <View style={[styles.bodiesSection, { backgroundColor: theme.surface }]}>
+            <View style={styles.bodiesHeader}>
+              <View style={styles.bodiesHeaderLeft}>
+                <Feather name="droplet" size={20} color={BrandColors.azureBlue} />
+                <ThemedText style={styles.bodiesSectionTitle}>Bodies of Water</ThemedText>
+              </View>
+              <View style={styles.bodiesCountBadge}>
+                <ThemedText style={styles.bodiesCountText}>
+                  {bodiesCompleted}/{stop.bodiesOfWater.length}
+                </ThemedText>
+              </View>
+              <Feather name="chevron-down" size={18} color={BrandColors.textSecondary} />
+            </View>
+            <View style={styles.bodiesList}>
+              {stop.bodiesOfWater.map((body) => (
+                <BodyOfWaterCard
+                  key={body.id}
+                  body={body}
+                  onPress={() => handleBodyOfWaterPress(body)}
+                />
+              ))}
+            </View>
           </View>
         </Animated.View>
 

@@ -465,7 +465,7 @@ export default function SupervisorHomeScreen() {
   const metrics = mockWeeklyMetrics;
   const inspections = mockQCInspections.slice(0, 4);
   const technicians = mockTechnicians;
-  const defaultProperty = mockProperties[0];
+  const defaultProperty = mockProperties[0] || { name: 'Select Property', address: '' };
 
   const handleChatPress = () => {
     if (Platform.OS !== 'web') {

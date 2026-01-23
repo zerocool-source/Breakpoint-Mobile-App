@@ -2,8 +2,8 @@ import type { Express } from "express";
 import { createServer, type Server } from "node:http";
 import authRoutes, { authMiddleware, AuthenticatedRequest } from "./auth";
 import { db } from "./db";
-import { users, properties, jobs, assignments, estimates, routeStops, propertyChannels, insertAssignmentSchema } from "@shared/schema";
-import { eq, and, desc, or } from "drizzle-orm";
+import { users, properties, jobs, assignments, estimates, routeStops, propertyChannels } from "@shared/schema";
+import { eq, and, desc } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/auth", authRoutes);
@@ -123,6 +123,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Type is required" });
       }
 
+      // Validate priority if provided
+      const validPriorities = ['LOW', 'MEDIUM', 'HIGH'];
+      const normalizedPriority = priority ? String(priority).toUpperCase() : 'MEDIUM';
+      if (!validPriorities.includes(normalizedPriority)) {
+        return res.status(400).json({ error: `Invalid priority. Must be one of: ${validPriorities.join(', ')}` });
+      }
+
       // Verify property exists
       const propertyExists = await db.query.properties.findFirst({
         where: eq(properties.id, propertyId),
@@ -155,7 +162,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         assignedById: req.user!.id,
         title: title.trim(),
         type: type.trim(),
-        priority: priority || 'MEDIUM',
+        priority: normalizedPriority,
         status: 'pending',
         scheduledDate: parsedScheduledDate,
         scheduledTime: scheduledTime || null,
@@ -229,8 +236,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Set notes if provided
+      // Validate and set notes if provided
       if (notes !== undefined) {
+        if (notes !== null && typeof notes !== 'string') {
+          return res.status(400).json({ error: "Notes must be a string or null" });
+        }
         updateData.notes = notes;
       }
 

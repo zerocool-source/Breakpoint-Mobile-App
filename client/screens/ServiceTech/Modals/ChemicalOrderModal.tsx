@@ -19,11 +19,18 @@ import { DualVoiceInput } from '@/components/DualVoiceInput';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing } from '@/constants/theme';
 
+interface PropertyOption {
+  id: string;
+  name: string;
+  address: string;
+}
+
 interface ChemicalOrderModalProps {
   visible: boolean;
   onClose: () => void;
   propertyName: string;
   propertyAddress: string;
+  properties?: PropertyOption[];
 }
 
 interface ChemicalRow {
@@ -61,6 +68,7 @@ export function ChemicalOrderModal({
   onClose,
   propertyName,
   propertyAddress,
+  properties,
 }: ChemicalOrderModalProps) {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
@@ -70,6 +78,11 @@ export function ChemicalOrderModal({
     { id: '1', chemical: '', quantity: 1, unit: '1 Quart' },
   ]);
   const [notes, setNotes] = useState('');
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
+
+  const selectedProperty = properties?.find(p => p.id === selectedPropertyId);
+  const displayPropertyName = properties ? (selectedProperty?.name || 'Select Property') : propertyName;
+  const displayPropertyAddress = properties ? (selectedProperty?.address || '') : propertyAddress;
 
   const handleAddRow = () => {
     if (Platform.OS !== 'web') {
@@ -150,8 +163,27 @@ export function ChemicalOrderModal({
           </View>
 
           <View style={[styles.propertyHeader, { backgroundColor: BrandColors.azureBlue }]}>
-            <ThemedText style={styles.propertyName}>{propertyName}</ThemedText>
-            <ThemedText style={styles.propertyAddress}>{propertyAddress}</ThemedText>
+            <ThemedText style={styles.sectionLabel}>Select Property</ThemedText>
+            {properties ? (
+              <View style={[styles.propertyPickerContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                <Picker
+                  selectedValue={selectedPropertyId}
+                  onValueChange={(value) => setSelectedPropertyId(value)}
+                  style={styles.propertyPicker}
+                  dropdownIconColor={theme.text}
+                >
+                  <Picker.Item label="Select a property..." value="" />
+                  {properties.map((prop) => (
+                    <Picker.Item key={prop.id} label={prop.name} value={prop.id} />
+                  ))}
+                </Picker>
+              </View>
+            ) : (
+              <>
+                <ThemedText style={styles.propertyName}>{propertyName}</ThemedText>
+                <ThemedText style={styles.propertyAddress}>{propertyAddress}</ThemedText>
+              </>
+            )}
           </View>
 
           <ScrollView
@@ -506,5 +538,19 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '600',
+  },
+  sectionLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: Spacing.sm,
+  },
+  propertyPickerContainer: {
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    overflow: 'hidden',
+  },
+  propertyPicker: {
+    height: 50,
   },
 });

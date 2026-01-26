@@ -14,13 +14,13 @@ import { Image } from 'expo-image';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { ThemedText } from '@/components/ThemedText';
 import { BPButton } from '@/components/BPButton';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
-import { apiRequest } from '@/lib/query-client';
+import { apiRequest, extractItems, Page } from '@/lib/query-client';
 
 interface Property {
   id: string;
@@ -62,15 +62,26 @@ export default function AssignmentDetailScreen() {
   const { assignment } = route.params;
   const [completionNotes, setCompletionNotes] = useState(assignment?.notes || '');
 
-  // Defensive property resolution - assignment.property may be undefined
-  const property = assignment?.property;
+  // Fetch properties list for fallback resolution
+  const { data: propertiesData } = useQuery<Page<Property>>({
+    queryKey: ['/api/properties'],
+  });
+  const properties = extractItems(propertiesData);
 
-  // DEV-only warning when property is missing
+  // Defensive property resolution - try assignment.property first, then lookup by propertyId
+  const property =
+    assignment?.property ??
+    properties?.find(p => p.id === assignment?.propertyId);
+
+  // DEV-only warning when property is missing even after fallback
   useEffect(() => {
-    if (__DEV__ && !assignment?.property) {
-      console.warn('[AssignmentDetailScreen] Property missing, using fallback', assignment?.propertyId);
+    if (__DEV__ && assignment && !property) {
+      console.warn(
+        '[AssignmentDetailScreen] Property missing even after fallback',
+        assignment.propertyId
+      );
     }
-  }, [assignment]);
+  }, [assignment, property]);
 
   const updateAssignmentMutation = useMutation({
     mutationFn: async (data: { status: string; notes: string }) => {

@@ -1,0 +1,98 @@
+Replit Prompt – Fix AssignmentDetailScreen Property Fallback
+
+You are working in the Breakpoint Mobile App (Expo / React Native).
+
+Goal
+
+AssignmentDetailScreen must:
+
+Never crash when assignment.property is missing
+
+Still display the correct property name and address by resolving via assignment.propertyId
+
+Avoid noisy warnings
+
+Tasks
+1) Open
+
+AssignmentDetailScreen.tsx
+
+2) Ensure the assignment type includes
+
+propertyId: string
+
+property?: Property (optional)
+
+Do not change backend or API types.
+
+3) Ensure this screen has access to the properties list
+
+If the screen already uses a properties query/hook, reuse it
+
+If not, import and use the same properties fetch hook used in the Home screen
+
+Do not create a new API client or endpoint
+
+4) Implement proper property fallback resolution
+
+Add this logic after assignment and properties are available:
+
+const property =
+  assignment?.property ??
+  properties?.find(p => p.id === assignment?.propertyId);
+
+5) Replace all unsafe property reads
+
+Replace any usage of:
+
+assignment.property?.name
+assignment.property?.address
+
+
+With:
+
+property?.name ?? 'Unknown Property'
+property?.address ?? 'Address unavailable'
+
+
+Use the resolved property variable everywhere in the UI.
+
+6) Add a DEV-only warning (only if fallback also fails)
+
+Add exactly this:
+
+if (__DEV__ && assignment && !property) {
+  console.warn(
+    '[AssignmentDetailScreen] Property missing even after fallback',
+    assignment.propertyId
+  );
+}
+
+
+Do not warn when only assignment.property is missing.
+
+7) Confirm
+
+No crashes occur
+
+When assignment.property is missing but the properties list is loaded, the correct name and address still display
+
+Constraints
+
+❌ Do not modify API responses
+
+❌ Do not add dependencies
+
+❌ Do not change other screens
+
+✅ Only touch AssignmentDetailScreen.tsx and the minimal import needed for the properties hook
+
+Additional Context (Do Not Implement Yet)
+
+Some assignment APIs return paginated results in this shape:
+
+{ "items": [...], "nextCursor": "..." }
+
+
+If apiAssignments.filter is not a function appears again, the fix is to unwrap items before filtering.
+This task is NOT part of this change.

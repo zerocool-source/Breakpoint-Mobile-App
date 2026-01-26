@@ -55,3 +55,20 @@ Breakpoint Commercial Pool Systems is a mobile-first field service management ap
 - **Authentication**: JWT (JSON Web Tokens), bcrypt
 - **Mobile Development**: Expo (React Native), React Navigation, TanStack Query, AsyncStorage, SecureStore, `@react-native-community/netinfo`, `expo-battery`.
 - **Backend Framework**: Express.js
+
+## API Configuration
+
+### EXPO_PUBLIC_API_URL
+The external API base URL is configured via `EXPO_PUBLIC_API_URL` environment variable.
+
+**Format**: The URL can end with or without a trailing slash - both formats work correctly.
+- `https://breakpoint-api-v2.onrender.com` ✓
+- `https://breakpoint-api-v2.onrender.com/` ✓
+
+### URL Helper Functions (client/lib/query-client.ts)
+- **`getApiUrl()`**: Returns the API base URL with trailing slashes removed.
+- **`joinUrl(base, path)`**: Safely joins a base URL with a path, ensuring exactly one "/" between them. Handles all edge cases:
+  - `joinUrl("https://x.com", "api/auth/me")` → `https://x.com/api/auth/me`
+  - `joinUrl("https://x.com/", "/api/auth/me")` → `https://x.com/api/auth/me`
+
+**Important**: Always use `joinUrl()` or `new URL(path, base)` when constructing API URLs. Never use string concatenation like `${baseUrl}path` as this can result in missing slashes.

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { storage } from '@/lib/storage';
-import { authApiRequest, apiRequest, getApiUrl } from '@/lib/query-client';
+import { authApiRequest, apiRequest, getApiUrl, joinUrl } from '@/lib/query-client';
 import type { User } from '@/types';
 
 export type UserRole = 'service_tech' | 'supervisor' | 'repair_tech' | 'repair_foreman';
@@ -56,8 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const storedToken = await storage.getAuthToken();
         if (storedToken) {
           setToken(storedToken);
-          const baseUrl = getApiUrl();
-          const res = await fetch(`${baseUrl}api/auth/me`, {
+          const res = await fetch(joinUrl(getApiUrl(), '/api/auth/me'), {
             headers: {
               'Authorization': `Bearer ${storedToken}`,
             },

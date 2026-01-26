@@ -9,7 +9,33 @@ export function getApiUrl(): string {
   }
 
   // Ensure no trailing slash to keep URL joining predictable
-  return url.replace(/\/$/, "");
+  return url.trim().replace(/\/+$/, "");
+}
+
+/**
+ * Safely joins a base URL with a path, ensuring exactly one "/" between them.
+ * Handles cases where base may or may not end with "/" and path may or may not start with "/".
+ * 
+ * Examples:
+ *   joinUrl("https://x.com", "api/auth/me") => "https://x.com/api/auth/me"
+ *   joinUrl("https://x.com/", "/api/auth/me") => "https://x.com/api/auth/me"
+ *   joinUrl("https://x.com", "/api/auth/me") => "https://x.com/api/auth/me"
+ *   joinUrl("https://x.com/", "api/auth/me") => "https://x.com/api/auth/me"
+ */
+export function joinUrl(base: string, path: string): string {
+  const trimmedBase = base.trim().replace(/\/+$/, "");
+  const trimmedPath = path.trim().replace(/^\/+/, "");
+  return `${trimmedBase}/${trimmedPath}`;
+}
+
+// Runtime assertion to verify joinUrl works correctly
+if (__DEV__) {
+  const test1 = joinUrl("https://x.com", "api/auth/me");
+  const test2 = joinUrl("https://x.com/", "/api/auth/me");
+  const expected = "https://x.com/api/auth/me";
+  if (test1 !== expected || test2 !== expected) {
+    console.error("[joinUrl] FAILED: URL joining is broken!", { test1, test2, expected });
+  }
 }
 
 

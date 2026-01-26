@@ -52,9 +52,9 @@ function PropertyCard({ property, isSubscribed, onToggle, index, isLoading }: Pr
         </View>
         
         <View style={styles.propertyInfo}>
-          <ThemedText style={styles.propertyName}>{property.name}</ThemedText>
+          <ThemedText style={styles.propertyName}>{property?.name ?? 'Unknown Property'}</ThemedText>
           <ThemedText style={[styles.propertyAddress, { color: theme.textSecondary }]}>
-            {property.address}
+            {property?.address ?? 'Address unavailable'}
           </ThemedText>
           <View style={styles.propertyMeta}>
             <View style={styles.metaItem}>

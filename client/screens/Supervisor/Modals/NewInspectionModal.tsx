@@ -114,7 +114,7 @@ export function NewInspectionModal({ visible, onClose, onStartInspection }: NewI
                   {mockProperties.map((property) => (
                     <Picker.Item
                       key={property.id}
-                      label={property.name}
+                      label={property?.name ?? 'Unknown Property'}
                       value={property.id}
                       color={theme.text}
                     />

@@ -295,7 +295,7 @@ export default function EmergencyScreen() {
                         styles.propertyOptionText,
                         selectedProperty === property.id && { color: BrandColors.azureBlue, fontWeight: '600' },
                       ]}>
-                        {property.name}
+                        {property?.name ?? 'Unknown Property'}
                       </ThemedText>
                       {selectedProperty === property.id ? (
                         <Feather name="check" size={18} color={BrandColors.azureBlue} />

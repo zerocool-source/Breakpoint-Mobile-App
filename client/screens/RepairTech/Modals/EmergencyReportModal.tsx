@@ -158,9 +158,9 @@ export function EmergencyReportModal({ visible, onClose, onSubmit }: EmergencyRe
                         }
                       }}
                     >
-                      <ThemedText style={styles.propertyOptionName}>{property.name}</ThemedText>
+                      <ThemedText style={styles.propertyOptionName}>{property?.name ?? 'Unknown Property'}</ThemedText>
                       <ThemedText style={[styles.propertyOptionAddress, { color: theme.textSecondary }]}>
-                        {property.address}
+                        {property?.address ?? 'Address unavailable'}
                       </ThemedText>
                     </Pressable>
                   ))}

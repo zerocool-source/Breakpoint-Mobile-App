@@ -144,7 +144,7 @@ export function EditAssignmentModal({ visible, onClose, assignment }: EditAssign
               <View style={styles.infoRow}>
                 <Feather name="map-pin" size={14} color={theme.textSecondary} />
                 <ThemedText style={[styles.infoText, { color: theme.textSecondary }]}>
-                  {assignment.property.name}
+                  {assignment.property?.name ?? 'Unknown Property'}
                 </ThemedText>
               </View>
             </View>

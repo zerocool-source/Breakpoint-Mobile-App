@@ -180,7 +180,7 @@ export default function ChatChannelsScreen({ role = 'serviceTech' }: ChatChannel
   const propertyChannels = useMemo(() => {
     return subscribedChannels.map((sc): ChatChannel => ({
       id: `prop_${sc.propertyId}`,
-      name: sc.property.name,
+      name: sc.property?.name ?? 'Unknown Property',
       type: 'property',
       icon: 'map-pin',
       lastMessage: 'Tap to start a conversation about this property',

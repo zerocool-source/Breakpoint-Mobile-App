@@ -289,11 +289,11 @@ export default function HomeScreen() {
                   <ThemedText style={styles.nextStopTimeText}>{nextStop.scheduledTime}</ThemedText>
                 </View>
               </View>
-              <ThemedText style={styles.nextStopName}>{nextStop.property.name}</ThemedText>
+              <ThemedText style={styles.nextStopName}>{nextStop.property?.name ?? 'Unknown Property'}</ThemedText>
               <View style={styles.nextStopAddressRow}>
                 <Feather name="map-pin" size={14} color={BrandColors.vividTangerine} />
                 <ThemedText style={[styles.nextStopAddress, { color: theme.textSecondary }]}>
-                  {nextStop.property.address}
+                  {nextStop.property?.address ?? 'Address unavailable'}
                 </ThemedText>
               </View>
               <View style={styles.nextStopMeta}>

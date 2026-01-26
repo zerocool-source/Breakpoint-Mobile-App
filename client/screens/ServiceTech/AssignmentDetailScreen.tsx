@@ -142,7 +142,7 @@ export default function AssignmentDetailScreen() {
           </Pressable>
           <View style={styles.headerText}>
             <ThemedText style={styles.headerTitle}>Assignment Details</ThemedText>
-            <ThemedText style={styles.headerSubtitle}>{assignment.property.name}</ThemedText>
+            <ThemedText style={styles.headerSubtitle}>{assignment.property?.name ?? 'Unknown Property'}</ThemedText>
           </View>
         </View>
       </View>

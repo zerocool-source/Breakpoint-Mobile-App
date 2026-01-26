@@ -72,3 +72,25 @@ The external API base URL is configured via `EXPO_PUBLIC_API_URL` environment va
   - `joinUrl("https://x.com/", "/api/auth/me")` → `https://x.com/api/auth/me`
 
 **Important**: Always use `joinUrl()` or `new URL(path, base)` when constructing API URLs. Never use string concatenation like `${baseUrl}path` as this can result in missing slashes.
+
+### Pagination Support (client/lib/query-client.ts)
+The backend API returns paginated responses in the format `{ items: T[], nextCursor: string | null }`.
+
+**Helper Types and Functions**:
+- **`Page<T>`**: Type interface for paginated responses
+- **`extractItems<T>(data)`**: Safely extracts array from paginated or raw array responses
+- **`extractNextCursor(data)`**: Extracts nextCursor for infinite scroll/load more
+
+**Usage Pattern**:
+```typescript
+// For simple lists (useQuery)
+const { data } = useQuery({ queryKey: ['/api/properties'] });
+const properties = extractItems(data); // Always returns T[]
+
+// For infinite scroll (useInfiniteQuery)
+const { data, fetchNextPage, hasNextPage } = useInfiniteQuery({
+  queryKey: ['/api/assignments'],
+  getNextPageParam: (lastPage) => extractNextCursor(lastPage),
+});
+const allAssignments = data?.pages.flatMap(extractItems) ?? [];
+```

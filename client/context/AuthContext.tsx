@@ -75,8 +75,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       
       const data = await res.json();
+      console.log("[AUTH] login response token exists:", !!data?.token);
+      console.log("[AUTH] login response role:", data?.user?.role);
+      console.log("[AUTH] api base url:", getApiUrl());
       
       await storage.setAuthToken(data.token);
+      const savedToken = await storage.getAuthToken();
+      console.log("[AUTH] saved token exists:", !!savedToken);
+      console.log("[AUTH] saved token prefix:", savedToken?.slice(0, 20));
+      
       await storage.setUser(data.user);
       setToken(data.token);
       setUser(data.user);
@@ -84,6 +91,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       // Test API call to verify token is being attached (temporary debug)
       try {
+        const debugToken = await storage.getAuthToken();
+        console.log("[AUTH] token used for requests exists:", !!debugToken);
+        console.log("[AUTH] token prefix for requests:", debugToken?.slice(0, 20));
         const testRes = await apiRequest('GET', '/api/properties');
         const properties = await testRes.json();
         console.log('[AUTH] Token verification - properties fetched:', properties.length);

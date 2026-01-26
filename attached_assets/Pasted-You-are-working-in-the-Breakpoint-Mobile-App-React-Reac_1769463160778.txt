@@ -1,0 +1,104 @@
+You are working in the Breakpoint Mobile App (React / React Native / Expo + Apollo Client).
+
+Your task is to fix three known integration issues between the mobile app and API v2.
+Do NOT refactor unrelated code. Do NOT change backend behavior.
+
+--------------------------------
+STEP 1 — Fix API base URL joining
+--------------------------------
+
+Problem:
+Some requests are being made to:
+https://breakpoint-api-v2.onrender.comapi/auth/me
+
+Root cause:
+The base API URL is missing a trailing slash OR endpoints are missing a leading slash.
+
+Action:
+- Locate the API base URL definition (likely api.ts, client.ts, or env config)
+- Ensure:
+  - baseURL ends with '/'
+  - all endpoint paths begin WITHOUT duplicating '/'
+- Resulting calls must look like:
+  https://breakpoint-api-v2.onrender.com/api/auth/me
+
+Add a small helper if needed:
+  joinUrl(base, path)
+
+--------------------------------
+STEP 2 — Unwrap paginated responses
+--------------------------------
+
+Problem:
+Core list endpoints now return:
+{
+  items: [...],
+  nextCursor: string | null
+}
+
+But mobile screens still assume arrays directly, causing:
+- apiAssignments.filter is not a function
+- crashes in ServiceTechHomeScreen
+
+Action:
+- Update all fetch/query handlers for:
+  - assignments
+  - properties
+  - technicians
+- Unwrap responses consistently:
+
+  const items = response.items ?? response
+
+- Ensure ALL screens receive arrays before calling:
+  .map()
+  .filter()
+  .length
+
+Do NOT change backend response shape.
+
+--------------------------------
+STEP 3 — Apollo Client typePolicies (recommended)
+--------------------------------
+
+Problem:
+Apollo cache warnings + unstable merges for paginated lists.
+
+Action:
+In Apollo Client setup:
+- Add typePolicies for paginated collections:
+  - assignments
+  - properties
+  - technicians
+
+Example pattern:
+{
+  Query: {
+    fields: {
+      assignments: {
+        keyArgs: false,
+        merge(existing = { items: [] }, incoming) {
+          return {
+            items: [...existing.items, ...incoming.items],
+            nextCursor: incoming.nextCursor
+          }
+        }
+      }
+    }
+  }
+}
+
+Do not over-engineer. Keep it predictable.
+
+--------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------
+
+- No more "filter is not a function"
+- /api/auth/me loads correctly
+- ServiceTechHomeScreen renders even with partial data
+- No crashes from missing property or assignment fields
+- Apollo warnings reduced or eliminated
+
+Output:
+- List files changed
+- Brief summary of each fix

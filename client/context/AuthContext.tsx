@@ -5,6 +5,24 @@ import type { User } from '@/types';
 
 export type UserRole = 'service_tech' | 'supervisor' | 'repair_tech' | 'repair_foreman';
 
+// API role types from Render API
+type ApiRole = "admin" | "supervisor" | "tech" | "repair";
+
+const mapApiRoleToAppRole = (role: ApiRole): UserRole => {
+  switch (role) {
+    case "tech":
+      return "service_tech";
+    case "repair":
+      return "repair_tech";
+    case "supervisor":
+      return "supervisor";
+    case "admin":
+      return "supervisor";
+    default:
+      return "service_tech";
+  }
+};
+
 interface AuthContextType {
   user: User | null;
   token: string | null;
@@ -47,8 +65,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           
           if (res.ok) {
             const userData = await res.json();
-            setUser(userData);
-            setSelectedRole(userData.role);
+            const normalizedRole = mapApiRoleToAppRole(userData.role);
+            const normalizedUser = { ...userData, role: normalizedRole };
+            setUser(normalizedUser);
+            setSelectedRole(normalizedRole);
           } else {
             await storage.clearAll();
           }
@@ -76,18 +96,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       const data = await res.json();
       console.log("[AUTH] login response token exists:", !!data?.token);
-      console.log("[AUTH] login response role:", data?.user?.role);
+      console.log("[AUTH] login response role (from API):", data?.user?.role);
       console.log("[AUTH] api base url:", getApiUrl());
+      
+      // Normalize role from API to app role
+      const normalizedRole = mapApiRoleToAppRole(data.user.role);
+      const normalizedUser = { ...data.user, role: normalizedRole };
+      console.log("[AUTH] normalized role:", normalizedRole);
       
       await storage.setAuthToken(data.token);
       const savedToken = await storage.getAuthToken();
       console.log("[AUTH] saved token exists:", !!savedToken);
       console.log("[AUTH] saved token prefix:", savedToken?.slice(0, 20));
       
-      await storage.setUser(data.user);
+      await storage.setUser(normalizedUser);
       setToken(data.token);
-      setUser(data.user);
-      setSelectedRole(data.user.role);
+      setUser(normalizedUser);
+      setSelectedRole(normalizedRole);
       
       // Test API call to verify token is being attached (temporary debug)
       try {

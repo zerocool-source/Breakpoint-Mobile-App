@@ -119,8 +119,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.log("[AUTH] token used for requests exists:", !!debugToken);
         console.log("[AUTH] token prefix for requests:", debugToken?.slice(0, 20));
         const testRes = await apiRequest('GET', '/api/properties');
-        const properties = await testRes.json();
-        console.log('[AUTH] Token verification - properties fetched:', properties.length);
+        const propertiesData = await testRes.json();
+        const propertiesCount = Array.isArray(propertiesData) ? propertiesData.length : (propertiesData.items?.length ?? 0);
+        console.log('[AUTH] Token verification - properties fetched:', propertiesCount);
       } catch (testError) {
         console.log('[AUTH] Token verification failed:', testError);
       }

@@ -6,7 +6,7 @@ import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown, FadeInUp, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 
 import { ThemedText } from '@/components/ThemedText';
 import { Avatar } from '@/components/Avatar';
@@ -21,7 +21,7 @@ import { useUrgentAlerts } from '@/context/UrgentAlertsContext';
 import { useTheme } from '@/hooks/useTheme';
 import { usePropertyChannels } from '@/context/PropertyChannelsContext';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
-import { extractItems, type Page } from '@/lib/query-client';
+import { extractItems, extractNextCursor, type Page, apiRequest } from '@/lib/query-client';
 import {
   mockDailyProgress,
   mockTruckInfo,
@@ -189,11 +189,28 @@ export default function ServiceTechHomeScreen() {
   const { channels: propertyChannels, isLoading: channelsLoading } = usePropertyChannels();
   const [completedStops, setCompletedStops] = useState<Set<string>>(new Set());
 
-  const { data: assignmentsData, isLoading: assignmentsLoading, refetch: refetchAssignments } = useQuery<Page<ApiAssignment>>({
+  const {
+    data: assignmentsPages,
+    isLoading: assignmentsLoading,
+    refetch: refetchAssignments,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery<Page<ApiAssignment>>({
     queryKey: ['/api/assignments'],
+    initialPageParam: null as string | null,
+    queryFn: async ({ pageParam }) => {
+      const url = pageParam ? `/api/assignments?cursor=${pageParam}` : '/api/assignments';
+      const res = await apiRequest('GET', url);
+      return res.json();
+    },
+    getNextPageParam: (lastPage) => extractNextCursor(lastPage),
   });
 
-  const apiAssignments = useMemo(() => extractItems(assignmentsData), [assignmentsData]);
+  const apiAssignments = useMemo(() => {
+    if (!assignmentsPages) return [];
+    return assignmentsPages.pages.flatMap(page => extractItems(page));
+  }, [assignmentsPages]);
 
   const filteredAssignments = useMemo(() => {
     if (assignmentFilter === 'today') {
@@ -425,13 +442,26 @@ export default function ServiceTechHomeScreen() {
                   </View>
                 ) : pendingAssignments.length > 0 ? (
                   <View style={styles.assignmentsList}>
-                    {pendingAssignments.slice(0, 5).map((assignment) => (
+                    {pendingAssignments.map((assignment) => (
                       <AssignmentCard
                         key={assignment.id}
                         assignment={assignment}
                         onPress={() => handleAssignmentPress(assignment)}
                       />
                     ))}
+                    {hasNextPage ? (
+                      <Pressable
+                        style={styles.loadMoreButton}
+                        onPress={() => fetchNextPage()}
+                        disabled={isFetchingNextPage}
+                      >
+                        {isFetchingNextPage ? (
+                          <ActivityIndicator size="small" color="#FFFFFF" />
+                        ) : (
+                          <ThemedText style={styles.loadMoreText}>Load More</ThemedText>
+                        )}
+                      </Pressable>
+                    ) : null}
                   </View>
                 ) : (
                   <View style={styles.noAssignmentsContainer}>
@@ -821,6 +851,19 @@ const styles = StyleSheet.create({
   },
   assignmentsList: {
     gap: Spacing.sm,
+  },
+  loadMoreButton: {
+    paddingVertical: Spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: BorderRadius.md,
+    marginTop: Spacing.sm,
+  },
+  loadMoreText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
   assignmentItem: {
     backgroundColor: '#FFFFFF',

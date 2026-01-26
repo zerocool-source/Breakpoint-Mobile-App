@@ -1,6 +1,34 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 import { storage } from "./storage";
 
+/**
+ * Paginated response type for API endpoints.
+ * Backend returns { items: T[], nextCursor: string | null }
+ */
+export interface Page<T> {
+  items: T[];
+  nextCursor: string | null;
+}
+
+/**
+ * Safely extracts items from a paginated response.
+ * Handles legacy array responses and undefined/null values gracefully.
+ */
+export function extractItems<T>(data: Page<T> | T[] | undefined | null): T[] {
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+  return data.items ?? [];
+}
+
+/**
+ * Safely extracts nextCursor from a paginated response.
+ */
+export function extractNextCursor(data: Page<unknown> | unknown[] | undefined | null): string | null {
+  if (!data) return null;
+  if (Array.isArray(data)) return null;
+  return (data as Page<unknown>).nextCursor ?? null;
+}
+
 export function getApiUrl(): string {
   const url = process.env.EXPO_PUBLIC_API_URL;
 

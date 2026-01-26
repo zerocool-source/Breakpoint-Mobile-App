@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -44,7 +44,8 @@ export interface ApiAssignment {
   scheduledTime: string | null;
   createdAt: string;
   updatedAt: string;
-  property: Property;
+  propertyId?: string;
+  property?: Property;
 }
 
 type ServiceTechStackParamList = {
@@ -59,7 +60,17 @@ export default function AssignmentDetailScreen() {
   const queryClient = useQueryClient();
 
   const { assignment } = route.params;
-  const [completionNotes, setCompletionNotes] = useState(assignment.notes || '');
+  const [completionNotes, setCompletionNotes] = useState(assignment?.notes || '');
+
+  // Defensive property resolution - assignment.property may be undefined
+  const property = assignment?.property;
+
+  // DEV-only warning when property is missing
+  useEffect(() => {
+    if (__DEV__ && !assignment?.property) {
+      console.warn('[AssignmentDetailScreen] Property missing, using fallback', assignment?.propertyId);
+    }
+  }, [assignment]);
 
   const updateAssignmentMutation = useMutation({
     mutationFn: async (data: { status: string; notes: string }) => {
@@ -142,7 +153,7 @@ export default function AssignmentDetailScreen() {
           </Pressable>
           <View style={styles.headerText}>
             <ThemedText style={styles.headerTitle}>Assignment Details</ThemedText>
-            <ThemedText style={styles.headerSubtitle}>{assignment.property?.name ?? 'Unknown Property'}</ThemedText>
+            <ThemedText style={styles.headerSubtitle}>{property?.name ?? 'Unknown Property'}</ThemedText>
           </View>
         </View>
       </View>
@@ -174,7 +185,7 @@ export default function AssignmentDetailScreen() {
               <View style={styles.metaRow}>
                 <Feather name="map-pin" size={14} color={theme.textSecondary} />
                 <ThemedText style={[styles.metaText, { color: theme.textSecondary }]}>
-                  {assignment.property.address || 'No address'}
+                  {property?.address ?? 'Address unavailable'}
                 </ThemedText>
               </View>
               {assignment.scheduledDate ? (

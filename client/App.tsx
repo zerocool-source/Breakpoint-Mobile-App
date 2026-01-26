@@ -17,6 +17,7 @@ import { UrgentAlertsProvider } from '@/context/UrgentAlertsContext';
 import { PropertyChannelsProvider } from '@/context/PropertyChannelsContext';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
+
 export default function App() {
   return (
     <ErrorBoundary>

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { storage } from '@/lib/storage';
-import { authApiRequest, getApiUrl } from '@/lib/query-client';
+import { authApiRequest, apiRequest, getApiUrl } from '@/lib/query-client';
 import type { User } from '@/types';
 
 export type UserRole = 'service_tech' | 'supervisor' | 'repair_tech' | 'repair_foreman';
@@ -81,6 +81,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setToken(data.token);
       setUser(data.user);
       setSelectedRole(data.user.role);
+      
+      // Test API call to verify token is being attached (temporary debug)
+      try {
+        const testRes = await apiRequest('GET', '/api/properties');
+        const properties = await testRes.json();
+        console.log('[AUTH] Token verification - properties fetched:', properties.length);
+      } catch (testError) {
+        console.log('[AUTH] Token verification failed:', testError);
+      }
       
       return { success: true };
     } catch (error) {

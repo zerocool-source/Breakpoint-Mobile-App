@@ -2,16 +2,16 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 import { storage } from "./storage";
 
 export function getApiUrl(): string {
-  let host = process.env.EXPO_PUBLIC_DOMAIN;
+  const url = process.env.EXPO_PUBLIC_API_URL;
 
-  if (!host) {
-    throw new Error("EXPO_PUBLIC_DOMAIN is not set");
+  if (!url) {
+    throw new Error("EXPO_PUBLIC_API_URL is not set");
   }
 
-  let url = new URL(`https://${host}`);
-
-  return url.href;
+  // Ensure no trailing slash to keep URL joining predictable
+  return url.replace(/\/$/, "");
 }
+
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {

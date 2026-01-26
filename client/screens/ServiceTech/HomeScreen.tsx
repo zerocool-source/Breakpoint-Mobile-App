@@ -209,7 +209,7 @@ export default function ServiceTechHomeScreen() {
 
   const apiAssignments = useMemo(() => {
     if (!assignmentsPages) return [];
-    return assignmentsPages.pages.flatMap(page => extractItems(page));
+    return assignmentsPages.pages.flatMap((page, i) => extractItems(page, `assignments-page-${i}`));
   }, [assignmentsPages]);
 
   const filteredAssignments = useMemo(() => {

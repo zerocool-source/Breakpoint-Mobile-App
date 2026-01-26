@@ -13,11 +13,26 @@ export interface Page<T> {
 /**
  * Safely extracts items from a paginated response.
  * Handles legacy array responses and undefined/null values gracefully.
+ * Supports both response shapes:
+ *   - If Array, use it directly
+ *   - If Object with "items", use resp.items
  */
-export function extractItems<T>(data: Page<T> | T[] | undefined | null): T[] {
-  if (!data) return [];
-  if (Array.isArray(data)) return data;
-  return data.items ?? [];
+export function extractItems<T>(data: Page<T> | T[] | undefined | null, debugLabel?: string): T[] {
+  if (!data) {
+    if (__DEV__ && debugLabel) {
+      console.log(`[extractItems:${debugLabel}] Received: null/undefined`);
+    }
+    return [];
+  }
+  
+  const isArray = Array.isArray(data);
+  const list = isArray ? data : (data.items ?? []);
+  
+  if (__DEV__ && debugLabel) {
+    console.log(`[extractItems:${debugLabel}] Received: ${isArray ? 'array' : 'paginated object'} with ${list.length} items`);
+  }
+  
+  return list;
 }
 
 /**

@@ -180,7 +180,7 @@ export default function SupervisorAssignScreen() {
     queryKey: ['/api/assignments/created'],
   });
 
-  const apiAssignments = useMemo(() => extractItems(assignmentsData), [assignmentsData]);
+  const apiAssignments = useMemo(() => extractItems(assignmentsData, 'supervisor-assignments'), [assignmentsData]);
 
   const assignments: SupervisorAssignment[] = useMemo(() => {
     return apiAssignments.map(mapAPIAssignmentToDisplay);

@@ -101,7 +101,7 @@ export default function PropertyChannelsScreen() {
     queryKey: ['/api/properties'],
   });
 
-  const allProperties = useMemo(() => extractItems(propertiesData), [propertiesData]);
+  const allProperties = useMemo(() => extractItems(propertiesData, 'properties'), [propertiesData]);
 
   const handleToggle = async (propertyId: string, subscribed: boolean) => {
     if (subscribed) {

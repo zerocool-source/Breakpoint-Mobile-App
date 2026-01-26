@@ -68,8 +68,8 @@ export function CreateAssignmentModal({ visible, onClose }: CreateAssignmentModa
     enabled: visible,
   });
 
-  const properties = useMemo(() => extractItems(propertiesData), [propertiesData]);
-  const technicians = useMemo(() => extractItems(techniciansData), [techniciansData]);
+  const properties = useMemo(() => extractItems(propertiesData, 'create-modal-properties'), [propertiesData]);
+  const technicians = useMemo(() => extractItems(techniciansData, 'create-modal-technicians'), [techniciansData]);
 
   const createAssignmentMutation = useMutation({
     mutationFn: async (data: {

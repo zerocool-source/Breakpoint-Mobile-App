@@ -16,6 +16,7 @@ import {
   type AssignmentPriority,
 } from '@/lib/supervisorMockData';
 import { CreateAssignmentModal } from '@/screens/Supervisor/Modals/CreateAssignmentModal';
+import { EditAssignmentModal } from '@/screens/Supervisor/Modals/EditAssignmentModal';
 
 type FilterTab = 'COMPLETED' | 'NOT_COMPLETED' | 'NEED_ASSISTANCE';
 
@@ -171,6 +172,8 @@ export default function SupervisorAssignScreen() {
     NEED_ASSISTANCE: true,
   });
   const [modalVisible, setModalVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [selectedAssignment, setSelectedAssignment] = useState<APIAssignment | null>(null);
 
   const { data: apiAssignments, isLoading, isError, error, refetch, isRefetching } = useQuery<APIAssignment[]>({
     queryKey: ['/api/assignments/created'],
@@ -236,6 +239,19 @@ export default function SupervisorAssignScreen() {
   const handleRefresh = useCallback(() => {
     refetch();
   }, [refetch]);
+
+  const handleAssignmentPress = useCallback((apiAssignment: APIAssignment) => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    setSelectedAssignment(apiAssignment);
+    setEditModalVisible(true);
+  }, []);
+
+  const handleEditModalClose = useCallback(() => {
+    setEditModalVisible(false);
+    setSelectedAssignment(null);
+  }, []);
 
   const totalCount = assignments.length;
 
@@ -371,13 +387,16 @@ export default function SupervisorAssignScreen() {
               
               {sectionsExpanded[section] ? (
                 <View style={styles.assignmentsList}>
-                  {sectionAssignments.map((assignment) => (
-                    <AssignmentCard
-                      key={assignment.id}
-                      assignment={assignment}
-                      onPress={() => {}}
-                    />
-                  ))}
+                  {sectionAssignments.map((assignment) => {
+                    const apiAssignment = apiAssignments?.find(a => a.id === assignment.id);
+                    return (
+                      <AssignmentCard
+                        key={assignment.id}
+                        assignment={assignment}
+                        onPress={() => apiAssignment && handleAssignmentPress(apiAssignment)}
+                      />
+                    );
+                  })}
                 </View>
               ) : null}
             </View>
@@ -397,6 +416,12 @@ export default function SupervisorAssignScreen() {
       <CreateAssignmentModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
+      />
+
+      <EditAssignmentModal
+        visible={editModalVisible}
+        onClose={handleEditModalClose}
+        assignment={selectedAssignment}
       />
     </View>
   );

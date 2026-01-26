@@ -1,11 +1,12 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { View, StyleSheet, Pressable, ScrollView, Platform } from 'react-native';
+import { View, StyleSheet, Pressable, ScrollView, Platform, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown, FadeInUp, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { ThemedText } from '@/components/ThemedText';
 import { Avatar } from '@/components/Avatar';
@@ -21,18 +22,30 @@ import { useTheme } from '@/hooks/useTheme';
 import { usePropertyChannels } from '@/context/PropertyChannelsContext';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
 import {
-  mockAssignments,
   mockDailyProgress,
   mockTruckInfo,
   mockCommissionTracker,
-  type Assignment,
   type RouteStop,
 } from '@/lib/serviceTechMockData';
+import type { ApiAssignment } from './AssignmentDetailScreen';
 
 type RootStackParamList = {
   PropertyDetail: { stop: RouteStop };
-  AssignmentDetail: { assignment: Assignment };
+  AssignmentDetail: { assignment: ApiAssignment };
 };
+
+type AssignmentFilter = 'today' | 'all';
+
+function isToday(dateString: string | null): boolean {
+  if (!dateString) return false;
+  const date = new Date(dateString);
+  const today = new Date();
+  return (
+    date.getFullYear() === today.getFullYear() &&
+    date.getMonth() === today.getMonth() &&
+    date.getDate() === today.getDate()
+  );
+}
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -46,19 +59,31 @@ function getCurrentTime(): string {
 }
 
 interface AssignmentCardProps {
-  assignment: Assignment;
+  assignment: ApiAssignment;
   onPress: () => void;
 }
 
 function AssignmentCard({ assignment, onPress }: AssignmentCardProps) {
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  };
+
   return (
     <Pressable style={styles.assignmentItem} onPress={onPress}>
       <View style={styles.assignmentItemLeft}>
-        <ThemedText style={styles.assignmentType}>{assignment.type}</ThemedText>
-        <ThemedText style={styles.assignmentProperty}>{assignment.propertyName}</ThemedText>
-        <ThemedText style={styles.assignmentNotes}>{assignment.notes}</ThemedText>
+        <ThemedText style={styles.assignmentType}>{assignment.title}</ThemedText>
+        <ThemedText style={styles.assignmentProperty}>{assignment.property.name}</ThemedText>
+        {assignment.notes ? (
+          <ThemedText style={styles.assignmentNotes}>{assignment.notes}</ThemedText>
+        ) : null}
         <ThemedText style={styles.assignmentMeta}>
-          {assignment.assignedAt} - by {assignment.assignedBy}
+          {formatDate(assignment.createdAt)} - {assignment.type}
         </ThemedText>
       </View>
       <Feather name="chevron-right" size={20} color={BrandColors.textSecondary} />
@@ -150,12 +175,27 @@ export default function ServiceTechHomeScreen() {
   const { isBatterySaverEnabled } = useBattery();
   const { addAlert } = useUrgentAlerts();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const queryClient = useQueryClient();
   
   const [assignmentsExpanded, setAssignmentsExpanded] = useState(true);
+  const [assignmentFilter, setAssignmentFilter] = useState<AssignmentFilter>('today');
   const [currentTime] = useState(getCurrentTime());
   const [showNotification, setShowNotification] = useState(false);
   const { channels: propertyChannels, isLoading: channelsLoading } = usePropertyChannels();
   const [completedStops, setCompletedStops] = useState<Set<string>>(new Set());
+
+  const { data: apiAssignments = [], isLoading: assignmentsLoading, refetch: refetchAssignments } = useQuery<ApiAssignment[]>({
+    queryKey: ['/api/assignments'],
+  });
+
+  const filteredAssignments = useMemo(() => {
+    if (assignmentFilter === 'today') {
+      return apiAssignments.filter(a => isToday(a.scheduledDate));
+    }
+    return apiAssignments;
+  }, [apiAssignments, assignmentFilter]);
+
+  const pendingAssignments = filteredAssignments.filter(a => a.status !== 'completed');
 
   const channelRouteStops: RouteStop[] = useMemo(() => {
     return propertyChannels.map((channel, index) => {
@@ -236,18 +276,27 @@ export default function ServiceTechHomeScreen() {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
+    refetchAssignments();
+    queryClient.invalidateQueries({ queryKey: ['/api/assignments'] });
   };
 
   const handleStopPress = useCallback((stop: RouteStop) => {
     navigation.navigate('PropertyDetail', { stop });
   }, [navigation]);
 
-  const handleAssignmentPress = useCallback((assignment: Assignment) => {
+  const handleAssignmentPress = useCallback((assignment: ApiAssignment) => {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
     navigation.navigate('AssignmentDetail', { assignment });
   }, [navigation]);
+
+  const toggleAssignmentFilter = () => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    setAssignmentFilter(prev => prev === 'today' ? 'all' : 'today');
+  };
 
   return (
     <BubbleBackground bubbleCount={18}>
@@ -299,39 +348,95 @@ export default function ServiceTechHomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={FadeInDown.delay(100).springify()}>
-          <Pressable
-            style={styles.assignmentsCard}
-            onPress={() => setAssignmentsExpanded(!assignmentsExpanded)}
-          >
-            <View style={styles.assignmentsHeader}>
-              <View style={styles.assignmentsHeaderLeft}>
-                <Feather
-                  name={assignmentsExpanded ? 'chevron-down' : 'chevron-right'}
-                  size={20}
-                  color="#FFFFFF"
-                />
-                <Feather name="clipboard" size={18} color="#FFFFFF" style={{ marginLeft: 8 }} />
-                <ThemedText style={styles.assignmentsTitle}>ASSIGNMENTS</ThemedText>
-              </View>
-              <View style={styles.assignmentsBadge}>
-                <ThemedText style={styles.assignmentsBadgeText}>
-                  {mockAssignments.length} pending
-                </ThemedText>
-              </View>
-            </View>
-            
-            {assignmentsExpanded && (
-              <View style={styles.assignmentsList}>
-                {mockAssignments.slice(0, 2).map((assignment) => (
-                  <AssignmentCard
-                    key={assignment.id}
-                    assignment={assignment}
-                    onPress={() => handleAssignmentPress(assignment)}
+          <View style={styles.assignmentsCard}>
+            <Pressable
+              onPress={() => setAssignmentsExpanded(!assignmentsExpanded)}
+            >
+              <View style={styles.assignmentsHeader}>
+                <View style={styles.assignmentsHeaderLeft}>
+                  <Feather
+                    name={assignmentsExpanded ? 'chevron-down' : 'chevron-right'}
+                    size={20}
+                    color="#FFFFFF"
                   />
-                ))}
+                  <Feather name="clipboard" size={18} color="#FFFFFF" style={{ marginLeft: 8 }} />
+                  <ThemedText style={styles.assignmentsTitle}>ASSIGNMENTS</ThemedText>
+                </View>
+                <View style={styles.assignmentsBadge}>
+                  <ThemedText style={styles.assignmentsBadgeText}>
+                    {pendingAssignments.length} pending
+                  </ThemedText>
+                </View>
               </View>
-            )}
-          </Pressable>
+            </Pressable>
+            
+            {assignmentsExpanded ? (
+              <View style={styles.assignmentsContent}>
+                <View style={styles.filterToggleContainer}>
+                  <Pressable
+                    style={[
+                      styles.filterButton,
+                      assignmentFilter === 'today' && styles.filterButtonActive,
+                    ]}
+                    onPress={() => {
+                      if (assignmentFilter !== 'today') toggleAssignmentFilter();
+                    }}
+                  >
+                    <ThemedText
+                      style={[
+                        styles.filterButtonText,
+                        assignmentFilter === 'today' && styles.filterButtonTextActive,
+                      ]}
+                    >
+                      Today
+                    </ThemedText>
+                  </Pressable>
+                  <Pressable
+                    style={[
+                      styles.filterButton,
+                      assignmentFilter === 'all' && styles.filterButtonActive,
+                    ]}
+                    onPress={() => {
+                      if (assignmentFilter !== 'all') toggleAssignmentFilter();
+                    }}
+                  >
+                    <ThemedText
+                      style={[
+                        styles.filterButtonText,
+                        assignmentFilter === 'all' && styles.filterButtonTextActive,
+                      ]}
+                    >
+                      All
+                    </ThemedText>
+                  </Pressable>
+                </View>
+                
+                {assignmentsLoading ? (
+                  <View style={styles.assignmentsLoadingContainer}>
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                    <ThemedText style={styles.assignmentsLoadingText}>Loading...</ThemedText>
+                  </View>
+                ) : pendingAssignments.length > 0 ? (
+                  <View style={styles.assignmentsList}>
+                    {pendingAssignments.slice(0, 5).map((assignment) => (
+                      <AssignmentCard
+                        key={assignment.id}
+                        assignment={assignment}
+                        onPress={() => handleAssignmentPress(assignment)}
+                      />
+                    ))}
+                  </View>
+                ) : (
+                  <View style={styles.noAssignmentsContainer}>
+                    <Feather name="check-circle" size={24} color="rgba(255,255,255,0.7)" />
+                    <ThemedText style={styles.noAssignmentsText}>
+                      {assignmentFilter === 'today' ? 'No assignments for today' : 'No pending assignments'}
+                    </ThemedText>
+                  </View>
+                )}
+              </View>
+            ) : null}
+          </View>
         </Animated.View>
 
         {nextStop ? (
@@ -656,8 +761,58 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
-  assignmentsList: {
+  assignmentsContent: {
     marginTop: Spacing.md,
+  },
+  filterToggleContainer: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: BorderRadius.sm,
+    padding: 2,
+    marginBottom: Spacing.md,
+  },
+  filterButton: {
+    flex: 1,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.xs,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterButtonActive: {
+    backgroundColor: '#FFFFFF',
+  },
+  filterButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.8)',
+  },
+  filterButtonTextActive: {
+    color: BrandColors.vividTangerine,
+  },
+  assignmentsLoadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.lg,
+  },
+  assignmentsLoadingText: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+  },
+  noAssignmentsContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.lg,
+  },
+  noAssignmentsText: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  assignmentsList: {
     gap: Spacing.sm,
   },
   assignmentItem: {

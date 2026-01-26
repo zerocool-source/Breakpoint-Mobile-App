@@ -6,6 +6,7 @@ import {
   Pressable,
   TextInput,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
@@ -13,16 +14,41 @@ import { Image } from 'expo-image';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { ThemedText } from '@/components/ThemedText';
 import { BPButton } from '@/components/BPButton';
-import { BubbleBackground } from '@/components/BubbleBackground';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
-import type { Assignment } from '@/lib/serviceTechMockData';
+import { apiRequest } from '@/lib/query-client';
+
+interface Property {
+  id: string;
+  name: string;
+  address: string | null;
+  type: string;
+  poolCount: number | null;
+  gateCode: string | null;
+  contactName: string | null;
+  contactPhone: string | null;
+}
+
+export interface ApiAssignment {
+  id: string;
+  title: string;
+  type: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'need_assistance';
+  priority: 'LOW' | 'MEDIUM' | 'HIGH';
+  notes: string | null;
+  scheduledDate: string | null;
+  scheduledTime: string | null;
+  createdAt: string;
+  updatedAt: string;
+  property: Property;
+}
 
 type ServiceTechStackParamList = {
-  AssignmentDetail: { assignment: Assignment };
+  AssignmentDetail: { assignment: ApiAssignment };
 };
 
 export default function AssignmentDetailScreen() {
@@ -30,9 +56,27 @@ export default function AssignmentDetailScreen() {
   const navigation = useNavigation();
   const route = useRoute<RouteProp<ServiceTechStackParamList, 'AssignmentDetail'>>();
   const { theme } = useTheme();
+  const queryClient = useQueryClient();
 
   const { assignment } = route.params;
-  const [completionNotes, setCompletionNotes] = useState('');
+  const [completionNotes, setCompletionNotes] = useState(assignment.notes || '');
+
+  const updateAssignmentMutation = useMutation({
+    mutationFn: async (data: { status: string; notes: string }) => {
+      const response = await apiRequest('PATCH', `/api/assignments/${assignment.id}`, {
+        status: data.status,
+        notes: data.notes,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/assignments'] });
+      navigation.goBack();
+    },
+    onError: (error) => {
+      console.error('Failed to update assignment:', error);
+    },
+  });
 
   const handleBack = () => {
     if (Platform.OS !== 'web') {
@@ -45,20 +89,30 @@ export default function AssignmentDetailScreen() {
     if (Platform.OS !== 'web') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
-    navigation.goBack();
+    updateAssignmentMutation.mutate({
+      status: 'completed',
+      notes: completionNotes,
+    });
   };
 
   const handleDidNotComplete = () => {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
-    navigation.goBack();
+    updateAssignmentMutation.mutate({
+      status: 'pending',
+      notes: completionNotes,
+    });
   };
 
   const handleNeedAssistance = () => {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
+    updateAssignmentMutation.mutate({
+      status: 'need_assistance',
+      notes: completionNotes,
+    });
   };
 
   const handleAddPhoto = () => {
@@ -67,16 +121,28 @@ export default function AssignmentDetailScreen() {
     }
   };
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  };
+
+  const isUpdating = updateAssignmentMutation.isPending;
+
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top }]}>
         <View style={styles.headerContent}>
-          <Pressable onPress={handleBack} style={styles.backButton}>
+          <Pressable onPress={handleBack} style={styles.backButton} disabled={isUpdating}>
             <Feather name="chevron-left" size={28} color="#FFFFFF" />
           </Pressable>
           <View style={styles.headerText}>
             <ThemedText style={styles.headerTitle}>Assignment Details</ThemedText>
-            <ThemedText style={styles.headerSubtitle}>{assignment.propertyName}</ThemedText>
+            <ThemedText style={styles.headerSubtitle}>{assignment.property.name}</ThemedText>
           </View>
         </View>
       </View>
@@ -89,23 +155,36 @@ export default function AssignmentDetailScreen() {
       >
         <Animated.View entering={FadeInDown.delay(100).springify()}>
           <View style={[styles.card, { backgroundColor: theme.surface }]}>
-            <ThemedText style={styles.cardTitle}>{assignment.type}</ThemedText>
-            <ThemedText style={[styles.cardNotes, { color: BrandColors.azureBlue }]}>
-              {assignment.notes}
-            </ThemedText>
+            <ThemedText style={styles.cardTitle}>{assignment.title}</ThemedText>
+            <View style={styles.typeBadge}>
+              <ThemedText style={styles.typeBadgeText}>{assignment.type}</ThemedText>
+            </View>
+            {assignment.notes ? (
+              <ThemedText style={[styles.cardNotes, { color: BrandColors.azureBlue }]}>
+                {assignment.notes}
+              </ThemedText>
+            ) : null}
             <View style={styles.cardMeta}>
               <View style={styles.metaRow}>
                 <Feather name="clock" size={14} color={theme.textSecondary} />
                 <ThemedText style={[styles.metaText, { color: theme.textSecondary }]}>
-                  Created {assignment.assignedAt}
+                  Created {formatDate(assignment.createdAt)}
                 </ThemedText>
               </View>
               <View style={styles.metaRow}>
-                <Feather name="user" size={14} color={theme.textSecondary} />
+                <Feather name="map-pin" size={14} color={theme.textSecondary} />
                 <ThemedText style={[styles.metaText, { color: theme.textSecondary }]}>
-                  Assigned by {assignment.assignedBy}
+                  {assignment.property.address || 'No address'}
                 </ThemedText>
               </View>
+              {assignment.scheduledDate ? (
+                <View style={styles.metaRow}>
+                  <Feather name="calendar" size={14} color={theme.textSecondary} />
+                  <ThemedText style={[styles.metaText, { color: theme.textSecondary }]}>
+                    Scheduled: {formatDate(assignment.scheduledDate)}
+                  </ThemedText>
+                </View>
+              ) : null}
             </View>
           </View>
         </Animated.View>
@@ -135,6 +214,7 @@ export default function AssignmentDetailScreen() {
               multiline
               numberOfLines={4}
               textAlignVertical="top"
+              editable={!isUpdating}
             />
           </View>
         </Animated.View>
@@ -143,6 +223,7 @@ export default function AssignmentDetailScreen() {
           <Pressable 
             style={[styles.addPhotoCard, { backgroundColor: theme.surface }]}
             onPress={handleAddPhoto}
+            disabled={isUpdating}
           >
             <Feather name="camera" size={20} color={theme.textSecondary} />
             <ThemedText style={[styles.addPhotoText, { color: theme.text }]}>Add Photos</ThemedText>
@@ -151,32 +232,41 @@ export default function AssignmentDetailScreen() {
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(500).springify()} style={styles.buttonContainer}>
-          <BPButton
-            onPress={handleComplete}
-            fullWidth
-            icon="check"
-            style={styles.completeButton}
-          >
-            Complete
-          </BPButton>
+          {isUpdating ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={BrandColors.azureBlue} />
+              <ThemedText style={styles.loadingText}>Updating assignment...</ThemedText>
+            </View>
+          ) : (
+            <>
+              <BPButton
+                onPress={handleComplete}
+                fullWidth
+                icon="check"
+                style={styles.completeButton}
+              >
+                Complete
+              </BPButton>
 
-          <BPButton
-            onPress={handleDidNotComplete}
-            variant="secondary"
-            fullWidth
-            icon="x"
-            style={styles.didNotCompleteButton}
-          >
-            Did Not Complete
-          </BPButton>
+              <BPButton
+                onPress={handleDidNotComplete}
+                variant="secondary"
+                fullWidth
+                icon="x"
+                style={styles.didNotCompleteButton}
+              >
+                Did Not Complete
+              </BPButton>
 
-          <Pressable 
-            style={styles.needAssistanceButton}
-            onPress={handleNeedAssistance}
-          >
-            <Feather name="alert-triangle" size={18} color={BrandColors.vividTangerine} />
-            <ThemedText style={styles.needAssistanceText}>Need Assistance</ThemedText>
-          </Pressable>
+              <Pressable 
+                style={styles.needAssistanceButton}
+                onPress={handleNeedAssistance}
+              >
+                <Feather name="alert-triangle" size={18} color={BrandColors.vividTangerine} />
+                <ThemedText style={styles.needAssistanceText}>Need Assistance</ThemedText>
+              </Pressable>
+            </>
+          )}
         </Animated.View>
       </ScrollView>
     </View>
@@ -237,6 +327,19 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginBottom: Spacing.xs,
   },
+  typeBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: BrandColors.azureBlue + '20',
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.xs,
+    marginBottom: Spacing.md,
+  },
+  typeBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: BrandColors.azureBlue,
+  },
   cardNotes: {
     fontSize: 16,
     marginBottom: Spacing.md,
@@ -251,6 +354,7 @@ const styles = StyleSheet.create({
   },
   metaText: {
     fontSize: 13,
+    flex: 1,
   },
   sectionTitle: {
     fontSize: 16,
@@ -289,6 +393,15 @@ const styles = StyleSheet.create({
   buttonContainer: {
     gap: Spacing.md,
     marginTop: Spacing.md,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    paddingVertical: Spacing.xl,
+    gap: Spacing.md,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: BrandColors.textSecondary,
   },
   completeButton: {
     backgroundColor: BrandColors.emerald,

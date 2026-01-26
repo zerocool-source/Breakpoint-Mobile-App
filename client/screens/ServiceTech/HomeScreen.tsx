@@ -21,6 +21,7 @@ import { useUrgentAlerts } from '@/context/UrgentAlertsContext';
 import { useTheme } from '@/hooks/useTheme';
 import { usePropertyChannels } from '@/context/PropertyChannelsContext';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
+import { extractItems, type Page } from '@/lib/query-client';
 import {
   mockDailyProgress,
   mockTruckInfo,
@@ -74,16 +75,20 @@ function AssignmentCard({ assignment, onPress }: AssignmentCardProps) {
     });
   };
 
+  const propertyName = assignment.property?.name ?? '(Unknown Property)';
+  const assignmentTitle = assignment.title ?? 'Untitled Assignment';
+  const assignmentType = assignment.type ?? 'assignment';
+
   return (
     <Pressable style={styles.assignmentItem} onPress={onPress}>
       <View style={styles.assignmentItemLeft}>
-        <ThemedText style={styles.assignmentType}>{assignment.title}</ThemedText>
-        <ThemedText style={styles.assignmentProperty}>{assignment.property.name}</ThemedText>
+        <ThemedText style={styles.assignmentType}>{assignmentTitle}</ThemedText>
+        <ThemedText style={styles.assignmentProperty}>{propertyName}</ThemedText>
         {assignment.notes ? (
           <ThemedText style={styles.assignmentNotes}>{assignment.notes}</ThemedText>
         ) : null}
         <ThemedText style={styles.assignmentMeta}>
-          {formatDate(assignment.createdAt)} - {assignment.type}
+          {formatDate(assignment.createdAt)} - {assignmentType}
         </ThemedText>
       </View>
       <Feather name="chevron-right" size={20} color={BrandColors.textSecondary} />
@@ -184,9 +189,11 @@ export default function ServiceTechHomeScreen() {
   const { channels: propertyChannels, isLoading: channelsLoading } = usePropertyChannels();
   const [completedStops, setCompletedStops] = useState<Set<string>>(new Set());
 
-  const { data: apiAssignments = [], isLoading: assignmentsLoading, refetch: refetchAssignments } = useQuery<ApiAssignment[]>({
+  const { data: assignmentsData, isLoading: assignmentsLoading, refetch: refetchAssignments } = useQuery<Page<ApiAssignment>>({
     queryKey: ['/api/assignments'],
   });
+
+  const apiAssignments = useMemo(() => extractItems(assignmentsData), [assignmentsData]);
 
   const filteredAssignments = useMemo(() => {
     if (assignmentFilter === 'today') {

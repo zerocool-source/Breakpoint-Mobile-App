@@ -10,6 +10,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { BPButton } from '@/components/BPButton';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
+import { extractItems, type Page } from '@/lib/query-client';
 import {
   type SupervisorAssignment,
   type AssignmentStatus,
@@ -175,12 +176,13 @@ export default function SupervisorAssignScreen() {
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<APIAssignment | null>(null);
 
-  const { data: apiAssignments, isLoading, isError, error, refetch, isRefetching } = useQuery<APIAssignment[]>({
+  const { data: assignmentsData, isLoading, isError, error, refetch, isRefetching } = useQuery<Page<APIAssignment>>({
     queryKey: ['/api/assignments/created'],
   });
 
+  const apiAssignments = useMemo(() => extractItems(assignmentsData), [assignmentsData]);
+
   const assignments: SupervisorAssignment[] = useMemo(() => {
-    if (!apiAssignments) return [];
     return apiAssignments.map(mapAPIAssignmentToDisplay);
   }, [apiAssignments]);
 

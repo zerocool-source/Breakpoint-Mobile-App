@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -21,7 +21,7 @@ import { BPButton } from '@/components/BPButton';
 import { DualVoiceInput } from '@/components/DualVoiceInput';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing } from '@/constants/theme';
-import { apiRequest } from '@/lib/query-client';
+import { apiRequest, extractItems, type Page } from '@/lib/query-client';
 
 type AssignmentPriority = 'LOW' | 'MEDIUM' | 'HIGH';
 
@@ -58,15 +58,18 @@ export function CreateAssignmentModal({ visible, onClose }: CreateAssignmentModa
   const [isAssistAssignment, setIsAssistAssignment] = useState(false);
   const [techNeedingHelp, setTechNeedingHelp] = useState('');
 
-  const { data: properties = [], isLoading: propertiesLoading, error: propertiesError } = useQuery<Property[]>({
+  const { data: propertiesData, isLoading: propertiesLoading, error: propertiesError } = useQuery<Page<Property>>({
     queryKey: ['/api/properties'],
     enabled: visible,
   });
 
-  const { data: technicians = [], isLoading: techniciansLoading, error: techniciansError } = useQuery<Technician[]>({
+  const { data: techniciansData, isLoading: techniciansLoading, error: techniciansError } = useQuery<Page<Technician>>({
     queryKey: ['/api/technicians'],
     enabled: visible,
   });
+
+  const properties = useMemo(() => extractItems(propertiesData), [propertiesData]);
+  const technicians = useMemo(() => extractItems(techniciansData), [techniciansData]);
 
   const createAssignmentMutation = useMutation({
     mutationFn: async (data: {

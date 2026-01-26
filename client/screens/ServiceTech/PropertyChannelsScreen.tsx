@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -20,6 +20,7 @@ import { BubbleBackground } from '@/components/BubbleBackground';
 import { useTheme } from '@/hooks/useTheme';
 import { usePropertyChannels } from '@/context/PropertyChannelsContext';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
+import { extractItems, type Page } from '@/lib/query-client';
 import type { Property } from '@shared/schema';
 
 interface PropertyCardProps {
@@ -96,9 +97,11 @@ export default function PropertyChannelsScreen() {
   const { channels, addChannel, removeChannel, isPropertyInChannels, isLoading: channelsLoading } = usePropertyChannels();
   const [refreshing, setRefreshing] = useState(false);
 
-  const { data: allProperties = [], isLoading: propertiesLoading, refetch } = useQuery<Property[]>({
+  const { data: propertiesData, isLoading: propertiesLoading, refetch } = useQuery<Page<Property>>({
     queryKey: ['/api/properties'],
   });
+
+  const allProperties = useMemo(() => extractItems(propertiesData), [propertiesData]);
 
   const handleToggle = async (propertyId: string, subscribed: boolean) => {
     if (subscribed) {

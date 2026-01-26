@@ -8,18 +8,35 @@ import {
   ScrollView,
   Platform,
   useWindowDimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import * as Haptics from 'expo-haptics';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { ThemedText } from '@/components/ThemedText';
 import { BPButton } from '@/components/BPButton';
 import { DualVoiceInput } from '@/components/DualVoiceInput';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing } from '@/constants/theme';
-import { mockTechnicians, mockProperties, type AssignmentPriority } from '@/lib/supervisorMockData';
+import { apiRequest } from '@/lib/query-client';
+
+type AssignmentPriority = 'LOW' | 'MEDIUM' | 'HIGH';
+
+interface Property {
+  id: number;
+  name: string;
+  address: string;
+}
+
+interface Technician {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+}
 
 interface CreateAssignmentModalProps {
   visible: boolean;
@@ -30,27 +47,73 @@ export function CreateAssignmentModal({ visible, onClose }: CreateAssignmentModa
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const { height: windowHeight } = useWindowDimensions();
+  const queryClient = useQueryClient();
 
-  const [assignmentType, setAssignmentType] = useState('');
+  const [title, setTitle] = useState('');
   const [selectedTechnician, setSelectedTechnician] = useState('');
   const [selectedProperty, setSelectedProperty] = useState('');
   const [priority, setPriority] = useState<AssignmentPriority>('MEDIUM');
+  const [scheduledDate, setScheduledDate] = useState('');
   const [notes, setNotes] = useState('');
   const [isAssistAssignment, setIsAssistAssignment] = useState(false);
   const [techNeedingHelp, setTechNeedingHelp] = useState('');
 
-  const handleSubmit = () => {
-    if (Platform.OS !== 'web') {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    }
-    setAssignmentType('');
+  const { data: properties = [], isLoading: propertiesLoading, error: propertiesError } = useQuery<Property[]>({
+    queryKey: ['/api/properties'],
+    enabled: visible,
+  });
+
+  const { data: technicians = [], isLoading: techniciansLoading, error: techniciansError } = useQuery<Technician[]>({
+    queryKey: ['/api/technicians'],
+    enabled: visible,
+  });
+
+  const createAssignmentMutation = useMutation({
+    mutationFn: async (data: {
+      propertyId: number;
+      technicianId: number;
+      title: string;
+      type: string;
+      priority: AssignmentPriority;
+      scheduledDate?: string;
+      notes?: string;
+    }) => {
+      const response = await apiRequest('POST', '/api/assignments', data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/assignments/created'] });
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+      resetForm();
+      onClose();
+    },
+  });
+
+  const resetForm = () => {
+    setTitle('');
     setSelectedTechnician('');
     setSelectedProperty('');
     setPriority('MEDIUM');
+    setScheduledDate('');
     setNotes('');
     setIsAssistAssignment(false);
     setTechNeedingHelp('');
-    onClose();
+  };
+
+  const handleSubmit = () => {
+    if (!selectedProperty || !selectedTechnician || !title.trim()) return;
+
+    createAssignmentMutation.mutate({
+      propertyId: parseInt(selectedProperty, 10),
+      technicianId: parseInt(selectedTechnician, 10),
+      title: title.trim(),
+      type: 'assignment',
+      priority,
+      scheduledDate: scheduledDate.trim() || undefined,
+      notes: notes.trim() || undefined,
+    });
   };
 
   const handleAssistToggle = () => {
@@ -95,12 +158,15 @@ export function CreateAssignmentModal({ visible, onClose }: CreateAssignmentModa
     }
   };
 
-  const isFormValid = assignmentType.trim() && selectedTechnician && selectedProperty && 
+  const isFormValid = title.trim() && selectedTechnician && selectedProperty && 
     (!isAssistAssignment || (isAssistAssignment && techNeedingHelp && techNeedingHelp !== selectedTechnician));
   
-  const availableTechsToHelp = mockTechnicians.filter(tech => tech.id !== selectedTechnician);
-  const selectedHelperName = mockTechnicians.find(t => t.id === selectedTechnician)?.name || '';
-  const selectedNeedingHelpName = mockTechnicians.find(t => t.id === techNeedingHelp)?.name || '';
+  const availableTechsToHelp = technicians.filter(tech => String(tech.id) !== selectedTechnician);
+  const selectedHelperName = technicians.find(t => String(t.id) === selectedTechnician)?.name || '';
+  const selectedNeedingHelpName = technicians.find(t => String(t.id) === techNeedingHelp)?.name || '';
+
+  const isLoading = propertiesLoading || techniciansLoading;
+  const hasError = propertiesError || techniciansError;
 
   return (
     <Modal
@@ -123,194 +189,237 @@ export function CreateAssignmentModal({ visible, onClose }: CreateAssignmentModa
             </Pressable>
           </View>
 
-          <ScrollView
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
-            <View style={styles.inputSection}>
-              <ThemedText style={styles.inputLabel}>Assignment Type *</ThemedText>
-              <View style={[styles.textInputContainer, { borderColor: theme.border }]}>
-                <TextInput
-                  style={[styles.textInput, { color: theme.text }]}
-                  placeholder="Enter assignment type..."
-                  placeholderTextColor={theme.textSecondary}
-                  value={assignmentType}
-                  onChangeText={setAssignmentType}
-                />
-              </View>
-            </View>
-
-            <View style={styles.inputSection}>
-              <ThemedText style={styles.inputLabel}>
-                {isAssistAssignment ? 'Helper Technician *' : 'Technician *'}
+          {isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={BrandColors.azureBlue} />
+              <ThemedText style={[styles.loadingText, { color: theme.textSecondary }]}>
+                Loading...
               </ThemedText>
-              <View style={[styles.pickerContainer, { borderColor: theme.border }]}>
-                <Picker
-                  selectedValue={selectedTechnician}
-                  onValueChange={(value: string) => {
-                    setSelectedTechnician(value);
-                    if (value === techNeedingHelp) {
-                      setTechNeedingHelp('');
-                    }
-                  }}
-                  style={styles.picker}
-                >
-                  <Picker.Item label="Select technician..." value="" color={theme.textSecondary} />
-                  {mockTechnicians.map((tech) => (
-                    <Picker.Item key={tech.id} label={tech.name} value={tech.id} />
-                  ))}
-                </Picker>
-              </View>
             </View>
-
-            <Pressable
-              style={[
-                styles.assistToggle,
-                {
-                  backgroundColor: isAssistAssignment ? BrandColors.vividTangerine : theme.backgroundSecondary,
-                  borderColor: BrandColors.vividTangerine,
-                },
-              ]}
-              onPress={handleAssistToggle}
-            >
-              <Feather
-                name="users"
-                size={20}
-                color={isAssistAssignment ? '#FFFFFF' : BrandColors.vividTangerine}
-              />
-              <ThemedText
-                style={[
-                  styles.assistToggleText,
-                  { color: isAssistAssignment ? '#FFFFFF' : BrandColors.vividTangerine },
-                ]}
+          ) : hasError ? (
+            <View style={styles.errorContainer}>
+              <Feather name="alert-circle" size={48} color={BrandColors.danger} />
+              <ThemedText style={[styles.errorText, { color: theme.text }]}>
+                Failed to load data
+              </ThemedText>
+              <ThemedText style={[styles.errorSubtext, { color: theme.textSecondary }]}>
+                Please try again later
+              </ThemedText>
+            </View>
+          ) : (
+            <>
+              <ScrollView
+                style={styles.scrollView}
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
               >
-                Assign to Help Another Tech
-              </ThemedText>
-              <Feather
-                name={isAssistAssignment ? 'check-circle' : 'circle'}
-                size={20}
-                color={isAssistAssignment ? '#FFFFFF' : BrandColors.vividTangerine}
-              />
-            </Pressable>
-
-            {isAssistAssignment ? (
-              <View style={styles.inputSection}>
-                <ThemedText style={styles.inputLabel}>Technician Needing Help *</ThemedText>
-                <View style={[styles.pickerContainer, { borderColor: BrandColors.vividTangerine }]}>
-                  <Picker
-                    selectedValue={techNeedingHelp}
-                    onValueChange={(value: string) => setTechNeedingHelp(value)}
-                    style={styles.picker}
-                  >
-                    <Picker.Item label="Select technician to assist..." value="" color={theme.textSecondary} />
-                    {availableTechsToHelp.map((tech) => (
-                      <Picker.Item key={tech.id} label={tech.name} value={tech.id} />
-                    ))}
-                  </Picker>
+                <View style={styles.inputSection}>
+                  <ThemedText style={styles.inputLabel}>Title *</ThemedText>
+                  <View style={[styles.textInputContainer, { borderColor: theme.border }]}>
+                    <TextInput
+                      style={[styles.textInput, { color: theme.text }]}
+                      placeholder="Enter assignment title..."
+                      placeholderTextColor={theme.textSecondary}
+                      value={title}
+                      onChangeText={setTitle}
+                    />
+                  </View>
                 </View>
-                {selectedTechnician && techNeedingHelp ? (
-                  <View style={[styles.assistSummary, { backgroundColor: `${BrandColors.vividTangerine}15` }]}>
-                    <Feather name="arrow-right" size={16} color={BrandColors.vividTangerine} />
-                    <ThemedText style={[styles.assistSummaryText, { color: theme.text }]}>
-                      <ThemedText style={{ fontWeight: '600' }}>{selectedHelperName}</ThemedText>
-                      {' will assist '}
-                      <ThemedText style={{ fontWeight: '600' }}>{selectedNeedingHelpName}</ThemedText>
+
+                <View style={styles.inputSection}>
+                  <ThemedText style={styles.inputLabel}>
+                    {isAssistAssignment ? 'Helper Technician *' : 'Technician *'}
+                  </ThemedText>
+                  <View style={[styles.pickerContainer, { borderColor: theme.border }]}>
+                    <Picker
+                      selectedValue={selectedTechnician}
+                      onValueChange={(value: string) => {
+                        setSelectedTechnician(value);
+                        if (value === techNeedingHelp) {
+                          setTechNeedingHelp('');
+                        }
+                      }}
+                      style={styles.picker}
+                    >
+                      <Picker.Item label="Select technician..." value="" color={theme.textSecondary} />
+                      {technicians.map((tech) => (
+                        <Picker.Item key={tech.id} label={tech.name} value={String(tech.id)} />
+                      ))}
+                    </Picker>
+                  </View>
+                </View>
+
+                <Pressable
+                  style={[
+                    styles.assistToggle,
+                    {
+                      backgroundColor: isAssistAssignment ? BrandColors.vividTangerine : theme.backgroundSecondary,
+                      borderColor: BrandColors.vividTangerine,
+                    },
+                  ]}
+                  onPress={handleAssistToggle}
+                >
+                  <Feather
+                    name="users"
+                    size={20}
+                    color={isAssistAssignment ? '#FFFFFF' : BrandColors.vividTangerine}
+                  />
+                  <ThemedText
+                    style={[
+                      styles.assistToggleText,
+                      { color: isAssistAssignment ? '#FFFFFF' : BrandColors.vividTangerine },
+                    ]}
+                  >
+                    Assign to Help Another Tech
+                  </ThemedText>
+                  <Feather
+                    name={isAssistAssignment ? 'check-circle' : 'circle'}
+                    size={20}
+                    color={isAssistAssignment ? '#FFFFFF' : BrandColors.vividTangerine}
+                  />
+                </Pressable>
+
+                {isAssistAssignment ? (
+                  <View style={styles.inputSection}>
+                    <ThemedText style={styles.inputLabel}>Technician Needing Help *</ThemedText>
+                    <View style={[styles.pickerContainer, { borderColor: BrandColors.vividTangerine }]}>
+                      <Picker
+                        selectedValue={techNeedingHelp}
+                        onValueChange={(value: string) => setTechNeedingHelp(value)}
+                        style={styles.picker}
+                      >
+                        <Picker.Item label="Select technician to assist..." value="" color={theme.textSecondary} />
+                        {availableTechsToHelp.map((tech) => (
+                          <Picker.Item key={tech.id} label={tech.name} value={String(tech.id)} />
+                        ))}
+                      </Picker>
+                    </View>
+                    {selectedTechnician && techNeedingHelp ? (
+                      <View style={[styles.assistSummary, { backgroundColor: `${BrandColors.vividTangerine}15` }]}>
+                        <Feather name="arrow-right" size={16} color={BrandColors.vividTangerine} />
+                        <ThemedText style={[styles.assistSummaryText, { color: theme.text }]}>
+                          <ThemedText style={{ fontWeight: '600' }}>{selectedHelperName}</ThemedText>
+                          {' will assist '}
+                          <ThemedText style={{ fontWeight: '600' }}>{selectedNeedingHelpName}</ThemedText>
+                        </ThemedText>
+                      </View>
+                    ) : null}
+                  </View>
+                ) : null}
+
+                <View style={styles.inputSection}>
+                  <ThemedText style={styles.inputLabel}>Property *</ThemedText>
+                  <View style={[styles.pickerContainer, { borderColor: theme.border }]}>
+                    <Picker
+                      selectedValue={selectedProperty}
+                      onValueChange={(value: string) => setSelectedProperty(value)}
+                      style={styles.picker}
+                    >
+                      <Picker.Item label="Select property..." value="" color={theme.textSecondary} />
+                      {properties.map((prop) => (
+                        <Picker.Item key={prop.id} label={prop.name} value={String(prop.id)} />
+                      ))}
+                    </Picker>
+                  </View>
+                </View>
+
+                <View style={styles.inputSection}>
+                  <ThemedText style={styles.inputLabel}>Priority</ThemedText>
+                  <View style={styles.priorityButtons}>
+                    {(['LOW', 'MEDIUM', 'HIGH'] as AssignmentPriority[]).map((p) => (
+                      <Pressable
+                        key={p}
+                        style={[
+                          styles.priorityButton,
+                          {
+                            backgroundColor: priority === p ? getPriorityColor(p) : theme.backgroundSecondary,
+                            borderColor: getPriorityColor(p),
+                          },
+                        ]}
+                        onPress={() => handlePrioritySelect(p)}
+                      >
+                        <ThemedText
+                          style={[
+                            styles.priorityButtonText,
+                            { color: priority === p ? '#FFFFFF' : getPriorityColor(p) },
+                          ]}
+                        >
+                          {p}
+                        </ThemedText>
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
+
+                <View style={styles.inputSection}>
+                  <ThemedText style={styles.inputLabel}>Scheduled Date</ThemedText>
+                  <View style={[styles.textInputContainer, { borderColor: theme.border }]}>
+                    <TextInput
+                      style={[styles.textInput, { color: theme.text }]}
+                      placeholder="YYYY-MM-DD (e.g., 2026-01-27)"
+                      placeholderTextColor={theme.textSecondary}
+                      value={scheduledDate}
+                      onChangeText={setScheduledDate}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.inputSection}>
+                  <ThemedText style={styles.inputLabel}>Notes</ThemedText>
+                  <DualVoiceInput
+                    value={notes}
+                    onTextChange={setNotes}
+                    placeholder="Add any notes or instructions..."
+                  />
+                </View>
+
+                <View style={styles.photosSection}>
+                  <ThemedText style={styles.inputLabel}>Photos</ThemedText>
+                  <View style={styles.photoButtons}>
+                    <Pressable
+                      style={[styles.photoButton, { borderColor: theme.border }]}
+                      onPress={handleTakePhoto}
+                    >
+                      <Feather name="camera" size={24} color={theme.textSecondary} />
+                      <ThemedText style={[styles.photoButtonText, { color: theme.textSecondary }]}>
+                        Take Photo
+                      </ThemedText>
+                    </Pressable>
+                    <Pressable
+                      style={[styles.photoButton, { borderColor: theme.border }]}
+                      onPress={handleFromGallery}
+                    >
+                      <Feather name="image" size={24} color={theme.textSecondary} />
+                      <ThemedText style={[styles.photoButtonText, { color: theme.textSecondary }]}>
+                        Gallery
+                      </ThemedText>
+                    </Pressable>
+                  </View>
+                </View>
+
+                {createAssignmentMutation.error ? (
+                  <View style={[styles.mutationError, { backgroundColor: `${BrandColors.danger}15` }]}>
+                    <Feather name="alert-triangle" size={16} color={BrandColors.danger} />
+                    <ThemedText style={[styles.mutationErrorText, { color: BrandColors.danger }]}>
+                      Failed to create assignment. Please try again.
                     </ThemedText>
                   </View>
                 ) : null}
-              </View>
-            ) : null}
+              </ScrollView>
 
-            <View style={styles.inputSection}>
-              <ThemedText style={styles.inputLabel}>Property *</ThemedText>
-              <View style={[styles.pickerContainer, { borderColor: theme.border }]}>
-                <Picker
-                  selectedValue={selectedProperty}
-                  onValueChange={(value: string) => setSelectedProperty(value)}
-                  style={styles.picker}
+              <View style={styles.footer}>
+                <BPButton
+                  variant="primary"
+                  onPress={handleSubmit}
+                  fullWidth
+                  disabled={!isFormValid || createAssignmentMutation.isPending}
                 >
-                  <Picker.Item label="Select property..." value="" color={theme.textSecondary} />
-                  {mockProperties.map((prop) => (
-                    <Picker.Item key={prop.id} label={prop.name} value={prop.id} />
-                  ))}
-                </Picker>
+                  {createAssignmentMutation.isPending ? 'Creating...' : 'Create Assignment'}
+                </BPButton>
               </View>
-            </View>
-
-            <View style={styles.inputSection}>
-              <ThemedText style={styles.inputLabel}>Priority</ThemedText>
-              <View style={styles.priorityButtons}>
-                {(['LOW', 'MEDIUM', 'HIGH'] as AssignmentPriority[]).map((p) => (
-                  <Pressable
-                    key={p}
-                    style={[
-                      styles.priorityButton,
-                      {
-                        backgroundColor: priority === p ? getPriorityColor(p) : theme.backgroundSecondary,
-                        borderColor: getPriorityColor(p),
-                      },
-                    ]}
-                    onPress={() => handlePrioritySelect(p)}
-                  >
-                    <ThemedText
-                      style={[
-                        styles.priorityButtonText,
-                        { color: priority === p ? '#FFFFFF' : getPriorityColor(p) },
-                      ]}
-                    >
-                      {p}
-                    </ThemedText>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-
-            <View style={styles.inputSection}>
-              <ThemedText style={styles.inputLabel}>Notes</ThemedText>
-              <DualVoiceInput
-                value={notes}
-                onTextChange={setNotes}
-                placeholder="Add any notes or instructions..."
-              />
-            </View>
-
-            <View style={styles.photosSection}>
-              <ThemedText style={styles.inputLabel}>Photos</ThemedText>
-              <View style={styles.photoButtons}>
-                <Pressable
-                  style={[styles.photoButton, { borderColor: theme.border }]}
-                  onPress={handleTakePhoto}
-                >
-                  <Feather name="camera" size={24} color={theme.textSecondary} />
-                  <ThemedText style={[styles.photoButtonText, { color: theme.textSecondary }]}>
-                    Take Photo
-                  </ThemedText>
-                </Pressable>
-                <Pressable
-                  style={[styles.photoButton, { borderColor: theme.border }]}
-                  onPress={handleFromGallery}
-                >
-                  <Feather name="image" size={24} color={theme.textSecondary} />
-                  <ThemedText style={[styles.photoButtonText, { color: theme.textSecondary }]}>
-                    Gallery
-                  </ThemedText>
-                </Pressable>
-              </View>
-            </View>
-          </ScrollView>
-
-          <View style={styles.footer}>
-            <BPButton
-              variant="primary"
-              onPress={handleSubmit}
-              fullWidth
-              disabled={!isFormValid}
-            >
-              Create Assignment
-            </BPButton>
-          </View>
+            </>
+          )}
         </View>
       </View>
     </Modal>
@@ -348,6 +457,31 @@ const styles = StyleSheet.create({
     height: 32,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.xl,
+  },
+  loadingText: {
+    marginTop: Spacing.md,
+    fontSize: 15,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.xl,
+  },
+  errorText: {
+    marginTop: Spacing.md,
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  errorSubtext: {
+    marginTop: Spacing.sm,
+    fontSize: 14,
   },
   scrollView: {
     flex: 1,
@@ -455,6 +589,18 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
   },
   assistSummaryText: {
+    fontSize: 14,
+    flex: 1,
+  },
+  mutationError: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    marginBottom: Spacing.md,
+  },
+  mutationErrorText: {
     fontSize: 14,
     flex: 1,
   },

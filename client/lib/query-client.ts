@@ -80,8 +80,12 @@ export async function apiRequest(
   data?: unknown | undefined,
 ): Promise<Response> {
   const baseUrl = getApiUrl();
-  const url = new URL(route, baseUrl);
+  const url = joinUrl(baseUrl, route);
   const token = await storage.getAuthToken();
+  
+  if (__DEV__ && route === '/api/auth/me') {
+    console.log('[apiRequest] Final URL for /api/auth/me:', url);
+  }
 
   const headers: Record<string, string> = {};
   if (data) {
@@ -108,7 +112,11 @@ export async function authApiRequest(
   data?: unknown | undefined,
 ): Promise<Response> {
   const baseUrl = getApiUrl();
-  const url = new URL(route, baseUrl);
+  const url = joinUrl(baseUrl, route);
+
+  if (__DEV__ && route === '/api/auth/me') {
+    console.log('[authApiRequest] Final URL for /api/auth/me:', url);
+  }
 
   const headers: Record<string, string> = {};
   if (data) {
@@ -132,8 +140,13 @@ export const getQueryFn: <T>(options: {
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
     const baseUrl = getApiUrl();
-    const url = new URL(queryKey.join("/") as string, baseUrl);
+    const route = queryKey.join("/") as string;
+    const url = joinUrl(baseUrl, route);
     const token = await storage.getAuthToken();
+    
+    if (__DEV__ && route.includes('/api/auth/me')) {
+      console.log('[getQueryFn] Final URL for /api/auth/me:', url);
+    }
 
     const headers: Record<string, string> = {};
     if (token) {

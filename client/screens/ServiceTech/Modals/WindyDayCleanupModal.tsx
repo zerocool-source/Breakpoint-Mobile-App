@@ -8,6 +8,8 @@ import {
   ScrollView,
   Platform,
   useWindowDimensions,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -17,6 +19,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { DualVoiceInput } from '@/components/DualVoiceInput';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing } from '@/constants/theme';
+import { submitWindyDayCleanup } from '@/lib/techOpsService';
 
 interface WindyDayCleanupModalProps {
   visible: boolean;
@@ -38,13 +41,37 @@ export function WindyDayCleanupModal({
   const { height: windowHeight } = useWindowDimensions();
 
   const [notes, setNotes] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = () => {
-    if (Platform.OS !== 'web') {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  const handleSubmit = async () => {
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+
+    try {
+      await submitWindyDayCleanup({
+        propertyName,
+        propertyAddress,
+        technicianName,
+        description: notes.trim() || 'Windy day cleanup performed',
+        photos: [], // TODO: Add photo support
+      });
+
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+
+      Alert.alert('Success', 'Windy day cleanup submitted!', [
+        { text: 'OK', onPress: onClose }
+      ]);
+
+      setNotes('');
+    } catch (error) {
+      console.error('Failed to submit windy day cleanup:', error);
+      Alert.alert('Error', 'Failed to submit. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
-    setNotes('');
-    onClose();
   };
 
   const handleVoiceRecordingComplete = (uri: string, duration: number) => {

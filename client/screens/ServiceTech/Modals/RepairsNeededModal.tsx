@@ -8,6 +8,8 @@ import {
   ScrollView,
   Platform,
   useWindowDimensions,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -18,6 +20,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { DualVoiceInput } from '@/components/DualVoiceInput';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing } from '@/constants/theme';
+import { submitRepairsNeeded } from '@/lib/techOpsService';
 
 interface PropertyOption {
   id: string;
@@ -49,6 +52,7 @@ export function RepairsNeededModal({
   const [isUrgent, setIsUrgent] = useState(false);
   const [issueDescription, setIssueDescription] = useState('');
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const selectedProperty = properties?.find(p => p.id === selectedPropertyId);
   const displayPropertyName = properties ? (selectedProperty?.name || 'Select Property') : propertyName;
@@ -60,13 +64,53 @@ export function RepairsNeededModal({
     }
   }, [visible, properties]);
 
-  const handleSubmit = () => {
-    if (Platform.OS !== 'web') {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  const handleSubmit = async () => {
+    if (isSubmitting) return;
+
+    const finalPropertyName = properties ? selectedProperty?.name : propertyName;
+    const finalPropertyAddress = properties ? selectedProperty?.address : propertyAddress;
+    const finalPropertyId = properties ? selectedPropertyId : undefined;
+
+    if (!finalPropertyName) {
+      Alert.alert('Error', 'Please select a property');
+      return;
     }
-    setIssueDescription('');
-    setIsUrgent(false);
-    onClose();
+
+    if (!issueDescription.trim() && !audioRecording) {
+      Alert.alert('Error', 'Please describe the issue');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      await submitRepairsNeeded({
+        propertyId: finalPropertyId,
+        propertyName: finalPropertyName,
+        propertyAddress: finalPropertyAddress,
+        technicianName: technicianName,
+        description: issueDescription.trim() || 'Voice recording attached',
+        isUrgent,
+        photos: [], // TODO: Add photo upload support
+      });
+
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+
+      Alert.alert('Success', 'Repair request submitted successfully!', [
+        { text: 'OK', onPress: onClose }
+      ]);
+
+      setIssueDescription('');
+      setIsUrgent(false);
+      setAudioRecording(null);
+    } catch (error) {
+      console.error('Failed to submit repair request:', error);
+      Alert.alert('Error', 'Failed to submit repair request. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const [audioRecording, setAudioRecording] = useState<{ uri: string; duration: number } | null>(null);
@@ -226,12 +270,16 @@ export function RepairsNeededModal({
               style={[
                 styles.submitButton,
                 { backgroundColor: BrandColors.azureBlue },
-                (!issueDescription.trim() && !audioRecording) && styles.submitButtonDisabled,
+                ((!issueDescription.trim() && !audioRecording) || isSubmitting) && styles.submitButtonDisabled,
               ]}
               onPress={handleSubmit}
-              disabled={!issueDescription.trim() && !audioRecording}
+              disabled={(!issueDescription.trim() && !audioRecording) || isSubmitting}
             >
-              <ThemedText style={styles.submitButtonText}>Submit Repair Request</ThemedText>
+              {isSubmitting ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              ) : (
+                <ThemedText style={styles.submitButtonText}>Submit Repair Request</ThemedText>
+              )}
             </Pressable>
           </View>
         </View>

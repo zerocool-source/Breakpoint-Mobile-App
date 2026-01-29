@@ -201,11 +201,6 @@ export function WindyDayCleanupModal({
                 </>
               )}
             </Pressable>
-              onPress={handleSubmit}
-            >
-              <Feather name="wind" size={20} color="#FFFFFF" />
-              <ThemedText style={styles.submitButtonText}>Log Cleanup</ThemedText>
-            </Pressable>
           </View>
         </View>
       </View>
@@ -366,29 +361,11 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.md,
   },
   submitButton: {
-  },
-  submitButtonDisabled: {
-    opacity: 0.6,
     flexDirection: 'row',
-  },
-  submitButtonDisabled: {
-    opacity: 0.6,
     paddingVertical: Spacing.lg,
-  },
-  submitButtonDisabled: {
-    opacity: 0.6,
     borderRadius: BorderRadius.md,
-  },
-  submitButtonDisabled: {
-    opacity: 0.6,
     alignItems: 'center',
-  },
-  submitButtonDisabled: {
-    opacity: 0.6,
     justifyContent: 'center',
-  },
-  submitButtonDisabled: {
-    opacity: 0.6,
     gap: Spacing.sm,
   },
   submitButtonDisabled: {

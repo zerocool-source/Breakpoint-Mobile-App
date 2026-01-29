@@ -26,6 +26,7 @@ import {
   mockDailyProgress,
   mockTruckInfo,
   mockCommissionTracker,
+  mockRouteStops,
   type RouteStop,
 } from '@/lib/serviceTechMockData';
 import type { ApiAssignment } from './AssignmentDetailScreen';
@@ -249,10 +250,14 @@ export default function ServiceTechHomeScreen() {
     });
   }, [propertyChannels, completedStops]);
 
-  const [routeStops, setRouteStops] = useState<RouteStop[]>([]);
+  const [routeStops, setRouteStops] = useState<RouteStop[]>(mockRouteStops);
 
   useEffect(() => {
-    setRouteStops(channelRouteStops);
+    if (channelRouteStops.length > 0) {
+      setRouteStops(channelRouteStops);
+    } else {
+      setRouteStops(mockRouteStops);
+    }
   }, [channelRouteStops]);
 
   const demoAlert = {

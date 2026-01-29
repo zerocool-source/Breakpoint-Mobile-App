@@ -184,7 +184,12 @@ export function WindyDayCleanupModal({
 
           <View style={styles.footer}>
             <Pressable
-              style={[styles.submitButton, { backgroundColor: BrandColors.azureBlue }]}
+              style={[
+                styles.submitButton,
+                { backgroundColor: BrandColors.azureBlue },
+                isSubmitting && styles.submitButtonDisabled,
+              ]}
+              disabled={isSubmitting}
               onPress={handleSubmit}
             >
               <Feather name="wind" size={20} color="#FFFFFF" />

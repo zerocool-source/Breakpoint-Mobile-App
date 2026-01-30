@@ -32,6 +32,7 @@ interface AuthContextType {
   setSelectedRole: (role: UserRole | null) => void;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   register: (email: string, password: string, name: string) => Promise<{ success: boolean; error?: string }>;
+  loginAsDemo: () => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
 }
 
@@ -171,11 +172,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [selectedRole]);
 
+  const loginAsDemo = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
+    if (!selectedRole) {
+      return { success: false, error: 'Please select a role first' };
+    }
+    
+    try {
+      setIsLoading(true);
+      
+      const demoUser: User = {
+        id: `demo-${selectedRole}-${Date.now()}`,
+        email: `demo-${selectedRole}@breakpoint.local`,
+        name: roleNames[selectedRole],
+        role: selectedRole,
+      };
+      
+      const demoToken = `demo-token-${Date.now()}`;
+      
+      await storage.setAuthToken(demoToken);
+      await storage.setUser(demoUser);
+      setToken(demoToken);
+      setUser(demoUser);
+      
+      console.log('[AUTH] Demo login successful for role:', selectedRole);
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Demo login failed:', error);
+      return { success: false, error: 'Demo login failed' };
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedRole]);
+
   const logout = useCallback(async () => {
     try {
       setIsLoading(true);
-      const token = await storage.getAuthToken();
-      if (token) {
+      const storedToken = await storage.getAuthToken();
+      if (storedToken && !storedToken.startsWith('demo-token-')) {
         try {
           await authApiRequest('POST', '/api/auth/logout');
         } catch (e) {
@@ -207,6 +241,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSelectedRole,
         login,
         register,
+        loginAsDemo,
         logout,
       }}
     >

@@ -59,8 +59,15 @@ const UNITS = [
   { value: '1 Gallon', label: '1 Gallon' },
   { value: '2.5 Gallon', label: '2.5 Gallon' },
   { value: '5 Gallon', label: '5 Gallon' },
-  { value: '50 lb Bag', label: '50 lb Bag' },
+  { value: '15 Gallon', label: '15 Gallon' },
+  { value: '30 Gallon', label: '30 Gallon' },
+  { value: '55 Gallon Drum', label: '55 Gallon Drum' },
+  { value: '100 Gallon', label: '100 Gallon' },
   { value: '25 lb Bucket', label: '25 lb Bucket' },
+  { value: '50 lb Bag', label: '50 lb Bag' },
+  { value: '100 lb Drum', label: '100 lb Drum' },
+  { value: 'Case (4x1 gal)', label: 'Case (4x1 gal)' },
+  { value: 'Pallet', label: 'Pallet' },
 ];
 
 export function ChemicalOrderModal({
@@ -165,12 +172,12 @@ export function ChemicalOrderModal({
           <View style={[styles.propertyHeader, { backgroundColor: BrandColors.azureBlue }]}>
             <ThemedText style={styles.sectionLabel}>Select Property</ThemedText>
             {properties ? (
-              <View style={[styles.propertyPickerContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+              <View style={[styles.propertyPickerContainer, { backgroundColor: '#FFFFFF', borderColor: theme.border }]}>
                 <Picker
                   selectedValue={selectedPropertyId}
                   onValueChange={(value) => setSelectedPropertyId(value)}
-                  style={styles.propertyPicker}
-                  dropdownIconColor={theme.text}
+                  style={[styles.propertyPicker, { backgroundColor: '#FFFFFF' }]}
+                  dropdownIconColor="#000000"
                   itemStyle={{ color: '#000000', fontSize: 16 }}
                 >
                   <Picker.Item label="Select a property..." value="" color="#000000" />
@@ -198,12 +205,12 @@ export function ChemicalOrderModal({
                 <View style={styles.chemicalMainRow}>
                   <View style={styles.chemicalSelectContainer}>
                     <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>CHEMICAL</ThemedText>
-                    <View style={[styles.pickerContainer, { borderColor: theme.border, backgroundColor: theme.surface }]}>
+                    <View style={[styles.pickerContainer, { borderColor: theme.border, backgroundColor: '#FFFFFF' }]}>
                       <Picker
                         selectedValue={row.chemical}
                         onValueChange={(value: string) => handleChemicalChange(row.id, value)}
-                        style={styles.picker}
-                        dropdownIconColor={theme.text}
+                        style={[styles.picker, { backgroundColor: '#FFFFFF' }]}
+                        dropdownIconColor="#000000"
                         itemStyle={{ color: '#000000', fontSize: 16 }}
                       >
                         {CHEMICALS.map((chem) => (
@@ -247,13 +254,13 @@ export function ChemicalOrderModal({
 
                 {row.chemical ? (
                   <View style={styles.unitRow}>
-                    <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>UNIT</ThemedText>
-                    <View style={[styles.pickerContainer, { borderColor: theme.border, backgroundColor: theme.surface }]}>
+                    <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>UNIT SIZE</ThemedText>
+                    <View style={[styles.pickerContainer, { borderColor: theme.border, backgroundColor: '#FFFFFF' }]}>
                       <Picker
                         selectedValue={row.unit}
                         onValueChange={(value: string) => handleUnitChange(row.id, value)}
-                        style={styles.picker}
-                        dropdownIconColor={theme.text}
+                        style={[styles.picker, { backgroundColor: '#FFFFFF' }]}
+                        dropdownIconColor="#000000"
                         itemStyle={{ color: '#000000', fontSize: 16 }}
                       >
                         {UNITS.map((unit) => (

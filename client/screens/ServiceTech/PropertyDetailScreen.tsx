@@ -492,6 +492,7 @@ export default function PropertyDetailScreen() {
       <RepairsNeededModal
         visible={repairsModalVisible}
         onClose={() => setRepairsModalVisible(false)}
+        propertyId={stop.id}
         propertyName={stop.propertyName}
         propertyAddress={stop.address}
       />

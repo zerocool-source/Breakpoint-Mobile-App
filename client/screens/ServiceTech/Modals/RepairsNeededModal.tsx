@@ -34,6 +34,7 @@ interface PropertyOption {
 interface RepairsNeededModalProps {
   visible: boolean;
   onClose: () => void;
+  propertyId?: string;
   propertyName: string;
   propertyAddress: string;
   technicianName?: string;
@@ -43,6 +44,7 @@ interface RepairsNeededModalProps {
 export function RepairsNeededModal({
   visible,
   onClose,
+  propertyId,
   propertyName,
   propertyAddress,
   technicianName = 'Service Technician',
@@ -70,7 +72,7 @@ export function RepairsNeededModal({
   }, [visible, properties]);
 
   const handleSubmit = async () => {
-    const propId = properties ? selectedPropertyId : 'default';
+    const propId = properties ? selectedPropertyId : propertyId;
     const propName = displayPropertyName;
     
     if (!propId || (properties && !selectedPropertyId)) {

@@ -158,6 +158,9 @@ export function logEnvironmentConfig(): void {
  * - Tech Ops requests  → EXPO_PUBLIC_TECHOPS_URL (breakpoint-app.onrender.com)
  */
 export async function techOpsRequest(route: string, data: unknown): Promise<Response> {
+  const token = await storage.getAuthToken();
+  const mobileKey = process.env.EXPO_PUBLIC_MOBILE_API_KEY;
+  
   // On web, use proxy to bypass CORS; on mobile, call directly
   if (Platform.OS === 'web') {
     const domain = process.env.EXPO_PUBLIC_DOMAIN;
@@ -167,13 +170,20 @@ export async function techOpsRequest(route: string, data: unknown): Promise<Resp
     if (__DEV__) {
       console.log("[TechOps] POST (via proxy)", proxyUrl);
       console.log("[TechOps] payload", data);
+      console.log("[TechOps] Auth token:", token ? `${token.substring(0, 20)}...` : "NOT SET");
+    }
+    
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
     }
     
     const res = await fetch(proxyUrl, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify(data),
     });
     
@@ -181,27 +191,31 @@ export async function techOpsRequest(route: string, data: unknown): Promise<Resp
     return res;
   }
   
-  // Mobile: Call Tech Ops API directly with mobile key
+  // Mobile: Call Tech Ops API directly with both auth methods
   const baseUrl = getTechOpsUrl();
   const url = joinUrl(baseUrl, route);
-  const mobileKey = process.env.EXPO_PUBLIC_MOBILE_API_KEY;
-
-  if (!mobileKey) {
-    throw new Error("EXPO_PUBLIC_MOBILE_API_KEY is not set");
-  }
 
   if (__DEV__) {
     console.log("[TechOps] POST", url);
     console.log("[TechOps] payload", data);
-    console.log("[TechOps] Using mobile key:", mobileKey.substring(0, 8) + "...");
+    console.log("[TechOps] Auth token:", token ? `${token.substring(0, 20)}...` : "NOT SET");
+    console.log("[TechOps] Mobile key:", mobileKey ? `${mobileKey.substring(0, 8)}...` : "NOT SET");
+  }
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  if (mobileKey) {
+    headers["X-MOBILE-KEY"] = mobileKey;
   }
 
   const res = await fetch(url, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-MOBILE-KEY": mobileKey,
-    },
+    headers,
     body: JSON.stringify(data),
   });
 

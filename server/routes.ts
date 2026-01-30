@@ -50,15 +50,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ error: "Server configuration error" });
       }
       
+      // Forward Authorization header from client
+      const authHeader = req.headers.authorization;
+      
       console.log("[Proxy] Tech Ops request to:", `${TECHOPS_API_URL}/api/tech-ops`);
       console.log("[Proxy] Tech Ops payload:", JSON.stringify(req.body));
+      console.log("[Proxy] Auth header present:", !!authHeader);
+      
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        "X-MOBILE-KEY": apiKey,
+      };
+      
+      if (authHeader) {
+        headers["Authorization"] = authHeader;
+      }
       
       const response = await fetch(`${TECHOPS_API_URL}/api/tech-ops`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-MOBILE-KEY": apiKey,
-        },
+        headers,
         body: JSON.stringify(req.body),
       });
       

@@ -179,7 +179,7 @@ export function RepairsNeededModal({
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
-        <View style={[styles.modalContainer, { backgroundColor: theme.surface, paddingBottom: insets.bottom + Spacing.lg, maxHeight: windowHeight * 0.95 }]}>
+        <View style={[styles.modalContainer, { backgroundColor: theme.surface, maxHeight: windowHeight * 0.90 }]}>
           <View style={styles.header}>
             <View style={styles.headerContent}>
               <View style={styles.headerIconContainer}>
@@ -299,7 +299,7 @@ export function RepairsNeededModal({
             </View>
           </ScrollView>
 
-          <View style={styles.footer}>
+          <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, Spacing.lg) }]}>
             <Pressable
               style={[
                 styles.submitButton,
@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
   modalContainer: {
     borderTopLeftRadius: BorderRadius.xl,
     borderTopRightRadius: BorderRadius.xl,
-    minHeight: '70%',
+    minHeight: '60%',
   },
   header: {
     flexDirection: 'row',

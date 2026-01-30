@@ -77,4 +77,5 @@ ensurePreviewReachable = "/status"
 
 [userenv.shared]
 EXPO_PUBLIC_API_URL = "https://breakpoint-api-v2.onrender.com"
-EXPO_PUBLIC_TECHOPS_URL = "https://breakpoint-app.onrender.com"
+EXPO_PUBLIC_TECHOPS_URL = "https://breakpoint-api-v2.onrender.com"
+TECHOPS_API_URL = "https://breakpoint-api-v2.onrender.com"

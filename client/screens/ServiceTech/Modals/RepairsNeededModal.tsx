@@ -80,8 +80,8 @@ export function RepairsNeededModal({
       return;
     }
     
-    if (issueDescription.trim().length < 10 && !audioRecording) {
-      Alert.alert('Description Required', 'Please provide at least 10 characters describing the issue, or record an audio message.');
+    if (issueDescription.trim().length < 3 && !audioRecording) {
+      Alert.alert('Description Required', 'Please describe the issue or record an audio message.');
       return;
     }
 

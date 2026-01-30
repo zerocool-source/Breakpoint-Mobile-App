@@ -52,14 +52,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Validate required fields before sending
       const { description, hasAudio, audioUri, priority, entryType } = req.body;
-      const hasValidDescription = description && typeof description === 'string' && description.trim().length >= 10;
+      const hasValidDescription = description && typeof description === 'string' && description.trim().length >= 3;
       const hasAudioMessage = hasAudio === true || (audioUri && typeof audioUri === 'string');
       
       if (entryType !== 'repairs_needed') {
         return res.status(403).json({ error: "Only repairs_needed entries supported" });
       }
       if (!hasValidDescription && !hasAudioMessage) {
-        return res.status(422).json({ error: "Description (min 10 chars) OR audio message is required" });
+        return res.status(422).json({ error: "Please describe the issue or record an audio message" });
       }
       if (!priority || !['urgent', 'normal'].includes(priority)) {
         return res.status(422).json({ error: "Priority is required and must be 'urgent' or 'normal'" });

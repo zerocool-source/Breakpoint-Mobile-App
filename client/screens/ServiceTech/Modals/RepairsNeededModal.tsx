@@ -129,7 +129,18 @@ export function RepairsNeededModal({
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       console.error('[RepairsNeeded] Submission failed:', errorMessage);
-      Alert.alert('Submission Failed', `Could not send repair request: ${errorMessage}`);
+      
+      // Provide user-friendly error messages
+      let userMessage = 'Could not send repair request. ';
+      if (errorMessage.includes('503') || errorMessage.includes('unavailable') || errorMessage.includes('500')) {
+        userMessage = 'The repair reporting system is temporarily down. Please try again in a few minutes, or contact the office directly.';
+      } else if (errorMessage.includes('network') || errorMessage.includes('fetch') || errorMessage.includes('timeout')) {
+        userMessage = 'Unable to connect to the server. Please check your internet connection and try again.';
+      } else {
+        userMessage = `Could not send repair request: ${errorMessage}`;
+      }
+      
+      Alert.alert('Submission Failed', userMessage);
     } finally {
       setIsSubmitting(false);
     }

@@ -50,6 +50,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ error: "Server configuration error" });
       }
       
+      // Validate required fields before sending
+      const { description, hasAudio, audioUri, priority, entryType } = req.body;
+      const hasValidDescription = description && typeof description === 'string' && description.trim().length >= 10;
+      const hasAudioMessage = hasAudio === true || (audioUri && typeof audioUri === 'string');
+      
+      if (entryType !== 'repairs_needed') {
+        return res.status(403).json({ error: "Only repairs_needed entries supported" });
+      }
+      if (!hasValidDescription && !hasAudioMessage) {
+        return res.status(422).json({ error: "Description (min 10 chars) OR audio message is required" });
+      }
+      if (!priority || !['urgent', 'normal'].includes(priority)) {
+        return res.status(422).json({ error: "Priority is required and must be 'urgent' or 'normal'" });
+      }
+      
       console.log("[Proxy] Tech Ops request to:", `${TECHOPS_API_URL}/api/tech-ops`);
       console.log("[Proxy] Tech Ops payload:", JSON.stringify(req.body));
       
@@ -66,16 +81,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("[Proxy] Tech Ops response status:", response.status);
       console.log("[Proxy] Tech Ops response:", responseText);
       
-      // Try to parse as JSON, otherwise return as-is
-      try {
-        const data = JSON.parse(responseText);
-        res.status(response.status).json(data);
-      } catch {
-        res.status(response.status).send(responseText);
+      // If Render returned success, pass it through
+      if (response.ok) {
+        try {
+          const data = JSON.parse(responseText);
+          return res.status(response.status).json(data);
+        } catch {
+          return res.status(response.status).send(responseText);
+        }
       }
+      
+      // If Render returned an error, return a user-friendly message
+      console.error("[Proxy] Render Tech Ops server error:", response.status, responseText);
+      return res.status(503).json({ 
+        error: "The repair reporting system is temporarily unavailable. Please try again in a few minutes or contact the office directly.",
+        details: `Server returned ${response.status}`
+      });
     } catch (error) {
       console.error("[Proxy] Tech Ops error:", error);
-      res.status(503).json({ error: "Unable to reach Tech Ops server" });
+      res.status(503).json({ 
+        error: "Unable to reach the repair reporting server. Please check your connection and try again." 
+      });
     }
   });
 

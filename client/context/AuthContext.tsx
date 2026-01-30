@@ -92,9 +92,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (res.ok) {
               const userData = await res.json();
               const normalizedRole = mapApiRoleToAppRole(userData.role);
-              const normalizedUser = { ...userData, role: normalizedRole };
+              // Use stored role if available, otherwise use API role
+              const roleToUse = storedRole as UserRole || normalizedRole;
+              const normalizedUser = { ...userData, role: roleToUse };
               setUser(normalizedUser);
-              setSelectedRole(normalizedRole);
+              // Only set role if not already set from storage
+              if (!storedRole) {
+                setSelectedRole(normalizedRole);
+              }
             } else {
               await storage.clearAll();
               setToken(null);
@@ -124,6 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(true);
       
       console.log('[AUTH] Attempting login for:', email);
+      console.log('[AUTH] User-selected role before login:', selectedRole);
       const res = await authApiRequest('POST', '/api/auth/login', { email, password });
       console.log('[AUTH] Login response status:', res.status);
       
@@ -145,22 +151,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       // Normalize role from API to app role
       const normalizedRole = mapApiRoleToAppRole(data.user.role);
-      const normalizedUser = { ...data.user, role: normalizedRole };
-      console.log("[AUTH] normalized role:", normalizedRole);
+      // Preserve user's selected role instead of overwriting with API role
+      const roleToUse = selectedRole || normalizedRole;
+      const normalizedUser = { ...data.user, role: roleToUse };
+      console.log("[AUTH] API role:", normalizedRole, "Using role:", roleToUse);
       
       await storage.setAuthToken(data.token);
       await storage.setUser(normalizedUser);
       
       if (rememberMe) {
         await storage.setSavedEmail(email);
-        await storage.setSavedRole(normalizedRole);
+        await storage.setSavedRole(roleToUse);
         await storage.setRememberMe(true);
         setSavedEmail(email);
       }
       
+      // Save the role selection
+      await storage.setSavedRole(roleToUse);
+      
       setToken(data.token);
       setUser(normalizedUser);
-      setSelectedRole(normalizedRole);
+      // Keep the user's selected role, don't override with API role
+      if (!selectedRole) {
+        setSelectedRole(normalizedRole);
+      }
       
       return { success: true };
     } catch (error) {
@@ -169,7 +183,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [selectedRole]);
 
   const register = useCallback(async (email: string, password: string, name: string): Promise<{ success: boolean; error?: string }> => {
     if (!selectedRole) {

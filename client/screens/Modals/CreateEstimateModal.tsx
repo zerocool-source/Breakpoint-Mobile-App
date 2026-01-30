@@ -21,6 +21,7 @@ export default function CreateEstimateModal() {
 
   const [selectedProperty, setSelectedProperty] = useState('');
   const [showPropertyPicker, setShowPropertyPicker] = useState(false);
+  const [propertySearch, setPropertySearch] = useState('');
   const [items, setItems] = useState<EstimateItem[]>([
     { id: '1', description: '', quantity: 1, rate: 0, amount: 0 },
   ]);
@@ -143,18 +144,39 @@ export default function CreateEstimateModal() {
           </Pressable>
           {showPropertyPicker ? (
             <View style={[styles.dropdown, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-              {mockProperties.map(prop => (
-                <Pressable
-                  key={prop.id}
-                  onPress={() => {
-                    setSelectedProperty(prop.id);
-                    setShowPropertyPicker(false);
-                  }}
-                  style={styles.dropdownItem}
-                >
-                  <ThemedText>{prop.name}</ThemedText>
-                </Pressable>
-              ))}
+              <View style={[styles.searchContainer, { borderBottomColor: theme.border }]}>
+                <Feather name="search" size={16} color={theme.textSecondary} />
+                <TextInput
+                  style={[styles.searchInput, { color: theme.text }]}
+                  placeholder="Search properties..."
+                  placeholderTextColor={theme.textSecondary}
+                  value={propertySearch}
+                  onChangeText={setPropertySearch}
+                  autoFocus
+                />
+                {propertySearch.length > 0 ? (
+                  <Pressable onPress={() => setPropertySearch('')}>
+                    <Feather name="x" size={16} color={theme.textSecondary} />
+                  </Pressable>
+                ) : null}
+              </View>
+              <ScrollView style={styles.dropdownScroll} keyboardShouldPersistTaps="handled">
+                {mockProperties
+                  .filter(prop => prop.name.toLowerCase().includes(propertySearch.toLowerCase()))
+                  .map(prop => (
+                    <Pressable
+                      key={prop.id}
+                      onPress={() => {
+                        setSelectedProperty(prop.id);
+                        setShowPropertyPicker(false);
+                        setPropertySearch('');
+                      }}
+                      style={styles.dropdownItem}
+                    >
+                      <ThemedText>{prop.name}</ThemedText>
+                    </Pressable>
+                  ))}
+              </ScrollView>
             </View>
           ) : null}
         </View>
@@ -302,6 +324,22 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     ...Shadows.card,
     zIndex: 100,
+    maxHeight: 300,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: Spacing.md,
+    borderBottomWidth: 1,
+    gap: Spacing.sm,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    padding: 0,
+  },
+  dropdownScroll: {
+    maxHeight: 240,
   },
   dropdownItem: {
     padding: Spacing.lg,

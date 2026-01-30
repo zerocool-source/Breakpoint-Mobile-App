@@ -15,13 +15,15 @@ export interface User {
 export interface Property {
   id: string;
   name: string;
-  address: string;
-  type: 'residential' | 'commercial' | 'municipal';
+  address?: string;
+  type?: 'residential' | 'commercial' | 'municipal';
   gateCode?: string;
-  contactName: string;
-  contactPhone: string;
+  contactName?: string;
+  contactPhone?: string;
+  email?: string;
+  phone?: string;
   notes?: string;
-  poolCount: number;
+  poolCount?: number;
 }
 
 export interface RouteStop {

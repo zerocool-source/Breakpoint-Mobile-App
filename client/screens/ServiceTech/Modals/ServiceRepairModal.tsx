@@ -147,11 +147,10 @@ export function ServiceRepairModal({
                   onValueChange={(value) => setSelectedPropertyId(value)}
                   style={styles.propertyPicker}
                   dropdownIconColor={theme.text}
-                  itemStyle={{ color: '#000000', fontSize: 16 }}
                 >
-                  <Picker.Item label="Select a property..." value="" color="#000000" />
+                  <Picker.Item label="Select a property..." value="" />
                   {properties.map((prop) => (
-                    <Picker.Item key={prop.id} label={prop.name} value={prop.id} color="#000000" />
+                    <Picker.Item key={prop.id} label={prop.name} value={prop.id} />
                   ))}
                 </Picker>
               </View>

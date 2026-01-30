@@ -244,11 +244,10 @@ export function CreateAssignmentModal({ visible, onClose }: CreateAssignmentModa
                         }
                       }}
                       style={styles.picker}
-                      itemStyle={{ color: '#000000', fontSize: 16 }}
                     >
-                      <Picker.Item label="Select technician..." value="" color="#666666" />
+                      <Picker.Item label="Select technician..." value="" color={theme.textSecondary} />
                       {technicians.map((tech) => (
-                        <Picker.Item key={tech.id} label={tech.name} value={String(tech.id)} color="#000000" />
+                        <Picker.Item key={tech.id} label={tech.name} value={String(tech.id)} />
                       ))}
                     </Picker>
                   </View>
@@ -292,11 +291,10 @@ export function CreateAssignmentModal({ visible, onClose }: CreateAssignmentModa
                         selectedValue={techNeedingHelp}
                         onValueChange={(value: string) => setTechNeedingHelp(value)}
                         style={styles.picker}
-                        itemStyle={{ color: '#000000', fontSize: 16 }}
                       >
-                        <Picker.Item label="Select technician to assist..." value="" color="#666666" />
+                        <Picker.Item label="Select technician to assist..." value="" color={theme.textSecondary} />
                         {availableTechsToHelp.map((tech) => (
-                          <Picker.Item key={tech.id} label={tech.name} value={String(tech.id)} color="#000000" />
+                          <Picker.Item key={tech.id} label={tech.name} value={String(tech.id)} />
                         ))}
                       </Picker>
                     </View>
@@ -320,11 +318,10 @@ export function CreateAssignmentModal({ visible, onClose }: CreateAssignmentModa
                       selectedValue={selectedProperty}
                       onValueChange={(value: string) => setSelectedProperty(value)}
                       style={styles.picker}
-                      itemStyle={{ color: '#000000', fontSize: 16 }}
                     >
-                      <Picker.Item label="Select property..." value="" color="#666666" />
+                      <Picker.Item label="Select property..." value="" color={theme.textSecondary} />
                       {properties.map((prop) => (
-                        <Picker.Item key={prop.id} label={prop.name} value={String(prop.id)} color="#000000" />
+                        <Picker.Item key={prop.id} label={prop.name} value={String(prop.id)} />
                       ))}
                     </Picker>
                   </View>

@@ -50,21 +50,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ error: "Server configuration error" });
       }
       
-      // Validate required fields before sending
-      const { description, hasAudio, audioUri, priority, entryType } = req.body;
-      const hasValidDescription = description && typeof description === 'string' && description.trim().length >= 3;
-      const hasAudioMessage = hasAudio === true || (audioUri && typeof audioUri === 'string');
-      
-      if (entryType !== 'repairs_needed') {
-        return res.status(403).json({ error: "Only repairs_needed entries supported" });
-      }
-      if (!hasValidDescription && !hasAudioMessage) {
-        return res.status(422).json({ error: "Please describe the issue or record an audio message" });
-      }
-      if (!priority || !['urgent', 'normal'].includes(priority)) {
-        return res.status(422).json({ error: "Priority is required and must be 'urgent' or 'normal'" });
-      }
-      
       console.log("[Proxy] Tech Ops request to:", `${TECHOPS_API_URL}/api/tech-ops`);
       console.log("[Proxy] Tech Ops payload:", JSON.stringify(req.body));
       
@@ -81,79 +66,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("[Proxy] Tech Ops response status:", response.status);
       console.log("[Proxy] Tech Ops response:", responseText);
       
-      // If Render returned success, pass it through
-      if (response.ok) {
-        try {
-          const data = JSON.parse(responseText);
-          return res.status(response.status).json(data);
-        } catch {
-          return res.status(response.status).send(responseText);
-        }
-      }
-      
-      // If Render returned an error, save to local database as fallback
-      console.error("[Proxy] Render Tech Ops server error:", response.status, responseText);
-      console.log("[Proxy] Saving to local database as fallback...");
-      
+      // Try to parse as JSON, otherwise return as-is
       try {
-        const { propertyId, propertyName, bodyOfWater, technicianId, technicianName } = req.body;
-        const savedEntry = await db.insert(techOps).values({
-          entryType: 'repairs_needed',
-          description: description || '[Audio message attached]',
-          priority: priority,
-          status: 'pending',
-          propertyId: propertyId || 'unknown',
-          propertyName: propertyName || 'Unknown Property',
-          bodyOfWater: bodyOfWater || 'Main Pool',
-          technicianId: technicianId || 'unknown',
-          technicianName: technicianName || 'Unknown Technician',
-        }).returning();
-        
-        console.log("[Proxy] Saved to local database:", savedEntry[0]?.id);
-        return res.status(200).json({ 
-          success: true, 
-          message: "Repair request saved locally. It will sync when the server is available.",
-          id: savedEntry[0]?.id,
-          savedLocally: true
-        });
-      } catch (dbError) {
-        console.error("[Proxy] Failed to save to local database:", dbError);
-        return res.status(503).json({ 
-          error: "The repair reporting system is temporarily unavailable. Please try again in a few minutes or contact the office directly.",
-          details: `Server returned ${response.status}`
-        });
+        const data = JSON.parse(responseText);
+        res.status(response.status).json(data);
+      } catch {
+        res.status(response.status).send(responseText);
       }
     } catch (error) {
       console.error("[Proxy] Tech Ops error:", error);
-      
-      // Try to save to local database as fallback
-      try {
-        const { description, priority, propertyId, propertyName, bodyOfWater, technicianId, technicianName } = req.body;
-        const savedEntry = await db.insert(techOps).values({
-          entryType: 'repairs_needed',
-          description: description || '[Audio message attached]',
-          priority: priority || 'normal',
-          status: 'pending',
-          propertyId: propertyId || 'unknown',
-          propertyName: propertyName || 'Unknown Property',
-          bodyOfWater: bodyOfWater || 'Main Pool',
-          technicianId: technicianId || 'unknown',
-          technicianName: technicianName || 'Unknown Technician',
-        }).returning();
-        
-        console.log("[Proxy] Saved to local database (network error fallback):", savedEntry[0]?.id);
-        return res.status(200).json({ 
-          success: true, 
-          message: "Repair request saved locally. It will sync when the server is available.",
-          id: savedEntry[0]?.id,
-          savedLocally: true
-        });
-      } catch (dbError) {
-        console.error("[Proxy] Failed to save to local database:", dbError);
-        res.status(503).json({ 
-          error: "Unable to reach the repair reporting server. Please check your connection and try again." 
-        });
-      }
+      res.status(503).json({ error: "Unable to reach Tech Ops server" });
     }
   });
 

@@ -80,8 +80,8 @@ export function RepairsNeededModal({
       return;
     }
     
-    if (issueDescription.trim().length < 3 && !audioRecording) {
-      Alert.alert('Description Required', 'Please describe the issue or record an audio message.');
+    if (issueDescription.trim().length < 10 && !audioRecording) {
+      Alert.alert('Description Required', 'Please provide at least 10 characters describing the issue, or record an audio message.');
       return;
     }
 
@@ -129,18 +129,7 @@ export function RepairsNeededModal({
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       console.error('[RepairsNeeded] Submission failed:', errorMessage);
-      
-      // Provide user-friendly error messages
-      let userMessage = 'Could not send repair request. ';
-      if (errorMessage.includes('503') || errorMessage.includes('unavailable') || errorMessage.includes('500')) {
-        userMessage = 'The repair reporting system is temporarily down. Please try again in a few minutes, or contact the office directly.';
-      } else if (errorMessage.includes('network') || errorMessage.includes('fetch') || errorMessage.includes('timeout')) {
-        userMessage = 'Unable to connect to the server. Please check your internet connection and try again.';
-      } else {
-        userMessage = `Could not send repair request: ${errorMessage}`;
-      }
-      
-      Alert.alert('Submission Failed', userMessage);
+      Alert.alert('Submission Failed', `Could not send repair request: ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -179,7 +168,7 @@ export function RepairsNeededModal({
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
-        <View style={[styles.modalContainer, { backgroundColor: theme.surface, maxHeight: windowHeight * 0.90 }]}>
+        <View style={[styles.modalContainer, { backgroundColor: theme.surface, paddingBottom: insets.bottom + Spacing.lg, maxHeight: windowHeight * 0.95 }]}>
           <View style={styles.header}>
             <View style={styles.headerContent}>
               <View style={styles.headerIconContainer}>
@@ -212,11 +201,10 @@ export function RepairsNeededModal({
                     onValueChange={(value) => setSelectedPropertyId(value)}
                     style={styles.picker}
                     dropdownIconColor={theme.text}
-                    itemStyle={{ color: '#000000', fontSize: 16 }}
                   >
-                    <Picker.Item label="Select a property..." value="" color="#000000" />
+                    <Picker.Item label="Select a property..." value="" />
                     {properties.map((prop) => (
-                      <Picker.Item key={prop.id} label={prop.name} value={prop.id} color="#000000" />
+                      <Picker.Item key={prop.id} label={prop.name} value={prop.id} />
                     ))}
                   </Picker>
                 </View>
@@ -299,7 +287,7 @@ export function RepairsNeededModal({
             </View>
           </ScrollView>
 
-          <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, Spacing.lg) }]}>
+          <View style={styles.footer}>
             <Pressable
               style={[
                 styles.submitButton,
@@ -332,7 +320,7 @@ const styles = StyleSheet.create({
   modalContainer: {
     borderTopLeftRadius: BorderRadius.xl,
     borderTopRightRadius: BorderRadius.xl,
-    minHeight: '60%',
+    minHeight: '70%',
   },
   header: {
     flexDirection: 'row',

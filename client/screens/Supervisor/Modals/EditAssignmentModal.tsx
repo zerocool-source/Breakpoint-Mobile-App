@@ -161,14 +161,12 @@ export function EditAssignmentModal({ visible, onClose, assignment }: EditAssign
                     setStatus(value);
                   }}
                   style={styles.picker}
-                  itemStyle={{ color: '#000000', fontSize: 16 }}
                 >
                   {STATUS_OPTIONS.map((option) => (
                     <Picker.Item
                       key={option.value}
                       label={option.label}
                       value={option.value}
-                      color="#000000"
                     />
                   ))}
                 </Picker>

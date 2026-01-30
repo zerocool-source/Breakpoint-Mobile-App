@@ -26,7 +26,6 @@ import {
   ChemicalOrderModal,
   WindyDayCleanupModal,
   ServiceRepairModal,
-  ChemicalsDroppedOffModal,
 } from './Modals';
 
 type ServiceTechStackParamList = {
@@ -154,7 +153,6 @@ export default function PropertyDetailScreen() {
   const [chemicalModalVisible, setChemicalModalVisible] = useState(false);
   const [windyModalVisible, setWindyModalVisible] = useState(false);
   const [serviceRepairModalVisible, setServiceRepairModalVisible] = useState(false);
-  const [dropoffModalVisible, setDropoffModalVisible] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -187,7 +185,6 @@ export default function PropertyDetailScreen() {
         setServiceRepairModalVisible(true);
         break;
       case 'dropoff':
-        setDropoffModalVisible(true);
         break;
     }
   };
@@ -513,12 +510,6 @@ export default function PropertyDetailScreen() {
       <ServiceRepairModal
         visible={serviceRepairModalVisible}
         onClose={() => setServiceRepairModalVisible(false)}
-        propertyName={stop.propertyName}
-        propertyAddress={stop.address}
-      />
-      <ChemicalsDroppedOffModal
-        visible={dropoffModalVisible}
-        onClose={() => setDropoffModalVisible(false)}
         propertyName={stop.propertyName}
         propertyAddress={stop.address}
       />

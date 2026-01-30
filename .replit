@@ -1,5 +1,5 @@
 entrypoint = "README.md"
-modules = ["nodejs-22", "postgresql-16", "python-3.11"]
+modules = ["nodejs-22", "postgresql-16"]
 
 [nix]
 channel = "stable-24_05"
@@ -77,3 +77,4 @@ ensurePreviewReachable = "/status"
 
 [userenv.shared]
 EXPO_PUBLIC_API_URL = "https://breakpoint-api-v2.onrender.com"
+EXPO_PUBLIC_TECHOPS_URL = "https://breakpoint-app.onrender.com"

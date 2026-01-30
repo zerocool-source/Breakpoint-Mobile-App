@@ -432,7 +432,11 @@ export default function HomeScreen() {
       <ReportIssueModal
         visible={showReportIssueModal}
         onClose={() => setShowReportIssueModal(false)}
-        onSubmit={(data) => console.log('Issue:', data)}
+        propertyId={nextStop?.propertyId || jobs[0]?.property?.id || 'unknown'}
+        propertyName={nextStop?.property?.name || jobs[0]?.property?.name || 'Current Property'}
+        bodyOfWater="Main Pool"
+        technicianId={user?.id || 'unknown'}
+        technicianName={user?.name || user?.email || 'Technician'}
       />
       <EmergencyReportModal
         visible={showEmergencyModal}

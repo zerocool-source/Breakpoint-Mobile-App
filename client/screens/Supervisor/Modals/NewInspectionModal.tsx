@@ -109,14 +109,15 @@ export function NewInspectionModal({ visible, onClose, onStartInspection }: NewI
                   }}
                   style={styles.picker}
                   dropdownIconColor={theme.textSecondary}
+                  itemStyle={{ color: '#000000', fontSize: 16 }}
                 >
-                  <Picker.Item label="Select a property..." value="" color={theme.textSecondary} />
+                  <Picker.Item label="Select a property..." value="" color="#666666" />
                   {mockProperties.map((property) => (
                     <Picker.Item
                       key={property.id}
                       label={property?.name ?? 'Unknown Property'}
                       value={property.id}
-                      color={theme.text}
+                      color="#000000"
                     />
                   ))}
                 </Picker>

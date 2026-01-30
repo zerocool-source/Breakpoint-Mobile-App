@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -7,7 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 
 import { QueryClientProvider } from '@tanstack/react-query';
-import { queryClient } from '@/lib/query-client';
+import { queryClient, logEnvironmentConfig } from '@/lib/query-client';
 
 import AuthNavigator from '@/navigation/AuthNavigator';
 import { AuthProvider } from '@/context/AuthContext';
@@ -19,6 +19,11 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 
 export default function App() {
+  // Log environment configuration on app startup (dev mode only)
+  useEffect(() => {
+    logEnvironmentConfig();
+  }, []);
+
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>

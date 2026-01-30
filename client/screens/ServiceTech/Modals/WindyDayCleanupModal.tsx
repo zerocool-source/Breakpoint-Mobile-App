@@ -8,8 +8,6 @@ import {
   ScrollView,
   Platform,
   useWindowDimensions,
-  Alert,
-  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -19,7 +17,6 @@ import { ThemedText } from '@/components/ThemedText';
 import { DualVoiceInput } from '@/components/DualVoiceInput';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing } from '@/constants/theme';
-import { submitWindyDayCleanup } from '@/lib/techOpsService';
 
 interface WindyDayCleanupModalProps {
   visible: boolean;
@@ -41,37 +38,13 @@ export function WindyDayCleanupModal({
   const { height: windowHeight } = useWindowDimensions();
 
   const [notes, setNotes] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async () => {
-    if (isSubmitting) return;
-
-    setIsSubmitting(true);
-
-    try {
-      await submitWindyDayCleanup({
-        propertyName,
-        propertyAddress,
-        technicianName,
-        description: notes.trim() || 'Windy day cleanup performed',
-        photos: [], // TODO: Add photo support
-      });
-
-      if (Platform.OS !== 'web') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      }
-
-      Alert.alert('Success', 'Windy day cleanup submitted!', [
-        { text: 'OK', onPress: onClose }
-      ]);
-
-      setNotes('');
-    } catch (error) {
-      console.error('Failed to submit windy day cleanup:', error);
-      Alert.alert('Error', 'Failed to submit. Please try again.');
-    } finally {
-      setIsSubmitting(false);
+  const handleSubmit = () => {
+    if (Platform.OS !== 'web') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
+    setNotes('');
+    onClose();
   };
 
   const handleVoiceRecordingComplete = (uri: string, duration: number) => {
@@ -184,22 +157,11 @@ export function WindyDayCleanupModal({
 
           <View style={styles.footer}>
             <Pressable
-              style={[
-                styles.submitButton,
-                { backgroundColor: BrandColors.azureBlue },
-                isSubmitting && styles.submitButtonDisabled,
-              ]}
+              style={[styles.submitButton, { backgroundColor: BrandColors.azureBlue }]}
               onPress={handleSubmit}
-              disabled={isSubmitting}
             >
-              {isSubmitting ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
-              ) : (
-                <>
-                  <Feather name="wind" size={20} color="#FFFFFF" />
-                  <ThemedText style={styles.submitButtonText}>Log Cleanup</ThemedText>
-                </>
-              )}
+              <Feather name="wind" size={20} color="#FFFFFF" />
+              <ThemedText style={styles.submitButtonText}>Log Cleanup</ThemedText>
             </Pressable>
           </View>
         </View>
@@ -367,9 +329,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.sm,
-  },
-  submitButtonDisabled: {
-    opacity: 0.6,
   },
   submitButtonText: {
     color: '#FFFFFF',

@@ -58,18 +58,26 @@ Breakpoint Commercial Pool Systems is a mobile-first field service management ap
 
 ## API Configuration
 
-### EXPO_PUBLIC_API_URL
-The external API base URL is configured via `EXPO_PUBLIC_API_URL` environment variable.
+### Dual Backend Architecture
+The app uses two separate backends:
 
-**Format**: The URL can end with or without a trailing slash - both formats work correctly.
-- `https://breakpoint-api-v2.onrender.com` ✓
-- `https://breakpoint-api-v2.onrender.com/` ✓
+1. **Mobile API (Auth + Data)**: `EXPO_PUBLIC_API_URL`
+   - URL: `https://breakpoint-api-v2.onrender.com`
+   - Used for: Login, registration, user data, assignments, properties, chat
+   - Auth: JWT Bearer token in `Authorization` header
+
+2. **Tech Ops API (BI Admin)**: `EXPO_PUBLIC_TECHOPS_URL`
+   - URL: `https://breakpoint-app.onrender.com`
+   - Used for: Repair requests (Tech Ops Alerts)
+   - Auth: Mobile API key in `X-MOBILE-KEY` header
+
+**Note**: Replit Secrets/Configuration overrides `.env` files. Always set environment variables in the Replit Secrets pane.
 
 ### URL Helper Functions (client/lib/query-client.ts)
-- **`getApiUrl()`**: Returns the API base URL with trailing slashes removed.
-- **`joinUrl(base, path)`**: Safely joins a base URL with a path, ensuring exactly one "/" between them. Handles all edge cases:
-  - `joinUrl("https://x.com", "api/auth/me")` → `https://x.com/api/auth/me`
-  - `joinUrl("https://x.com/", "/api/auth/me")` → `https://x.com/api/auth/me`
+- **`getApiUrl()`**: Returns the main API base URL (`EXPO_PUBLIC_API_URL`).
+- **`getTechOpsUrl()`**: Returns the Tech Ops API URL (`EXPO_PUBLIC_TECHOPS_URL`), falls back to main API if not set.
+- **`joinUrl(base, path)`**: Safely joins a base URL with a path, ensuring exactly one "/" between them.
+- **`techOpsRequest(route, data)`**: POSTs to Tech Ops API with `X-MOBILE-KEY` header.
 
 **Important**: Always use `joinUrl()` or `new URL(path, base)` when constructing API URLs. Never use string concatenation like `${baseUrl}path` as this can result in missing slashes.
 

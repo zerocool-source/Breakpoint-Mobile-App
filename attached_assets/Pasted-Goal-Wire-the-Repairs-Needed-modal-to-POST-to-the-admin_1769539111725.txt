@@ -1,0 +1,44 @@
+Goal: Wire the “Repairs Needed” modal to POST to the admin backend at POST /api/tech-ops so submissions appear in Admin → Tech Ops Alerts.
+
+Context:
+- Base URL comes from process.env.EXPO_PUBLIC_API_URL via getApiUrl() in client/lib/query-client.ts
+- Mobile API key is in process.env.EXPO_PUBLIC_MOBILE_API_KEY and must be sent as header: X-MOBILE-KEY
+- Endpoint expects JSON with:
+  entryType: "repairs_needed"
+  description: string (min 10 chars)
+  priority: "urgent" | "normal"
+  propertyId, propertyName, bodyOfWater, technicianId, technicianName (all required for our workflow)
+  photos optional (array/urls if present)
+
+Edits:
+1) In client/lib/query-client.ts, add a new helper:
+   export async function mobileKeyRequest(route: string, data: unknown): Promise<Response>
+   - baseUrl = getApiUrl()
+   - url = joinUrl(baseUrl, route)
+   - read const mobileKey = process.env.EXPO_PUBLIC_MOBILE_API_KEY
+   - headers must include:
+     Content-Type: application/json
+     X-MOBILE-KEY: <mobileKey>
+   - do NOT attach Authorization token
+   - fetch POST and call throwIfResNotOk(res)
+   - return res
+
+2) Find the Repairs Needed modal/screen (the UI that shows “Submit Repair Request”).
+   - Replace the current placeholder submit handler so it:
+     a) validates description length >= 10
+     b) maps “Mark as Urgent” checkbox to priority ("urgent" if checked else "normal")
+     c) gathers required fields:
+        propertyId/propertyName/bodyOfWater from the current selected stop/context
+        technicianId/technicianName from current logged-in user
+     d) calls:
+        await mobileKeyRequest("/api/tech-ops", payload)
+     e) on success: clear the form, close modal, and show a simple success alert/toast
+     f) on error: show the server error text (status + body) so we can debug quickly
+
+3) Add a small debug log in DEV:
+   console.log("[RepairsNeeded] POST", url, payloadWithoutKey)
+   but never log the API key.
+
+4) Ensure the route is exactly "/api/tech-ops" and entryType is exactly "repairs_needed".
+
+Return: implement changes and point me to the files edited and the exact lines where submit is wired up.

@@ -215,6 +215,46 @@ export const sessionsRelations = relations(sessions, ({ one }) => ({
   }),
 }));
 
+export const techOpsEntryTypeEnum = pgEnum('tech_ops_entry_type', ['repairs_needed', 'safety_issue', 'equipment_failure', 'water_quality', 'other']);
+export const techOpsStatusEnum = pgEnum('tech_ops_status', ['pending', 'acknowledged', 'in_progress', 'resolved', 'closed']);
+export const techOpsPriorityEnum = pgEnum('tech_ops_priority', ['normal', 'urgent']);
+
+export const techOps = pgTable("tech_ops", {
+  id: varchar("id", { length: 36 })
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  entryType: techOpsEntryTypeEnum("entry_type").notNull(),
+  description: text("description").notNull(),
+  priority: techOpsPriorityEnum("priority").notNull().default('normal'),
+  status: techOpsStatusEnum("status").notNull().default('pending'),
+  propertyId: varchar("property_id", { length: 36 }).notNull(),
+  propertyName: text("property_name").notNull(),
+  bodyOfWater: text("body_of_water").notNull(),
+  technicianId: varchar("technician_id", { length: 36 }).notNull(),
+  technicianName: text("technician_name").notNull(),
+  photoUrls: text("photo_urls"),
+  resolvedAt: timestamp("resolved_at"),
+  resolvedById: varchar("resolved_by_id", { length: 36 }),
+  resolutionNotes: text("resolution_notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const techOpsRelations = relations(techOps, ({ one }) => ({
+  property: one(properties, {
+    fields: [techOps.propertyId],
+    references: [properties.id],
+  }),
+  technician: one(users, {
+    fields: [techOps.technicianId],
+    references: [users.id],
+  }),
+  resolvedBy: one(users, {
+    fields: [techOps.resolvedById],
+    references: [users.id],
+  }),
+}));
+
 export const propertyChannels = pgTable("property_channels", {
   id: varchar("id", { length: 36 })
     .primaryKey()
@@ -295,3 +335,4 @@ export type Assignment = typeof assignments.$inferSelect;
 export type Estimate = typeof estimates.$inferSelect;
 export type RouteStop = typeof routeStops.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
+export type TechOps = typeof techOps.$inferSelect;

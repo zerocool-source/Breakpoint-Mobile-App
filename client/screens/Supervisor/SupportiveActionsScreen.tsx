@@ -255,10 +255,11 @@ function NewSupportiveActionModal({ visible, onClose, onSubmit }: NewSupportiveA
                     onValueChange={setSelectedTechnician}
                     style={styles.picker}
                     dropdownIconColor={theme.textSecondary}
+                    itemStyle={{ color: '#000000', fontSize: 16 }}
                   >
-                    <Picker.Item label="Select technician..." value="" color={theme.textSecondary} />
+                    <Picker.Item label="Select technician..." value="" color="#666666" />
                     {mockTechnicians.map((tech) => (
-                      <Picker.Item key={tech.id} label={tech.name} value={tech.id} color={theme.text} />
+                      <Picker.Item key={tech.id} label={tech.name} value={tech.id} color="#000000" />
                     ))}
                   </Picker>
                 </View>
@@ -297,9 +298,10 @@ function NewSupportiveActionModal({ visible, onClose, onSubmit }: NewSupportiveA
                       onValueChange={setCategory}
                       style={styles.picker}
                       dropdownIconColor={theme.textSecondary}
+                      itemStyle={{ color: '#000000', fontSize: 16 }}
                     >
                       {categoryOptions.map((option) => (
-                        <Picker.Item key={option.value} label={option.label} value={option.value} color={theme.text} />
+                        <Picker.Item key={option.value} label={option.label} value={option.value} color="#000000" />
                       ))}
                     </Picker>
                   </View>
@@ -313,9 +315,10 @@ function NewSupportiveActionModal({ visible, onClose, onSubmit }: NewSupportiveA
                       onValueChange={setSeverity}
                       style={styles.picker}
                       dropdownIconColor={theme.textSecondary}
+                      itemStyle={{ color: '#000000', fontSize: 16 }}
                     >
                       {severityOptions.map((option) => (
-                        <Picker.Item key={option.value} label={option.label} value={option.value} color={theme.text} />
+                        <Picker.Item key={option.value} label={option.label} value={option.value} color="#000000" />
                       ))}
                     </Picker>
                   </View>

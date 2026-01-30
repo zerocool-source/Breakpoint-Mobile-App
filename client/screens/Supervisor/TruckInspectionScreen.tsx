@@ -368,10 +368,11 @@ function TruckInspectionModal({ visible, onClose, onSubmit }: TruckInspectionMod
                     onValueChange={setSelectedTechnician}
                     style={styles.picker}
                     dropdownIconColor={theme.textSecondary}
+                    itemStyle={{ color: '#000000', fontSize: 16 }}
                   >
-                    <Picker.Item label="Select technician..." value="" color={theme.textSecondary} />
+                    <Picker.Item label="Select technician..." value="" color="#666666" />
                     {mockTechnicians.map((tech) => (
-                      <Picker.Item key={tech.id} label={tech.name} value={tech.id} color={theme.text} />
+                      <Picker.Item key={tech.id} label={tech.name} value={tech.id} color="#000000" />
                     ))}
                   </Picker>
                 </View>
@@ -398,9 +399,10 @@ function TruckInspectionModal({ visible, onClose, onSubmit }: TruckInspectionMod
                       onValueChange={setFuelLevel}
                       style={styles.picker}
                       dropdownIconColor={theme.textSecondary}
+                      itemStyle={{ color: '#000000', fontSize: 16 }}
                     >
                       {fuelLevelOptions.map((option) => (
-                        <Picker.Item key={option.value} label={option.label} value={option.value} color={theme.text} />
+                        <Picker.Item key={option.value} label={option.label} value={option.value} color="#000000" />
                       ))}
                     </Picker>
                   </View>
@@ -414,9 +416,10 @@ function TruckInspectionModal({ visible, onClose, onSubmit }: TruckInspectionMod
                       onValueChange={setOverallCondition}
                       style={styles.picker}
                       dropdownIconColor={theme.textSecondary}
+                      itemStyle={{ color: '#000000', fontSize: 16 }}
                     >
                       {conditionOptions.map((option) => (
-                        <Picker.Item key={option.value} label={option.label} value={option.value} color={theme.text} />
+                        <Picker.Item key={option.value} label={option.label} value={option.value} color="#000000" />
                       ))}
                     </Picker>
                   </View>

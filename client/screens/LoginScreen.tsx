@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, TextInput, Dimensions, Alert, Platform, Pressable } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, TextInput, Dimensions, Platform, Pressable, Modal, Switch } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
@@ -40,13 +40,23 @@ interface LoginScreenProps {
 
 export default function LoginScreen({ onBack }: LoginScreenProps) {
   const insets = useSafeAreaInsets();
-  const { login, register, loginAsDemo, isLoading, selectedRole } = useAuth();
+  const { login, register, isLoading, selectedRole, rememberMe, setRememberMe, savedEmail, requestPasswordReset } = useAuth();
 
   const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetSuccess, setResetSuccess] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
+
+  useEffect(() => {
+    if (savedEmail) {
+      setEmail(savedEmail);
+    }
+  }, [savedEmail]);
 
   const emailFocus = useSharedValue(0);
   const passwordFocus = useSharedValue(0);
@@ -72,6 +82,8 @@ export default function LoginScreen({ onBack }: LoginScreenProps) {
 
   const handleSubmit = async () => {
     setError(null);
+    console.log('[LoginScreen] handleSubmit called');
+    console.log('[LoginScreen] API URL:', process.env.EXPO_PUBLIC_API_URL);
     
     if (!email.trim() || !password.trim()) {
       if (Platform.OS !== 'web') {
@@ -148,29 +160,40 @@ export default function LoginScreen({ onBack }: LoginScreenProps) {
     }
   };
 
-  const handleDemoMode = async () => {
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    }
-    setError(null);
-    
-    const result = await loginAsDemo();
-    
-    if (result.success) {
-      if (Platform.OS !== 'web') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      }
-    } else {
-      setError(result.error || 'Demo mode failed. Please try again.');
-    }
-  };
-
   const toggleMode = () => {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
     setIsRegisterMode(!isRegisterMode);
     setError(null);
+  };
+
+  const handleForgotPassword = () => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    setResetEmail(email);
+    setResetSuccess(false);
+    setShowForgotPassword(true);
+  };
+
+  const handlePasswordReset = async () => {
+    if (!resetEmail.trim()) {
+      return;
+    }
+    setResetLoading(true);
+    const result = await requestPasswordReset(resetEmail);
+    setResetLoading(false);
+    if (result.success) {
+      setResetSuccess(true);
+    }
+  };
+
+  const handleToggleRememberMe = () => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    setRememberMe(!rememberMe);
   };
 
   return (
@@ -266,6 +289,30 @@ export default function LoginScreen({ onBack }: LoginScreenProps) {
             </Animated.View>
           </View>
 
+          {!isRegisterMode ? (
+            <View style={styles.loginOptionsRow}>
+              <Pressable 
+                style={styles.rememberMeContainer}
+                onPress={handleToggleRememberMe}
+                testID="remember-me-toggle"
+              >
+                <Switch
+                  value={rememberMe}
+                  onValueChange={setRememberMe}
+                  trackColor={{ false: BrandColors.border, true: roleColor + '80' }}
+                  thumbColor={rememberMe ? roleColor : '#f4f3f4'}
+                  style={styles.switch}
+                />
+                <ThemedText style={styles.rememberMeText}>Remember Me</ThemedText>
+              </Pressable>
+              <Pressable onPress={handleForgotPassword} testID="forgot-password-link">
+                <ThemedText style={[styles.forgotPasswordText, { color: roleColor }]}>
+                  Forgot Password?
+                </ThemedText>
+              </Pressable>
+            </View>
+          ) : null}
+
           {error ? (
             <View style={styles.errorContainer}>
               <Feather name="alert-circle" size={16} color={BrandColors.danger} />
@@ -304,15 +351,6 @@ export default function LoginScreen({ onBack }: LoginScreenProps) {
             <View style={styles.dividerLine} />
           </View>
           <Pressable 
-            style={[styles.demoButton, { backgroundColor: BrandColors.emerald }]}
-            onPress={handleDemoMode}
-          >
-            <Feather name="play-circle" size={18} color="#FFFFFF" />
-            <ThemedText style={styles.demoButtonText}>
-              Demo Mode (No Server Required)
-            </ThemedText>
-          </Pressable>
-          <Pressable 
             style={[styles.quickAccessButton, { borderColor: roleColor }]}
             onPress={handleQuickAccess}
           >
@@ -323,6 +361,78 @@ export default function LoginScreen({ onBack }: LoginScreenProps) {
           </Pressable>
         </Animated.View>
       </KeyboardAwareScrollViewCompat>
+
+      <Modal
+        visible={showForgotPassword}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowForgotPassword(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <ThemedText style={styles.modalTitle}>
+                {resetSuccess ? 'Check Your Email' : 'Reset Password'}
+              </ThemedText>
+              <Pressable 
+                onPress={() => setShowForgotPassword(false)}
+                style={styles.modalCloseButton}
+              >
+                <Feather name="x" size={24} color={BrandColors.textPrimary} />
+              </Pressable>
+            </View>
+
+            {resetSuccess ? (
+              <View style={styles.successContainer}>
+                <View style={[styles.successIcon, { backgroundColor: roleColor + '20' }]}>
+                  <Feather name="mail" size={32} color={roleColor} />
+                </View>
+                <ThemedText style={styles.successText}>
+                  If an account exists with {resetEmail}, you will receive password reset instructions shortly.
+                </ThemedText>
+                <BPButton
+                  onPress={() => setShowForgotPassword(false)}
+                  fullWidth
+                  style={[styles.modalButton, { backgroundColor: roleColor }]}
+                >
+                  Back to Login
+                </BPButton>
+              </View>
+            ) : (
+              <View>
+                <ThemedText style={styles.modalDescription}>
+                  Enter your email address and we'll send you instructions to reset your password.
+                </ThemedText>
+                <View style={styles.modalInputWrapper}>
+                  <ThemedText style={styles.label}>Email Address</ThemedText>
+                  <View style={styles.modalInputContainer}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Enter your email"
+                      placeholderTextColor={BrandColors.textSecondary}
+                      value={resetEmail}
+                      onChangeText={setResetEmail}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      testID="reset-email-input"
+                    />
+                  </View>
+                </View>
+                <BPButton
+                  onPress={handlePasswordReset}
+                  loading={resetLoading}
+                  fullWidth
+                  disabled={!resetEmail.trim()}
+                  style={[styles.modalButton, { backgroundColor: roleColor }]}
+                >
+                  Send Reset Link
+                </BPButton>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
     </BubbleBackground>
   );
 }
@@ -457,25 +567,96 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.sm,
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
     gap: Spacing.sm,
-    marginTop: Spacing.md,
   },
   quickAccessText: {
     fontSize: 16,
     fontWeight: '600',
   },
-  demoButton: {
+  loginOptionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+  },
+  rememberMeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing.lg,
-    paddingHorizontal: Spacing.xl,
-    borderRadius: BorderRadius.sm,
-    gap: Spacing.sm,
-    width: '100%',
   },
-  demoButtonText: {
-    fontSize: 16,
+  switch: {
+    transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }],
+    marginRight: Spacing.xs,
+  },
+  rememberMeText: {
+    fontSize: 14,
+    color: BrandColors.textSecondary,
+  },
+  forgotPasswordText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.xl,
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.xl,
+    width: '100%',
+    maxWidth: 400,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+  },
+  modalTitle: {
+    fontSize: 20,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: BrandColors.textPrimary,
+  },
+  modalCloseButton: {
+    padding: Spacing.xs,
+  },
+  modalDescription: {
+    fontSize: 14,
+    color: BrandColors.textSecondary,
+    marginBottom: Spacing.xl,
+    lineHeight: 20,
+  },
+  modalInputWrapper: {
+    marginBottom: Spacing.xl,
+  },
+  modalInputContainer: {
+    borderRadius: BorderRadius.sm,
+    backgroundColor: '#F5F5F5',
+    borderWidth: 1,
+    borderColor: BrandColors.border,
+  },
+  modalButton: {
+    marginTop: Spacing.sm,
+  },
+  successContainer: {
+    alignItems: 'center',
+    paddingVertical: Spacing.xl,
+  },
+  successIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+  },
+  successText: {
+    fontSize: 14,
+    color: BrandColors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: Spacing.xl,
   },
 });

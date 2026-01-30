@@ -20,7 +20,8 @@ import { ThemedText } from '@/components/ThemedText';
 import { DualVoiceInput } from '@/components/DualVoiceInput';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing } from '@/constants/theme';
-import { submitRepairsNeeded } from '@/lib/techOpsService';
+import { techOpsRequest } from '@/lib/query-client';
+import { useAuth } from '@/context/AuthContext';
 
 interface PropertyOption {
   id: string;
@@ -48,6 +49,7 @@ export function RepairsNeededModal({
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const { height: windowHeight } = useWindowDimensions();
+  const { user } = useAuth();
 
   const [isUrgent, setIsUrgent] = useState(false);
   const [issueDescription, setIssueDescription] = useState('');
@@ -65,49 +67,69 @@ export function RepairsNeededModal({
   }, [visible, properties]);
 
   const handleSubmit = async () => {
-    if (isSubmitting) return;
-
-    const finalPropertyName = properties ? selectedProperty?.name : propertyName;
-    const finalPropertyAddress = properties ? selectedProperty?.address : propertyAddress;
-    const finalPropertyId = properties ? selectedPropertyId : undefined;
-
-    if (!finalPropertyName) {
-      Alert.alert('Error', 'Please select a property');
+    const propId = properties ? selectedPropertyId : 'default';
+    const propName = displayPropertyName;
+    
+    if (!propId || (properties && !selectedPropertyId)) {
+      Alert.alert('Property Required', 'Please select a property before submitting a repair request.');
+      return;
+    }
+    
+    if (!user?.id) {
+      Alert.alert('Authentication Required', 'Please log in before submitting a repair request.');
+      return;
+    }
+    
+    if (issueDescription.trim().length < 10 && !audioRecording) {
+      Alert.alert('Description Required', 'Please provide at least 10 characters describing the issue, or record an audio message.');
       return;
     }
 
-    if (!issueDescription.trim() && !audioRecording) {
-      Alert.alert('Error', 'Please describe the issue');
-      return;
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
 
     setIsSubmitting(true);
 
-    try {
-      await submitRepairsNeeded({
-        propertyId: finalPropertyId,
-        propertyName: finalPropertyName,
-        propertyAddress: finalPropertyAddress,
-        technicianName: technicianName,
-        description: issueDescription.trim() || 'Voice recording attached',
-        isUrgent,
-        photos: [], // TODO: Add photo upload support
-      });
+    const payload = {
+      entryType: 'repairs_needed',
+      description: issueDescription.trim() || '[Audio message attached]',
+      priority: isUrgent ? 'urgent' : 'normal',
+      status: 'pending',
+      propertyId: propId,
+      propertyName: propName,
+      bodyOfWater: displayPropertyAddress || 'Main Pool',
+      technicianId: user.id.toString(),
+      technicianName: technicianName || user.name || 'Technician',
+      hasAudio: !!audioRecording,
+      audioUri: audioRecording?.uri,
+    };
 
+    if (__DEV__) {
+      console.log('[RepairsNeeded] Submitting to Tech Ops:', payload);
+    }
+
+    try {
+      await techOpsRequest('/api/tech-ops', payload);
+      
       if (Platform.OS !== 'web') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
-
-      Alert.alert('Success', 'Repair request submitted successfully!', [
-        { text: 'OK', onPress: onClose }
-      ]);
-
+      
+      Alert.alert(
+        'Report Submitted',
+        'Your repair request has been sent to the office.',
+        [{ text: 'OK', onPress: () => {} }]
+      );
+      
       setIssueDescription('');
       setIsUrgent(false);
       setAudioRecording(null);
+      onClose();
     } catch (error) {
-      console.error('Failed to submit repair request:', error);
-      Alert.alert('Error', 'Failed to submit repair request. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error('[RepairsNeeded] Submission failed:', errorMessage);
+      Alert.alert('Submission Failed', `Could not send repair request: ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -179,10 +201,11 @@ export function RepairsNeededModal({
                     onValueChange={(value) => setSelectedPropertyId(value)}
                     style={styles.picker}
                     dropdownIconColor={theme.text}
+                    itemStyle={{ color: '#000000', fontSize: 16 }}
                   >
-                    <Picker.Item label="Select a property..." value="" />
+                    <Picker.Item label="Select a property..." value="" color="#000000" />
                     {properties.map((prop) => (
-                      <Picker.Item key={prop.id} label={prop.name} value={prop.id} />
+                      <Picker.Item key={prop.id} label={prop.name} value={prop.id} color="#000000" />
                     ))}
                   </Picker>
                 </View>
@@ -269,17 +292,18 @@ export function RepairsNeededModal({
             <Pressable
               style={[
                 styles.submitButton,
-                { backgroundColor: BrandColors.azureBlue },
-                ((!issueDescription.trim() && !audioRecording) || isSubmitting) && styles.submitButtonDisabled,
+                { backgroundColor: isSubmitting ? theme.textSecondary : BrandColors.azureBlue },
+                (!issueDescription.trim() && !audioRecording) && styles.submitButtonDisabled,
               ]}
               onPress={handleSubmit}
-              disabled={(!issueDescription.trim() && !audioRecording) || isSubmitting}
+              disabled={isSubmitting || (!issueDescription.trim() && !audioRecording)}
             >
               {isSubmitting ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
-              ) : (
-                <ThemedText style={styles.submitButtonText}>Submit Repair Request</ThemedText>
-              )}
+                <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
+              ) : null}
+              <ThemedText style={styles.submitButtonText}>
+                {isSubmitting ? 'Submitting...' : 'Submit Repair Request'}
+              </ThemedText>
             </Pressable>
           </View>
         </View>
@@ -468,6 +492,7 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.md,
   },
   submitButton: {
+    flexDirection: 'row',
     paddingVertical: Spacing.lg,
     borderRadius: BorderRadius.md,
     alignItems: 'center',

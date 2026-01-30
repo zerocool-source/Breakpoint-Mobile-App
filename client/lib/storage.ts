@@ -6,6 +6,9 @@ import type { User, Job, Estimate, Property, RouteStop, ChatMessage } from '@/ty
 const STORAGE_KEYS = {
   AUTH_TOKEN: 'auth_token',
   USER: 'user',
+  REMEMBER_ME: 'remember_me',
+  SAVED_EMAIL: 'saved_email',
+  SAVED_ROLE: 'saved_role',
   JOBS: 'jobs',
   ESTIMATES: 'estimates',
   PROPERTIES: 'properties',
@@ -123,7 +126,44 @@ export const storage = {
     await AsyncStorage.removeItem(STORAGE_KEYS.OFFLINE_QUEUE);
   },
 
+  async setRememberMe(remember: boolean): Promise<void> {
+    await AsyncStorage.setItem(STORAGE_KEYS.REMEMBER_ME, JSON.stringify(remember));
+  },
+
+  async getRememberMe(): Promise<boolean> {
+    const data = await AsyncStorage.getItem(STORAGE_KEYS.REMEMBER_ME);
+    return data ? JSON.parse(data) : false;
+  },
+
+  async setSavedEmail(email: string): Promise<void> {
+    await AsyncStorage.setItem(STORAGE_KEYS.SAVED_EMAIL, email);
+  },
+
+  async getSavedEmail(): Promise<string | null> {
+    return AsyncStorage.getItem(STORAGE_KEYS.SAVED_EMAIL);
+  },
+
+  async removeSavedEmail(): Promise<void> {
+    await AsyncStorage.removeItem(STORAGE_KEYS.SAVED_EMAIL);
+  },
+
+  async setSavedRole(role: string): Promise<void> {
+    await AsyncStorage.setItem(STORAGE_KEYS.SAVED_ROLE, role);
+  },
+
+  async getSavedRole(): Promise<string | null> {
+    return AsyncStorage.getItem(STORAGE_KEYS.SAVED_ROLE);
+  },
+
+  async removeSavedRole(): Promise<void> {
+    await AsyncStorage.removeItem(STORAGE_KEYS.SAVED_ROLE);
+  },
+
   async clearAll(): Promise<void> {
+    const rememberMe = await this.getRememberMe();
+    const savedEmail = await this.getSavedEmail();
+    const savedRole = await this.getSavedRole();
+    
     await Promise.all([
       this.removeAuthToken(),
       this.removeUser(),
@@ -136,5 +176,13 @@ export const storage = {
         STORAGE_KEYS.OFFLINE_QUEUE,
       ]),
     ]);
+
+    if (rememberMe && savedEmail) {
+      await this.setSavedEmail(savedEmail);
+      await this.setRememberMe(true);
+      if (savedRole) {
+        await this.setSavedRole(savedRole);
+      }
+    }
   },
 };

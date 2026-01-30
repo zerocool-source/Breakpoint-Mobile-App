@@ -2,10 +2,83 @@ import type { Express } from "express";
 import { createServer, type Server } from "node:http";
 import authRoutes, { authMiddleware, AuthenticatedRequest } from "./auth";
 import { db } from "./db";
-import { users, properties, jobs, assignments, estimates, routeStops, propertyChannels } from "@shared/schema";
+import { users, properties, jobs, assignments, estimates, routeStops, propertyChannels, techOps } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 
+// Render API base URLs for proxy
+const RENDER_API_URL = process.env.RENDER_API_URL || "https://breakpoint-api-v2.onrender.com";
+const TECHOPS_API_URL = process.env.TECHOPS_API_URL || "https://breakpoint-app.onrender.com";
+const MOBILE_API_KEY = process.env.MOBILE_API_KEY;
+
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Proxy auth requests to Render API (for web testing - bypasses CORS)
+  app.post("/api/proxy/auth/login", async (req, res) => {
+    try {
+      const response = await fetch(`${RENDER_API_URL}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(req.body),
+      });
+      const data = await response.json();
+      res.status(response.status).json(data);
+    } catch (error) {
+      console.error("[Proxy] Login error:", error);
+      res.status(503).json({ error: "Unable to reach authentication server" });
+    }
+  });
+
+  app.get("/api/proxy/auth/me", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      const response = await fetch(`${RENDER_API_URL}/api/auth/me`, {
+        headers: authHeader ? { Authorization: authHeader } : {},
+      });
+      const data = await response.json();
+      res.status(response.status).json(data);
+    } catch (error) {
+      console.error("[Proxy] Auth check error:", error);
+      res.status(503).json({ error: "Unable to reach authentication server" });
+    }
+  });
+
+  // Proxy Tech Ops requests to Render Admin BI API (for web testing - bypasses CORS)
+  app.post("/api/proxy/tech-ops", async (req, res) => {
+    try {
+      const apiKey = MOBILE_API_KEY;
+      if (!apiKey) {
+        console.error("[Proxy] MOBILE_API_KEY not set");
+        return res.status(500).json({ error: "Server configuration error" });
+      }
+      
+      console.log("[Proxy] Tech Ops request to:", `${TECHOPS_API_URL}/api/tech-ops`);
+      console.log("[Proxy] Tech Ops payload:", JSON.stringify(req.body));
+      
+      const response = await fetch(`${TECHOPS_API_URL}/api/tech-ops`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-MOBILE-KEY": apiKey,
+        },
+        body: JSON.stringify(req.body),
+      });
+      
+      const responseText = await response.text();
+      console.log("[Proxy] Tech Ops response status:", response.status);
+      console.log("[Proxy] Tech Ops response:", responseText);
+      
+      // Try to parse as JSON, otherwise return as-is
+      try {
+        const data = JSON.parse(responseText);
+        res.status(response.status).json(data);
+      } catch {
+        res.status(response.status).send(responseText);
+      }
+    } catch (error) {
+      console.error("[Proxy] Tech Ops error:", error);
+      res.status(503).json({ error: "Unable to reach Tech Ops server" });
+    }
+  });
+
   app.use("/api/auth", authRoutes);
 
   app.get("/api/properties", authMiddleware, async (req: AuthenticatedRequest, res) => {
@@ -530,6 +603,211 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating technician county:", error);
       res.status(500).json({ error: "Failed to update county" });
+    }
+  });
+
+  // GET /api/tech-ops - Get all tech ops entries (admin/supervisor view)
+  app.get("/api/tech-ops", authMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      const role = req.user!.role;
+      if (role !== "supervisor" && role !== "repair_foreman") {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+
+      const entryType = req.query.entryType as string | undefined;
+      
+      let entries;
+      if (entryType) {
+        entries = await db.query.techOps.findMany({
+          where: eq(techOps.entryType, entryType as any),
+          orderBy: [desc(techOps.createdAt)],
+        });
+      } else {
+        entries = await db.query.techOps.findMany({
+          orderBy: [desc(techOps.createdAt)],
+        });
+      }
+      
+      res.json(entries);
+    } catch (error) {
+      console.error("Error fetching tech ops entries:", error);
+      res.status(500).json({ error: "Failed to fetch tech ops entries" });
+    }
+  });
+
+  // POST /api/tech-ops - Create a new tech ops entry
+  // Supports both session auth (web) and mobile API key auth
+  app.post("/api/tech-ops", async (req, res) => {
+    try {
+      const mobileApiKey = req.headers['x-mobile-key'] as string | undefined;
+      const expectedMobileKey = process.env.MOBILE_API_KEY;
+
+      // Check for mobile API key authentication
+      if (mobileApiKey) {
+        if (!expectedMobileKey) {
+          console.error("MOBILE_API_KEY not configured on server");
+          return res.status(500).json({ error: "Server configuration error" });
+        }
+        
+        if (mobileApiKey !== expectedMobileKey) {
+          return res.status(401).json({ error: "Invalid mobile API key" });
+        }
+
+        // Mobile API key can ONLY create repairs_needed entries
+        const { entryType, description, priority, propertyId, propertyName, bodyOfWater, technicianId, technicianName, photoUrls, hasAudio, audioUri } = req.body;
+
+        if (entryType !== 'repairs_needed') {
+          return res.status(403).json({ error: "Mobile API key can only create repairs_needed entries" });
+        }
+
+        // Validate required fields for repairs_needed
+        const errors: string[] = [];
+        
+        // Allow audio-only submissions OR text with 10+ characters
+        const hasValidDescription = description && typeof description === 'string' && description.trim().length >= 10;
+        const hasAudioMessage = hasAudio === true || (audioUri && typeof audioUri === 'string');
+        
+        if (!hasValidDescription && !hasAudioMessage) {
+          errors.push("Description (min 10 chars) OR audio message is required");
+        }
+        if (!priority || !['urgent', 'normal'].includes(priority)) {
+          errors.push("Priority is required and must be 'urgent' or 'normal'");
+        }
+        if (!propertyId || typeof propertyId !== 'string') {
+          errors.push("propertyId is required");
+        }
+        if (!propertyName || typeof propertyName !== 'string') {
+          errors.push("propertyName is required");
+        }
+        if (!bodyOfWater || typeof bodyOfWater !== 'string') {
+          errors.push("bodyOfWater is required");
+        }
+        if (!technicianId || typeof technicianId !== 'string') {
+          errors.push("technicianId is required");
+        }
+        if (!technicianName || typeof technicianName !== 'string') {
+          errors.push("technicianName is required");
+        }
+
+        if (errors.length > 0) {
+          return res.status(422).json({ error: "Validation failed", details: errors });
+        }
+
+        // Create the tech ops entry locally
+        const finalDescription = hasValidDescription 
+          ? description.trim() 
+          : hasAudioMessage 
+            ? '[Audio message attached]' 
+            : '';
+            
+        const [newEntry] = await db.insert(techOps).values({
+          entryType: 'repairs_needed',
+          description: finalDescription,
+          priority: priority as 'urgent' | 'normal',
+          status: 'pending',
+          propertyId,
+          propertyName,
+          bodyOfWater,
+          technicianId,
+          technicianName,
+          photoUrls: photoUrls ? JSON.stringify(photoUrls) : null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }).returning();
+
+        // Forward to Render Admin App API
+        const renderApiUrl = process.env.TECHOPS_RENDER_URL || 'https://breakpoint-app.onrender.com';
+        const renderPayload = {
+          propertyId,
+          propertyName,
+          bodyOfWater,
+          description: finalDescription,
+          priority,
+          submittedBy: technicianId,
+          submittedByName: technicianName,
+          submittedAt: new Date().toISOString(),
+          photoUrls: photoUrls || [],
+          audioUrl: audioUri || null,
+          hasAudio: hasAudioMessage,
+          localEntryId: newEntry.id,
+        };
+
+        try {
+          console.log('[TechOps] Forwarding to Render:', `${renderApiUrl}/api/tech-ops`);
+          const renderRes = await fetch(`${renderApiUrl}/api/tech-ops`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-MOBILE-KEY': expectedMobileKey,
+            },
+            body: JSON.stringify(renderPayload),
+          });
+
+          if (renderRes.ok) {
+            console.log('[TechOps] Successfully forwarded to Render');
+          } else {
+            const errorText = await renderRes.text();
+            console.error('[TechOps] Render API error:', renderRes.status, errorText);
+          }
+        } catch (renderError) {
+          console.error('[TechOps] Failed to forward to Render:', renderError);
+          // Don't fail the request - we've already saved locally
+        }
+
+        return res.status(201).json({
+          success: true,
+          entry: newEntry,
+          forwardedToRender: true,
+        });
+      }
+
+      // Fall back to session authentication for web users
+      // For now, return 401 if no auth method provided
+      return res.status(401).json({ error: "Authentication required. Provide X-MOBILE-KEY header or session token." });
+
+    } catch (error) {
+      console.error("Error creating tech ops entry:", error);
+      res.status(500).json({ error: "Failed to create tech ops entry" });
+    }
+  });
+
+  // PATCH /api/tech-ops/:id - Update a tech ops entry (supervisor only)
+  app.patch("/api/tech-ops/:id", authMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      const role = req.user!.role;
+      if (role !== "supervisor" && role !== "repair_foreman") {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+
+      const { id } = req.params;
+      const { status, resolutionNotes } = req.body;
+
+      const updateData: any = { updatedAt: new Date() };
+      
+      if (status) {
+        updateData.status = status;
+        if (status === 'resolved' || status === 'closed') {
+          updateData.resolvedAt = new Date();
+          updateData.resolvedById = req.user!.id;
+        }
+      }
+      if (resolutionNotes !== undefined) {
+        updateData.resolutionNotes = resolutionNotes;
+      }
+
+      const [updated] = await db.update(techOps)
+        .set(updateData)
+        .where(eq(techOps.id, id as string))
+        .returning();
+
+      if (!updated) {
+        return res.status(404).json({ error: "Tech ops entry not found" });
+      }
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating tech ops entry:", error);
+      res.status(500).json({ error: "Failed to update tech ops entry" });
     }
   });
 

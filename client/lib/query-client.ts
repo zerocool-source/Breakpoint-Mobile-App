@@ -1,4 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { Platform } from 'react-native';
 import { storage } from "./storage";
 
 /**
@@ -56,6 +57,38 @@ export function getApiUrl(): string {
 }
 
 /**
+ * Returns the auth API URL - uses proxy on web to avoid CORS issues.
+ * Web browser: Uses local backend proxy at /api/proxy/auth/*
+ * Mobile (Expo Go): Uses Render API directly
+ */
+export function getAuthApiUrl(): string {
+  if (Platform.OS === 'web') {
+    // Use local backend proxy to avoid CORS issues in browser
+    const domain = process.env.EXPO_PUBLIC_DOMAIN;
+    if (domain) {
+      return `https://${domain}`;
+    }
+    // Fallback for local dev
+    return 'http://localhost:5000';
+  }
+  // Mobile apps don't have CORS issues - use Render directly
+  return getApiUrl();
+}
+
+/**
+ * Returns the Tech Ops API URL for repair submissions.
+ * Falls back to EXPO_PUBLIC_API_URL if EXPO_PUBLIC_TECHOPS_URL is not set.
+ */
+export function getTechOpsUrl(): string {
+  const techOpsUrl = process.env.EXPO_PUBLIC_TECHOPS_URL;
+  if (techOpsUrl) {
+    return techOpsUrl.trim().replace(/\/+$/, "");
+  }
+  // Fallback to main API URL
+  return getApiUrl();
+}
+
+/**
  * Safely joins a base URL with a path, ensuring exactly one "/" between them.
  * Handles cases where base may or may not end with "/" and path may or may not start with "/".
  * 
@@ -87,6 +120,100 @@ async function throwIfResNotOk(res: Response) {
     const text = (await res.text()) || res.statusText;
     throw new Error(`${res.status}: ${text}`);
   }
+}
+
+/**
+ * Environment sanity check - logs the configured API URLs in dev mode.
+ * Call this at app startup to verify configuration.
+ */
+export function logEnvironmentConfig(): void {
+  if (__DEV__) {
+    const apiUrl = process.env.EXPO_PUBLIC_API_URL;
+    const techOpsUrl = process.env.EXPO_PUBLIC_TECHOPS_URL;
+    const mobileKey = process.env.EXPO_PUBLIC_MOBILE_API_KEY;
+    console.log("═══════════════════════════════════════════════════════════");
+    console.log("[ENV CONFIG] Auth/Data API:  ", apiUrl || "NOT SET");
+    console.log("[ENV CONFIG] Tech Ops API:   ", techOpsUrl || "(using Auth/Data API)");
+    console.log("[ENV CONFIG] Mobile API Key: ", mobileKey ? `${mobileKey.substring(0, 8)}...` : "NOT SET");
+    console.log("═══════════════════════════════════════════════════════════");
+  }
+}
+
+/**
+ * Makes a POST request to the Tech Ops API with mobile API key authentication.
+ * 
+ * Platform behavior:
+ * - Web: Uses local backend proxy at /api/proxy/tech-ops to bypass CORS
+ * - Mobile (Expo Go): Calls Tech Ops API directly with X-MOBILE-KEY header
+ * 
+ * Configuration Matrix:
+ * ┌────────────┬───────────────────────────────────────────────────────────┐
+ * │ Environment│ EXPO_PUBLIC_API_URL          │ EXPO_PUBLIC_TECHOPS_URL    │
+ * ├────────────┼──────────────────────────────┼────────────────────────────┤
+ * │ Dev/Replit │ https://breakpoint-api-v2... │ https://breakpoint-app...  │
+ * │ Production │ https://breakpoint-api-v2... │ https://breakpoint-app...  │
+ * └────────────┴──────────────────────────────┴────────────────────────────┘
+ * 
+ * - Auth/Data requests → EXPO_PUBLIC_API_URL (breakpoint-api-v2.onrender.com)
+ * - Tech Ops requests  → EXPO_PUBLIC_TECHOPS_URL (breakpoint-app.onrender.com)
+ */
+export async function techOpsRequest(route: string, data: unknown): Promise<Response> {
+  // On web, use proxy to bypass CORS; on mobile, call directly
+  if (Platform.OS === 'web') {
+    const domain = process.env.EXPO_PUBLIC_DOMAIN;
+    const proxyBaseUrl = domain ? `https://${domain}` : 'http://localhost:5000';
+    const proxyUrl = joinUrl(proxyBaseUrl, '/api/proxy/tech-ops');
+    
+    if (__DEV__) {
+      console.log("[TechOps] POST (via proxy)", proxyUrl);
+      console.log("[TechOps] payload", data);
+    }
+    
+    const res = await fetch(proxyUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+    
+    await throwIfResNotOk(res);
+    return res;
+  }
+  
+  // Mobile: Call Tech Ops API directly with mobile key
+  const baseUrl = getTechOpsUrl();
+  const url = joinUrl(baseUrl, route);
+  const mobileKey = process.env.EXPO_PUBLIC_MOBILE_API_KEY;
+
+  if (!mobileKey) {
+    throw new Error("EXPO_PUBLIC_MOBILE_API_KEY is not set");
+  }
+
+  if (__DEV__) {
+    console.log("[TechOps] POST", url);
+    console.log("[TechOps] payload", data);
+    console.log("[TechOps] Using mobile key:", mobileKey.substring(0, 8) + "...");
+  }
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-MOBILE-KEY": mobileKey,
+    },
+    body: JSON.stringify(data),
+  });
+
+  await throwIfResNotOk(res);
+  return res;
+}
+
+/**
+ * @deprecated Use techOpsRequest instead for Tech Ops submissions
+ */
+export async function mobileKeyRequest(route: string, data: unknown): Promise<Response> {
+  return techOpsRequest(route, data);
 }
 
 export async function apiRequest(
@@ -121,16 +248,34 @@ export async function apiRequest(
   return res;
 }
 
+/**
+ * Makes an authenticated API request with timeout.
+ * On web: Uses local backend proxy to avoid CORS issues.
+ * On mobile: Calls Render API directly.
+ * 
+ * @param method - HTTP method
+ * @param route - API route (e.g., '/api/auth/login')
+ * @param data - Optional request body
+ * @param timeoutMs - Request timeout in milliseconds (default: 15000)
+ */
 export async function authApiRequest(
   method: string,
   route: string,
   data?: unknown | undefined,
+  timeoutMs: number = 15000,
 ): Promise<Response> {
-  const baseUrl = getApiUrl();
-  const url = joinUrl(baseUrl, route);
+  const baseUrl = getAuthApiUrl();
+  
+  // On web, use proxy route to avoid CORS
+  let finalRoute = route;
+  if (Platform.OS === 'web' && route.startsWith('/api/auth/')) {
+    finalRoute = route.replace('/api/auth/', '/api/proxy/auth/');
+  }
+  
+  const url = joinUrl(baseUrl, finalRoute);
 
-  if (__DEV__ && route === '/api/auth/me') {
-    console.log('[authApiRequest] Final URL for /api/auth/me:', url);
+  if (__DEV__) {
+    console.log('[authApiRequest] URL:', url, Platform.OS === 'web' ? '(via proxy)' : '(direct)');
   }
 
   const headers: Record<string, string> = {};
@@ -138,14 +283,41 @@ export async function authApiRequest(
     headers["Content-Type"] = "application/json";
   }
 
-  const res = await fetch(url, {
-    method,
-    headers,
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
+  // Add timeout using AbortController
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-  return res;
+  try {
+    const res = await fetch(url, {
+      method,
+      headers,
+      body: data ? JSON.stringify(data) : undefined,
+      credentials: "include",
+      signal: controller.signal,
+    });
+    return res;
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      // Create a fake Response for timeout
+      return new Response(JSON.stringify({ 
+        error: 'Request timed out. The server may be starting up - please try again in a moment.' 
+      }), {
+        status: 408,
+        statusText: 'Request Timeout',
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    // Network error - create a fake Response with 503 status
+    return new Response(JSON.stringify({ 
+      error: 'Network error. Please check your connection and try again.' 
+    }), {
+      status: 503,
+      statusText: 'Service Unavailable',
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";

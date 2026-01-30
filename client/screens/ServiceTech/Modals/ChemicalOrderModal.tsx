@@ -8,8 +8,6 @@ import {
   Platform,
   TextInput,
   useWindowDimensions,
-  Alert,
-  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -20,7 +18,6 @@ import { ThemedText } from '@/components/ThemedText';
 import { DualVoiceInput } from '@/components/DualVoiceInput';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing } from '@/constants/theme';
-import { submitChemicalOrder } from '@/lib/techOpsService';
 
 interface PropertyOption {
   id: string;
@@ -34,7 +31,6 @@ interface ChemicalOrderModalProps {
   propertyName: string;
   propertyAddress: string;
   properties?: PropertyOption[];
-  technicianName?: string;
 }
 
 interface ChemicalRow {
@@ -73,7 +69,6 @@ export function ChemicalOrderModal({
   propertyName,
   propertyAddress,
   properties,
-  technicianName = 'Service Technician',
 }: ChemicalOrderModalProps) {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
@@ -84,7 +79,6 @@ export function ChemicalOrderModal({
   ]);
   const [notes, setNotes] = useState('');
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const selectedProperty = properties?.find(p => p.id === selectedPropertyId);
   const displayPropertyName = properties ? (selectedProperty?.name || 'Select Property') : propertyName;
@@ -129,57 +123,13 @@ export function ChemicalOrderModal({
     );
   };
 
-  const handleSubmit = async () => {
-    if (isSubmitting) return;
-
-    const finalPropertyName = properties ? selectedProperty?.name : propertyName;
-    const finalPropertyAddress = properties ? selectedProperty?.address : propertyAddress;
-    const finalPropertyId = properties ? selectedPropertyId : undefined;
-
-    if (!finalPropertyName) {
-      Alert.alert('Error', 'Please select a property');
-      return;
+  const handleSubmit = () => {
+    if (Platform.OS !== 'web') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
-
-    const validRows = rows.filter(r => r.chemical !== '');
-    if (validRows.length === 0) {
-      Alert.alert('Error', 'Please select at least one chemical');
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      // Format chemicals as a string list
-      const chemicalsStr = validRows.map(r => `${r.quantity} x ${r.unit} ${r.chemical}`).join(', ');
-      const quantityStr = validRows.map(r => `${r.quantity} ${r.unit}`).join(', ');
-
-      await submitChemicalOrder({
-        propertyId: finalPropertyId,
-        propertyName: finalPropertyName,
-        propertyAddress: finalPropertyAddress,
-        technicianName,
-        chemicals: chemicalsStr,
-        quantity: quantityStr,
-        notes: notes || undefined,
-      });
-
-      if (Platform.OS !== 'web') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      }
-
-      Alert.alert('Success', 'Chemical order submitted successfully!', [
-        { text: 'OK', onPress: onClose }
-      ]);
-
-      setRows([{ id: '1', chemical: '', quantity: 1, unit: '1 Quart' }]);
-      setNotes('');
-    } catch (error) {
-      console.error('Failed to submit chemical order:', error);
-      Alert.alert('Error', 'Failed to submit chemical order. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
+    setRows([{ id: '1', chemical: '', quantity: 1, unit: '1 Quart' }]);
+    setNotes('');
+    onClose();
   };
 
   const handleCancel = () => {
@@ -221,10 +171,11 @@ export function ChemicalOrderModal({
                   onValueChange={(value) => setSelectedPropertyId(value)}
                   style={styles.propertyPicker}
                   dropdownIconColor={theme.text}
+                  itemStyle={{ color: '#000000', fontSize: 16 }}
                 >
-                  <Picker.Item label="Select a property..." value="" />
+                  <Picker.Item label="Select a property..." value="" color="#000000" />
                   {properties.map((prop) => (
-                    <Picker.Item key={prop.id} label={prop.name} value={prop.id} />
+                    <Picker.Item key={prop.id} label={prop.name} value={prop.id} color="#000000" />
                   ))}
                 </Picker>
               </View>
@@ -247,14 +198,21 @@ export function ChemicalOrderModal({
                 <View style={styles.chemicalMainRow}>
                   <View style={styles.chemicalSelectContainer}>
                     <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>CHEMICAL</ThemedText>
-                    <View style={[styles.pickerContainer, { borderColor: theme.border }]}>
+                    <View style={[styles.pickerContainer, { borderColor: theme.border, backgroundColor: theme.surface }]}>
                       <Picker
                         selectedValue={row.chemical}
                         onValueChange={(value: string) => handleChemicalChange(row.id, value)}
                         style={styles.picker}
+                        dropdownIconColor={theme.text}
+                        itemStyle={{ color: '#000000', fontSize: 16 }}
                       >
                         {CHEMICALS.map((chem) => (
-                          <Picker.Item key={chem.value} label={chem.label} value={chem.value} />
+                          <Picker.Item 
+                            key={chem.value} 
+                            label={chem.label} 
+                            value={chem.value}
+                            color="#000000"
+                          />
                         ))}
                       </Picker>
                     </View>
@@ -290,14 +248,21 @@ export function ChemicalOrderModal({
                 {row.chemical ? (
                   <View style={styles.unitRow}>
                     <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>UNIT</ThemedText>
-                    <View style={[styles.pickerContainer, { borderColor: theme.border }]}>
+                    <View style={[styles.pickerContainer, { borderColor: theme.border, backgroundColor: theme.surface }]}>
                       <Picker
                         selectedValue={row.unit}
                         onValueChange={(value: string) => handleUnitChange(row.id, value)}
                         style={styles.picker}
+                        dropdownIconColor={theme.text}
+                        itemStyle={{ color: '#000000', fontSize: 16 }}
                       >
                         {UNITS.map((unit) => (
-                          <Picker.Item key={unit.value} label={unit.label} value={unit.value} />
+                          <Picker.Item 
+                            key={unit.value} 
+                            label={unit.label} 
+                            value={unit.value}
+                            color="#000000"
+                          />
                         ))}
                       </Picker>
                     </View>
@@ -359,19 +324,13 @@ export function ChemicalOrderModal({
               style={[
                 styles.submitButton,
                 { backgroundColor: BrandColors.azureBlue },
-                (!isValid || isSubmitting) && styles.submitButtonDisabled,
+                !isValid && styles.submitButtonDisabled,
               ]}
               onPress={handleSubmit}
-              disabled={!isValid || isSubmitting}
+              disabled={!isValid}
             >
-              {isSubmitting ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
-              ) : (
-                <>
-                  <Feather name="send" size={18} color="#FFFFFF" />
-                  <ThemedText style={styles.submitButtonText}>Send Order</ThemedText>
-                </>
-              )}
+              <Feather name="send" size={18} color="#FFFFFF" />
+              <ThemedText style={styles.submitButtonText}>Send Order</ThemedText>
             </Pressable>
           </View>
         </View>

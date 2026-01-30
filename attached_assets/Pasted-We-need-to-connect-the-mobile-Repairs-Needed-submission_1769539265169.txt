@@ -1,0 +1,65 @@
+We need to connect the mobile “Repairs Needed” submission to the Admin backend Tech Ops feed.
+
+Target backend:
+- Base URL must be https://breakpoint-app.onrender.com
+- POST endpoint: /api/tech-ops
+- Mobile must send header: X-MOBILE-KEY = process.env.EXPO_PUBLIC_MOBILE_API_KEY
+- Payload required fields:
+  entryType: "repairs_needed"
+  description: string (min 10 chars)
+  priority: "urgent" | "normal"
+  propertyId: string
+  propertyName: string
+  bodyOfWater: string (ex: "pool" or "spa")
+  technicianId: string
+  technicianName: string
+  status: "pending"
+
+TASKS (do ALL of these):
+1) Fix environment configuration:
+   - Search for EXPO_PUBLIC_API_URL being set in .replit (userenv/shared).
+   - Update it to: https://breakpoint-app.onrender.com
+   - Ensure the app reads base URL from process.env.EXPO_PUBLIC_API_URL consistently.
+
+2) Find where the mobile app currently stores/derives the “selected property / stop” context:
+   - Identify the source for propertyId + propertyName + bodyOfWater.
+   - It might be route stop context, property selection screen, or current “Bodies of Water” selection.
+   - Report the exact file and object shape.
+   - If propertyId is not available today, add it to the stop/property object (do not invent IDs; use existing id fields).
+
+3) Find where the mobile app stores the logged-in technician identity:
+   - Identify the auth/user store (context, Zustand, Redux, etc.).
+   - Confirm the available fields and pick technicianId + technicianName (fallback to email if needed).
+   - Report the exact file and object shape.
+   - If technicianName isn’t stored, create it from first/last name fields or a displayName field.
+
+4) Implement the API call:
+   - Add a new helper function (do NOT log secrets):
+     async function mobileKeyPost(route: string, body: any)
+       - baseUrl = getApiUrl()
+       - url = joinUrl(baseUrl, route)
+       - headers: Content-Type: application/json, X-MOBILE-KEY: process.env.EXPO_PUBLIC_MOBILE_API_KEY
+       - fetch POST, use throwIfResNotOk for errors, return parsed JSON
+   - Place it in client/lib/query-client.ts (or the existing API utility file where getApiUrl and joinUrl already exist).
+
+5) Wire up “Submit Repair Request”:
+   - Locate the Repairs Needed modal submit handler.
+   - Replace placeholder logic (haptics/close only) with:
+     a) validate description length >= 10
+     b) priority = urgent if “Mark as Urgent” is checked else normal
+     c) build payload with required fields from Step 2 and Step 3
+     d) await mobileKeyPost("/api/tech-ops", payload)
+     e) on success: clear form, close modal, show success toast/alert
+     f) on failure: show server response text
+
+6) Add safe debug logging in DEV only:
+   - console.log("[RepairsNeeded] POST", url)
+   - console.log("[RepairsNeeded] payload", payload)  // but NEVER log the API key
+   - This must help confirm property + technician fields are actually included.
+
+OUTPUT REQUIRED:
+- List the exact files edited.
+- Show the final payload object code.
+- Show where propertyId/propertyName/bodyOfWater comes from (file + variable).
+- Show where technicianId/technicianName comes from (file + variable).
+- Confirm the base URL is now https://breakpoint-app.onrender.com and not overridden by .replit.

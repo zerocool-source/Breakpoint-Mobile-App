@@ -245,11 +245,18 @@ export function DualVoiceInput({
                 </Pressable>
               </Animated.View>
             ) : (
-              <View style={[styles.hintContainer, { backgroundColor: theme.backgroundSecondary }]}>
-                <Feather name="info" size={16} color={theme.textSecondary} />
-                <ThemedText style={[styles.hintText, { color: theme.textSecondary }]}>
-                  Use your keyboard's dictation feature to speak
-                </ThemedText>
+              <View style={styles.mobileVoiceHint}>
+                <View style={[styles.hintIconContainer, { backgroundColor: BrandColors.azureBlue + '15' }]}>
+                  <Feather name="mic" size={20} color={BrandColors.azureBlue} />
+                </View>
+                <View style={styles.hintTextContainer}>
+                  <ThemedText style={[styles.hintTitle, { color: theme.text }]}>
+                    Voice Input Available
+                  </ThemedText>
+                  <ThemedText style={[styles.hintText, { color: theme.textSecondary }]}>
+                    Tap the text field, then tap the microphone on your keyboard to dictate
+                  </ThemedText>
+                </View>
               </View>
             )}
           </View>
@@ -377,6 +384,29 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     padding: Spacing.md,
     borderRadius: BorderRadius.md,
+  },
+  mobileVoiceHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    backgroundColor: 'rgba(0,0,0,0.03)',
+  },
+  hintIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  hintTextContainer: {
+    flex: 1,
+  },
+  hintTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 2,
   },
   hintText: {
     fontSize: 13,

@@ -1,0 +1,114 @@
+ix Repairs Needed Flow (Expo → Admin App on Render)
+
+Context
+This is a React Native Expo app that submits “Repairs Needed” requests from field techs to an Admin App API hosted on Render.
+
+Goals
+
+Repairs must actually send to the Admin App API.
+
+The submit button must show loading and prevent double submits.
+
+Mobile voice-to-text behavior must be clarified (web vs mobile).
+
+No fake success. Only close the modal on real API success.
+
+Task 1: Implement Real API Submission
+
+Update RepairsNeededModal.tsx:
+
+Add isSubmitting state
+
+Update handleSubmit to:
+
+Validate:
+
+User is authenticated (token present)
+
+Property is selected (if properties exist)
+
+Description OR audio message exists
+
+Text description minimum 10 characters (if used)
+
+POST to:
+
+https://breakpoint-app.onrender.com/api/tech-ops
+
+
+Payload must include:
+
+{
+  propertyId: string
+  description: string | null
+  audioUrl: string | null
+  submittedBy: user.id
+  submittedAt: ISOString
+}
+
+
+Send auth token in headers
+
+Handle:
+
+2xx → success alert, reset form, close modal
+
+non-2xx → error alert, keep modal open
+
+Log:
+
+[RepairsNeeded] Submitting to Tech Ops:
+
+Task 2: Loading + Disabled Submit Button
+
+Update the “Submit Repair Request” button:
+
+Disable while isSubmitting === true
+
+Replace text with spinner during submit
+
+Prevent double-tap submission
+
+Button should only re-enable after request completes
+
+Task 3: Voice-to-Text Clarification
+
+In DualVoiceInput:
+
+Keep Web Speech API web-only (Chrome / Edge)
+
+On mobile (Expo Go):
+
+Show a microphone icon
+
+Display text explaining:
+
+Tap the text field
+
+Use the keyboard’s dictation microphone
+
+Do NOT attempt to use webkitSpeechRecognition on mobile
+
+The Audio Message tab must continue working on both web and mobile.
+
+Acceptance Criteria
+
+Submitting a repair triggers a real network request
+
+Repairs appear in the Admin App
+
+Button shows loading and disables correctly
+
+Mobile users are not misled about voice-to-text
+
+Modal only closes on successful submission
+
+Do NOT
+
+Do not mock the API
+
+Do not auto-close the modal on failure
+
+Do not break web speech recognition
+
+If you need clarification, inspect existing components before adding new ones.

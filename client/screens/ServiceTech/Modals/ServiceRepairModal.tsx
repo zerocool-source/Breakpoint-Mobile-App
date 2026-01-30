@@ -8,8 +8,6 @@ import {
   ScrollView,
   Platform,
   useWindowDimensions,
-  Alert,
-  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -21,7 +19,6 @@ import { ThemedText } from '@/components/ThemedText';
 import { DualVoiceInput } from '@/components/DualVoiceInput';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing } from '@/constants/theme';
-import { submitServiceRepair } from '@/lib/techOpsService';
 
 interface PropertyOption {
   id: string;
@@ -35,7 +32,6 @@ interface ServiceRepairModalProps {
   propertyName: string;
   propertyAddress: string;
   properties?: PropertyOption[];
-  technicianName?: string;
 }
 
 interface Product {
@@ -59,7 +55,6 @@ export function ServiceRepairModal({
   propertyName,
   propertyAddress,
   properties,
-  technicianName = 'Service Technician',
 }: ServiceRepairModalProps) {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
@@ -68,61 +63,18 @@ export function ServiceRepairModal({
   const [issueDescription, setIssueDescription] = useState('');
   const [products, setProducts] = useState(AVAILABLE_PRODUCTS);
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const selectedProperty = properties?.find(p => p.id === selectedPropertyId);
   const displayPropertyName = properties ? (selectedProperty?.name || 'Select Property') : propertyName;
   const displayPropertyAddress = properties ? (selectedProperty?.address || '') : propertyAddress;
 
-  const handleSubmit = async () => {
-    if (isSubmitting) return;
-
-    const finalPropertyName = properties ? selectedProperty?.name : propertyName;
-    const finalPropertyAddress = properties ? selectedProperty?.address : propertyAddress;
-    const finalPropertyId = properties ? selectedPropertyId : undefined;
-
-    if (!finalPropertyName) {
-      Alert.alert('Error', 'Please select a property');
-      return;
+  const handleSubmit = () => {
+    if (Platform.OS !== 'web') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
-
-    if (!issueDescription.trim()) {
-      Alert.alert('Error', 'Please describe the repair');
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      const addedProducts = products.filter(p => p.added);
-      const partsCostEstimate = addedProducts.length * 5000; // $50 per product placeholder
-
-      await submitServiceRepair({
-        propertyId: finalPropertyId,
-        propertyName: finalPropertyName,
-        propertyAddress: finalPropertyAddress,
-        technicianName,
-        description: issueDescription.trim(),
-        partsCost: partsCostEstimate,
-        photos: [], // TODO: Add photo support
-      });
-
-      if (Platform.OS !== 'web') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      }
-
-      Alert.alert('Success', 'Service repair submitted!', [
-        { text: 'OK', onPress: onClose }
-      ]);
-
-      setIssueDescription('');
-      setProducts(AVAILABLE_PRODUCTS);
-    } catch (error) {
-      console.error('Failed to submit service repair:', error);
-      Alert.alert('Error', 'Failed to submit. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
+    setIssueDescription('');
+    setProducts(AVAILABLE_PRODUCTS);
+    onClose();
   };
 
   const handleVoiceRecordingComplete = (uri: string, duration: number) => {
@@ -195,10 +147,11 @@ export function ServiceRepairModal({
                   onValueChange={(value) => setSelectedPropertyId(value)}
                   style={styles.propertyPicker}
                   dropdownIconColor={theme.text}
+                  itemStyle={{ color: '#000000', fontSize: 16 }}
                 >
-                  <Picker.Item label="Select a property..." value="" />
+                  <Picker.Item label="Select a property..." value="" color="#000000" />
                   {properties.map((prop) => (
-                    <Picker.Item key={prop.id} label={prop.name} value={prop.id} />
+                    <Picker.Item key={prop.id} label={prop.name} value={prop.id} color="#000000" />
                   ))}
                 </Picker>
               </View>

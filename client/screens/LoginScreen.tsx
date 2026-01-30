@@ -40,7 +40,7 @@ interface LoginScreenProps {
 
 export default function LoginScreen({ onBack }: LoginScreenProps) {
   const insets = useSafeAreaInsets();
-  const { login, register, isLoading, selectedRole } = useAuth();
+  const { login, register, loginAsDemo, isLoading, selectedRole } = useAuth();
 
   const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [name, setName] = useState('');
@@ -145,6 +145,23 @@ export default function LoginScreen({ onBack }: LoginScreenProps) {
       }
     } else {
       setError(result.error || 'Quick access failed. Please try again.');
+    }
+  };
+
+  const handleDemoMode = async () => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+    setError(null);
+    
+    const result = await loginAsDemo();
+    
+    if (result.success) {
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    } else {
+      setError(result.error || 'Demo mode failed. Please try again.');
     }
   };
 
@@ -286,6 +303,15 @@ export default function LoginScreen({ onBack }: LoginScreenProps) {
             <ThemedText style={styles.dividerText}>Quick Access</ThemedText>
             <View style={styles.dividerLine} />
           </View>
+          <Pressable 
+            style={[styles.demoButton, { backgroundColor: BrandColors.emerald }]}
+            onPress={handleDemoMode}
+          >
+            <Feather name="play-circle" size={18} color="#FFFFFF" />
+            <ThemedText style={styles.demoButtonText}>
+              Demo Mode (No Server Required)
+            </ThemedText>
+          </Pressable>
           <Pressable 
             style={[styles.quickAccessButton, { borderColor: roleColor }]}
             onPress={handleQuickAccess}
@@ -431,9 +457,25 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.sm,
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
     gap: Spacing.sm,
+    marginTop: Spacing.md,
   },
   quickAccessText: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  demoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: BorderRadius.sm,
+    gap: Spacing.sm,
+    width: '100%',
+  },
+  demoButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 });

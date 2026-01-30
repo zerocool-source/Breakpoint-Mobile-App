@@ -158,53 +158,24 @@ export function logEnvironmentConfig(): void {
  * - Tech Ops requests  → EXPO_PUBLIC_TECHOPS_URL (breakpoint-app.onrender.com)
  */
 export async function techOpsRequest(route: string, data: unknown): Promise<Response> {
-  // On web, use proxy to bypass CORS; on mobile, call directly
-  if (Platform.OS === 'web') {
-    const domain = process.env.EXPO_PUBLIC_DOMAIN;
-    const proxyBaseUrl = domain ? `https://${domain}` : 'http://localhost:5000';
-    const proxyUrl = joinUrl(proxyBaseUrl, '/api/proxy/tech-ops');
-    
-    if (__DEV__) {
-      console.log("[TechOps] POST (via proxy)", proxyUrl);
-      console.log("[TechOps] payload", data);
-    }
-    
-    const res = await fetch(proxyUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    });
-    
-    await throwIfResNotOk(res);
-    return res;
+  // Always use proxy for repairs - it has local database fallback when Render is down
+  const domain = process.env.EXPO_PUBLIC_DOMAIN;
+  const proxyBaseUrl = domain ? `https://${domain}` : 'http://localhost:5000';
+  const proxyUrl = joinUrl(proxyBaseUrl, '/api/proxy/tech-ops');
+  
+  if (__DEV__) {
+    console.log("[TechOps] POST (via proxy)", proxyUrl);
+    console.log("[TechOps] payload", data);
   }
   
-  // Mobile: Call Tech Ops API directly with mobile key
-  const baseUrl = getTechOpsUrl();
-  const url = joinUrl(baseUrl, route);
-  const mobileKey = process.env.EXPO_PUBLIC_MOBILE_API_KEY;
-
-  if (!mobileKey) {
-    throw new Error("EXPO_PUBLIC_MOBILE_API_KEY is not set");
-  }
-
-  if (__DEV__) {
-    console.log("[TechOps] POST", url);
-    console.log("[TechOps] payload", data);
-    console.log("[TechOps] Using mobile key:", mobileKey.substring(0, 8) + "...");
-  }
-
-  const res = await fetch(url, {
+  const res = await fetch(proxyUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-MOBILE-KEY": mobileKey,
     },
     body: JSON.stringify(data),
   });
-
+  
   await throwIfResNotOk(res);
   return res;
 }

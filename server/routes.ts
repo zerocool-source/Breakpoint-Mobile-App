@@ -91,17 +91,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // If Render returned an error, return a user-friendly message
+      // If Render returned an error, save to local database as fallback
       console.error("[Proxy] Render Tech Ops server error:", response.status, responseText);
-      return res.status(503).json({ 
-        error: "The repair reporting system is temporarily unavailable. Please try again in a few minutes or contact the office directly.",
-        details: `Server returned ${response.status}`
-      });
+      console.log("[Proxy] Saving to local database as fallback...");
+      
+      try {
+        const { propertyId, propertyName, bodyOfWater, technicianId, technicianName } = req.body;
+        const savedEntry = await db.insert(techOps).values({
+          entryType: 'repairs_needed',
+          description: description || '[Audio message attached]',
+          priority: priority,
+          status: 'pending',
+          propertyId: propertyId || 'unknown',
+          propertyName: propertyName || 'Unknown Property',
+          bodyOfWater: bodyOfWater || 'Main Pool',
+          technicianId: technicianId || 'unknown',
+          technicianName: technicianName || 'Unknown Technician',
+        }).returning();
+        
+        console.log("[Proxy] Saved to local database:", savedEntry[0]?.id);
+        return res.status(200).json({ 
+          success: true, 
+          message: "Repair request saved locally. It will sync when the server is available.",
+          id: savedEntry[0]?.id,
+          savedLocally: true
+        });
+      } catch (dbError) {
+        console.error("[Proxy] Failed to save to local database:", dbError);
+        return res.status(503).json({ 
+          error: "The repair reporting system is temporarily unavailable. Please try again in a few minutes or contact the office directly.",
+          details: `Server returned ${response.status}`
+        });
+      }
     } catch (error) {
       console.error("[Proxy] Tech Ops error:", error);
-      res.status(503).json({ 
-        error: "Unable to reach the repair reporting server. Please check your connection and try again." 
-      });
+      
+      // Try to save to local database as fallback
+      try {
+        const { description, priority, propertyId, propertyName, bodyOfWater, technicianId, technicianName } = req.body;
+        const savedEntry = await db.insert(techOps).values({
+          entryType: 'repairs_needed',
+          description: description || '[Audio message attached]',
+          priority: priority || 'normal',
+          status: 'pending',
+          propertyId: propertyId || 'unknown',
+          propertyName: propertyName || 'Unknown Property',
+          bodyOfWater: bodyOfWater || 'Main Pool',
+          technicianId: technicianId || 'unknown',
+          technicianName: technicianName || 'Unknown Technician',
+        }).returning();
+        
+        console.log("[Proxy] Saved to local database (network error fallback):", savedEntry[0]?.id);
+        return res.status(200).json({ 
+          success: true, 
+          message: "Repair request saved locally. It will sync when the server is available.",
+          id: savedEntry[0]?.id,
+          savedLocally: true
+        });
+      } catch (dbError) {
+        console.error("[Proxy] Failed to save to local database:", dbError);
+        res.status(503).json({ 
+          error: "Unable to reach the repair reporting server. Please check your connection and try again." 
+        });
+      }
     }
   });
 

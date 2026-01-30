@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -8,6 +8,8 @@ import {
   ScrollView,
   Platform,
   useWindowDimensions,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -19,6 +21,8 @@ import { ThemedText } from '@/components/ThemedText';
 import { DualVoiceInput } from '@/components/DualVoiceInput';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing } from '@/constants/theme';
+import { techOpsRequest } from '@/lib/query-client';
+import { useAuth } from '@/context/AuthContext';
 
 interface PropertyOption {
   id: string;
@@ -29,6 +33,7 @@ interface PropertyOption {
 interface ServiceRepairModalProps {
   visible: boolean;
   onClose: () => void;
+  propertyId?: string;
   propertyName: string;
   propertyAddress: string;
   properties?: PropertyOption[];
@@ -52,6 +57,7 @@ const AVAILABLE_PRODUCTS: Product[] = [
 export function ServiceRepairModal({
   visible,
   onClose,
+  propertyId,
   propertyName,
   propertyAddress,
   properties,
@@ -59,22 +65,87 @@ export function ServiceRepairModal({
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const { height: windowHeight } = useWindowDimensions();
+  const { user } = useAuth();
 
   const [issueDescription, setIssueDescription] = useState('');
   const [products, setProducts] = useState(AVAILABLE_PRODUCTS);
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (visible && properties && properties.length > 0 && !selectedPropertyId) {
+      setSelectedPropertyId(properties[0].id);
+    }
+  }, [visible, properties]);
 
   const selectedProperty = properties?.find(p => p.id === selectedPropertyId);
   const displayPropertyName = properties ? (selectedProperty?.name || 'Select Property') : propertyName;
   const displayPropertyAddress = properties ? (selectedProperty?.address || '') : propertyAddress;
 
-  const handleSubmit = () => {
-    if (Platform.OS !== 'web') {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  const handleSubmit = async () => {
+    const propId = properties ? selectedPropertyId : propertyId;
+    const propName = displayPropertyName;
+    
+    if (!propId || (properties && !selectedPropertyId)) {
+      Alert.alert('Property Required', 'Please select a property before submitting a service repair.');
+      return;
     }
-    setIssueDescription('');
-    setProducts(AVAILABLE_PRODUCTS);
-    onClose();
+    
+    if (!user?.id) {
+      Alert.alert('Authentication Required', 'Please log in before submitting a service repair.');
+      return;
+    }
+
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+
+    setIsSubmitting(true);
+
+    const addedProducts = products.filter(p => p.added);
+    const productsList = addedProducts.map(p => ({
+      name: p.name,
+      sku: p.sku,
+    }));
+
+    const payload = {
+      entryType: 'service_repairs',
+      description: issueDescription.trim() || 'Service repair logged',
+      priority: 'normal',
+      status: 'pending',
+      propertyId: propId,
+      propertyName: propName,
+      bodyOfWater: displayPropertyAddress,
+      technicianId: user.id,
+      technicianName: user.name || user.email || 'Service Technician',
+      products: productsList,
+    };
+
+    console.log('[ServiceRepair] Submitting to Tech Ops:', payload);
+
+    try {
+      await techOpsRequest('/api/tech-ops', payload);
+      
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+      
+      Alert.alert(
+        'Service Repair Logged',
+        'Your service repair has been submitted.',
+        [{ text: 'OK', onPress: () => {} }]
+      );
+      
+      setIssueDescription('');
+      setProducts(AVAILABLE_PRODUCTS);
+      onClose();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error('[ServiceRepair] Submission failed:', errorMessage);
+      Alert.alert('Submission Failed', `Could not submit service repair: ${errorMessage}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleVoiceRecordingComplete = (uri: string, duration: number) => {
@@ -250,11 +321,18 @@ export function ServiceRepairModal({
 
           <View style={styles.footer}>
             <Pressable
-              style={[styles.submitButton, { backgroundColor: '#8E99A4' }]}
+              style={[styles.submitButton, { backgroundColor: BrandColors.azureBlue }, isSubmitting && styles.submitButtonDisabled]}
               onPress={handleSubmit}
+              disabled={isSubmitting}
             >
-              <Feather name="check" size={20} color="#FFFFFF" />
-              <ThemedText style={styles.submitButtonText}>Submit Service Repair</ThemedText>
+              {isSubmitting ? (
+                <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
+              ) : (
+                <Feather name="check" size={20} color="#FFFFFF" />
+              )}
+              <ThemedText style={styles.submitButtonText}>
+                {isSubmitting ? 'Submitting...' : 'Submit Service Repair'}
+              </ThemedText>
             </Pressable>
           </View>
         </View>
@@ -470,6 +548,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.sm,
+  },
+  submitButtonDisabled: {
+    opacity: 0.6,
   },
   submitButtonText: {
     color: '#FFFFFF',

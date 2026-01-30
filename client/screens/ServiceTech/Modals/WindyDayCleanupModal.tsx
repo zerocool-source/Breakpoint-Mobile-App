@@ -8,6 +8,8 @@ import {
   ScrollView,
   Platform,
   useWindowDimensions,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -17,10 +19,13 @@ import { ThemedText } from '@/components/ThemedText';
 import { DualVoiceInput } from '@/components/DualVoiceInput';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing } from '@/constants/theme';
+import { techOpsRequest } from '@/lib/query-client';
+import { useAuth } from '@/context/AuthContext';
 
 interface WindyDayCleanupModalProps {
   visible: boolean;
   onClose: () => void;
+  propertyId?: string;
   propertyName: string;
   propertyAddress: string;
   technicianName?: string;
@@ -29,6 +34,7 @@ interface WindyDayCleanupModalProps {
 export function WindyDayCleanupModal({
   visible,
   onClose,
+  propertyId,
   propertyName,
   propertyAddress,
   technicianName = 'Service Technician',
@@ -36,15 +42,66 @@ export function WindyDayCleanupModal({
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const { height: windowHeight } = useWindowDimensions();
+  const { user } = useAuth();
 
   const [notes, setNotes] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = () => {
-    if (Platform.OS !== 'web') {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  const handleSubmit = async () => {
+    if (!propertyId) {
+      Alert.alert('Property Required', 'Property information is missing.');
+      return;
     }
-    setNotes('');
-    onClose();
+    
+    if (!user?.id) {
+      Alert.alert('Authentication Required', 'Please log in before logging cleanup.');
+      return;
+    }
+
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+
+    setIsSubmitting(true);
+
+    const payload = {
+      entryType: 'windy_day_cleanup',
+      description: notes.trim() || 'Windy day cleanup completed',
+      priority: 'normal',
+      status: 'completed',
+      propertyId: propertyId,
+      propertyName: propertyName,
+      bodyOfWater: propertyAddress,
+      technicianId: user.id,
+      technicianName: user.name || user.email || technicianName,
+      notes: notes.trim(),
+      completedAt: new Date().toISOString(),
+    };
+
+    console.log('[WindyDayCleanup] Submitting to Tech Ops:', payload);
+
+    try {
+      await techOpsRequest('/api/tech-ops', payload);
+      
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+      
+      Alert.alert(
+        'Cleanup Logged',
+        'Your windy day cleanup has been recorded.',
+        [{ text: 'OK', onPress: () => {} }]
+      );
+      
+      setNotes('');
+      onClose();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error('[WindyDayCleanup] Submission failed:', errorMessage);
+      Alert.alert('Submission Failed', `Could not log cleanup: ${errorMessage}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleVoiceRecordingComplete = (uri: string, duration: number) => {
@@ -157,11 +214,18 @@ export function WindyDayCleanupModal({
 
           <View style={styles.footer}>
             <Pressable
-              style={[styles.submitButton, { backgroundColor: BrandColors.azureBlue }]}
+              style={[styles.submitButton, { backgroundColor: BrandColors.azureBlue }, isSubmitting && styles.submitButtonDisabled]}
               onPress={handleSubmit}
+              disabled={isSubmitting}
             >
-              <Feather name="wind" size={20} color="#FFFFFF" />
-              <ThemedText style={styles.submitButtonText}>Log Cleanup</ThemedText>
+              {isSubmitting ? (
+                <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
+              ) : (
+                <Feather name="wind" size={20} color="#FFFFFF" />
+              )}
+              <ThemedText style={styles.submitButtonText}>
+                {isSubmitting ? 'Logging...' : 'Log Cleanup'}
+              </ThemedText>
             </Pressable>
           </View>
         </View>
@@ -329,6 +393,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.sm,
+  },
+  submitButtonDisabled: {
+    opacity: 0.6,
   },
   submitButtonText: {
     color: '#FFFFFF',

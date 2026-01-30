@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -8,6 +8,8 @@ import {
   Platform,
   TextInput,
   useWindowDimensions,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -18,6 +20,8 @@ import { ThemedText } from '@/components/ThemedText';
 import { DualVoiceInput } from '@/components/DualVoiceInput';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing } from '@/constants/theme';
+import { techOpsRequest } from '@/lib/query-client';
+import { useAuth } from '@/context/AuthContext';
 
 interface PropertyOption {
   id: string;
@@ -28,6 +32,7 @@ interface PropertyOption {
 interface ChemicalOrderModalProps {
   visible: boolean;
   onClose: () => void;
+  propertyId?: string;
   propertyName: string;
   propertyAddress: string;
   properties?: PropertyOption[];
@@ -66,6 +71,7 @@ const UNITS = [
 export function ChemicalOrderModal({
   visible,
   onClose,
+  propertyId,
   propertyName,
   propertyAddress,
   properties,
@@ -73,12 +79,20 @@ export function ChemicalOrderModal({
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const { height: windowHeight } = useWindowDimensions();
+  const { user } = useAuth();
 
   const [rows, setRows] = useState<ChemicalRow[]>([
     { id: '1', chemical: '', quantity: 1, unit: '1 Quart' },
   ]);
   const [notes, setNotes] = useState('');
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (visible && properties && properties.length > 0 && !selectedPropertyId) {
+      setSelectedPropertyId(properties[0].id);
+    }
+  }, [visible, properties]);
 
   const selectedProperty = properties?.find(p => p.id === selectedPropertyId);
   const displayPropertyName = properties ? (selectedProperty?.name || 'Select Property') : propertyName;
@@ -123,13 +137,76 @@ export function ChemicalOrderModal({
     );
   };
 
-  const handleSubmit = () => {
-    if (Platform.OS !== 'web') {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  const handleSubmit = async () => {
+    const propId = properties ? selectedPropertyId : propertyId;
+    const propName = displayPropertyName;
+    
+    if (!propId || (properties && !selectedPropertyId)) {
+      Alert.alert('Property Required', 'Please select a property before submitting a chemical order.');
+      return;
     }
-    setRows([{ id: '1', chemical: '', quantity: 1, unit: '1 Quart' }]);
-    setNotes('');
-    onClose();
+    
+    if (!user?.id) {
+      Alert.alert('Authentication Required', 'Please log in before submitting a chemical order.');
+      return;
+    }
+    
+    if (selectedChemicals.length === 0) {
+      Alert.alert('Chemicals Required', 'Please select at least one chemical to order.');
+      return;
+    }
+
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+
+    setIsSubmitting(true);
+
+    const chemicalsOrderList = selectedChemicals.map(row => ({
+      chemical: row.chemical,
+      quantity: row.quantity,
+      unit: row.unit,
+    }));
+
+    const payload = {
+      entryType: 'chemical_order',
+      description: `Chemical Order: ${chemicalsOrderList.map(c => `${c.quantity}x ${c.unit} ${c.chemical}`).join(', ')}${notes ? ` - Notes: ${notes}` : ''}`,
+      priority: 'normal',
+      status: 'pending',
+      propertyId: propId,
+      propertyName: propName,
+      bodyOfWater: displayPropertyAddress,
+      technicianId: user.id,
+      technicianName: user.name || user.email || 'Service Technician',
+      chemicals: chemicalsOrderList,
+      notes: notes.trim(),
+    };
+
+    console.log('[ChemicalOrder] Submitting to Tech Ops:', payload);
+
+    try {
+      await techOpsRequest('/api/tech-ops', payload);
+      
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+      
+      Alert.alert(
+        'Order Submitted',
+        'Your chemical order has been sent to the office.',
+        [{ text: 'OK', onPress: () => {} }]
+      );
+      
+      setRows([{ id: '1', chemical: '', quantity: 1, unit: '1 Quart' }]);
+      setNotes('');
+      onClose();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error('[ChemicalOrder] Submission failed:', errorMessage);
+      Alert.alert('Submission Failed', `Could not send chemical order: ${errorMessage}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleCancel = () => {
@@ -309,13 +386,19 @@ export function ChemicalOrderModal({
               style={[
                 styles.submitButton,
                 { backgroundColor: BrandColors.azureBlue },
-                !isValid && styles.submitButtonDisabled,
+                (!isValid || isSubmitting) && styles.submitButtonDisabled,
               ]}
               onPress={handleSubmit}
-              disabled={!isValid}
+              disabled={!isValid || isSubmitting}
             >
-              <Feather name="send" size={18} color="#FFFFFF" />
-              <ThemedText style={styles.submitButtonText}>Send Order</ThemedText>
+              {isSubmitting ? (
+                <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
+              ) : (
+                <Feather name="send" size={18} color="#FFFFFF" />
+              )}
+              <ThemedText style={styles.submitButtonText}>
+                {isSubmitting ? 'Sending...' : 'Send Order'}
+              </ThemedText>
             </Pressable>
           </View>
         </View>

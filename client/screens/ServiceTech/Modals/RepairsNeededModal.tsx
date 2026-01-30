@@ -10,11 +10,13 @@ import {
   useWindowDimensions,
   Alert,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import * as Haptics from 'expo-haptics';
+import * as ImagePicker from 'expo-image-picker';
 
 import { ThemedText } from '@/components/ThemedText';
 import { DualVoiceInput } from '@/components/DualVoiceInput';
@@ -55,6 +57,7 @@ export function RepairsNeededModal({
   const [issueDescription, setIssueDescription] = useState('');
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [photos, setPhotos] = useState<string[]>([]);
 
   const selectedProperty = properties?.find(p => p.id === selectedPropertyId);
   const displayPropertyName = properties ? (selectedProperty?.name || 'Select Property') : propertyName;
@@ -103,6 +106,8 @@ export function RepairsNeededModal({
       technicianName: technicianName || user.name || 'Technician',
       hasAudio: !!audioRecording,
       audioUri: audioRecording?.uri,
+      hasPhotos: photos.length > 0,
+      photoUris: photos,
     };
 
     if (__DEV__) {
@@ -125,6 +130,7 @@ export function RepairsNeededModal({
       setIssueDescription('');
       setIsUrgent(false);
       setAudioRecording(null);
+      setPhotos([]);
       onClose();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
@@ -142,16 +148,58 @@ export function RepairsNeededModal({
     console.log('Voice recording saved:', uri, 'duration:', duration);
   };
 
-  const handleTakePhoto = () => {
+  const handleTakePhoto = async () => {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Required', 'Camera permission is needed to take photos.');
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      quality: 0.8,
+      aspect: [4, 3],
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setPhotos(prev => [...prev, result.assets[0].uri]);
     }
   };
 
-  const handleFromGallery = () => {
+  const handleFromGallery = async () => {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
+
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Required', 'Photo library permission is needed to select photos.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsMultipleSelection: true,
+      quality: 0.8,
+      selectionLimit: 5 - photos.length,
+    });
+
+    if (!result.canceled && result.assets.length > 0) {
+      const newPhotos = result.assets.map(asset => asset.uri);
+      setPhotos(prev => [...prev, ...newPhotos].slice(0, 5));
+    }
+  };
+
+  const handleRemovePhoto = (index: number) => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    setPhotos(prev => prev.filter((_, i) => i !== index));
   };
 
   const currentTime = new Date().toLocaleTimeString('en-US', {
@@ -263,27 +311,46 @@ export function RepairsNeededModal({
             </View>
 
             <View style={styles.photosSection}>
-              <ThemedText style={styles.inputLabel}>Photos (Optional)</ThemedText>
-              <View style={styles.photoButtons}>
-                <Pressable
-                  style={[styles.photoButton, { borderColor: BrandColors.azureBlue }]}
-                  onPress={handleTakePhoto}
-                >
-                  <Feather name="camera" size={24} color={BrandColors.azureBlue} />
-                  <ThemedText style={[styles.photoButtonText, { color: BrandColors.azureBlue }]}>
-                    Take Photo
-                  </ThemedText>
-                </Pressable>
-                <Pressable
-                  style={[styles.photoButton, { borderColor: theme.border }]}
-                  onPress={handleFromGallery}
-                >
-                  <Feather name="image" size={24} color={theme.textSecondary} />
-                  <ThemedText style={[styles.photoButtonText, { color: theme.textSecondary }]}>
-                    From Gallery
-                  </ThemedText>
-                </Pressable>
-              </View>
+              <ThemedText style={styles.inputLabel}>Photos (Optional) {photos.length > 0 ? `(${photos.length}/5)` : ''}</ThemedText>
+              
+              {photos.length > 0 ? (
+                <View style={styles.photoPreviewContainer}>
+                  {photos.map((uri, index) => (
+                    <View key={uri} style={styles.photoPreviewWrapper}>
+                      <Image source={{ uri }} style={styles.photoPreview} />
+                      <Pressable
+                        style={styles.photoRemoveButton}
+                        onPress={() => handleRemovePhoto(index)}
+                      >
+                        <Feather name="x" size={14} color="#FFFFFF" />
+                      </Pressable>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+              
+              {photos.length < 5 ? (
+                <View style={styles.photoButtons}>
+                  <Pressable
+                    style={[styles.photoButton, { borderColor: BrandColors.azureBlue }]}
+                    onPress={handleTakePhoto}
+                  >
+                    <Feather name="camera" size={24} color={BrandColors.azureBlue} />
+                    <ThemedText style={[styles.photoButtonText, { color: BrandColors.azureBlue }]}>
+                      Take Photo
+                    </ThemedText>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.photoButton, { borderColor: theme.border }]}
+                    onPress={handleFromGallery}
+                  >
+                    <Feather name="image" size={24} color={theme.textSecondary} />
+                    <ThemedText style={[styles.photoButtonText, { color: theme.textSecondary }]}>
+                      From Gallery
+                    </ThemedText>
+                  </Pressable>
+                </View>
+              ) : null}
             </View>
           </ScrollView>
 
@@ -466,6 +533,32 @@ const styles = StyleSheet.create({
   },
   photosSection: {
     marginBottom: Spacing.lg,
+  },
+  photoPreviewContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  photoPreviewWrapper: {
+    position: 'relative',
+  },
+  photoPreview: {
+    width: 80,
+    height: 80,
+    borderRadius: BorderRadius.md,
+  },
+  photoRemoveButton: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: BrandColors.danger,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   photoButtons: {
     flexDirection: 'row',

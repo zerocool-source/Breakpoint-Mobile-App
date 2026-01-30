@@ -6,15 +6,16 @@ import {
   Pressable,
   ScrollView,
   Platform,
-  TextInput,
   useWindowDimensions,
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import * as Haptics from 'expo-haptics';
+import * as ImagePicker from 'expo-image-picker';
 
 import { ThemedText } from '@/components/ThemedText';
 import { DualVoiceInput } from '@/components/DualVoiceInput';
@@ -56,17 +57,51 @@ const CHEMICALS = [
   { value: 'Stabilizer', label: 'Stabilizer' },
   { value: 'Defoamer', label: 'Defoamer' },
   { value: 'Calcium', label: 'Calcium' },
+  { value: 'Baking Soda', label: 'Baking Soda' },
+  { value: 'Sodium Bicarbonate', label: 'Sodium Bicarbonate' },
+  { value: 'Soda Ash', label: 'Soda Ash' },
+  { value: 'Cyanuric Acid', label: 'Cyanuric Acid' },
+  { value: 'Calcium Chloride', label: 'Calcium Chloride' },
   { value: 'Other', label: 'Other' },
 ];
 
-const UNITS = [
-  { value: '1 Quart', label: '1 Quart' },
+const LIQUID_UNITS = [
   { value: '1 Gallon', label: '1 Gallon' },
   { value: '2.5 Gallon', label: '2.5 Gallon' },
   { value: '5 Gallon', label: '5 Gallon' },
-  { value: '50 lb Bag', label: '50 lb Bag' },
-  { value: '25 lb Bucket', label: '25 lb Bucket' },
+  { value: '15 Gallon', label: '15 Gallon' },
+  { value: '30 Gallon', label: '30 Gallon' },
+  { value: '50 Gallon', label: '50 Gallon' },
+  { value: '100 Gallon', label: '100 Gallon' },
+  { value: '150 Gallon', label: '150 Gallon' },
+  { value: '200 Gallon', label: '200 Gallon' },
+  { value: '250 Gallon', label: '250 Gallon' },
 ];
+
+const DRY_UNITS = [
+  { value: '25 lb Bag', label: '25 lb Bag' },
+  { value: '50 lb Bag', label: '50 lb Bag' },
+  { value: '100 lb Bag', label: '100 lb Bag' },
+  { value: '250 lb Bag', label: '250 lb Bag' },
+  { value: '25 lb Bucket', label: '25 lb Bucket' },
+  { value: '50 lb Bucket', label: '50 lb Bucket' },
+];
+
+const DRY_CHEMICALS = ['Baking Soda', 'Sodium Bicarbonate', 'Soda Ash', 'Stabilizer', 'Cyanuric Acid', 'Calcium', 'Calcium Chloride', 'Shock'];
+
+function getUnitsForChemical(chemical: string) {
+  if (DRY_CHEMICALS.includes(chemical)) {
+    return DRY_UNITS;
+  }
+  return LIQUID_UNITS;
+}
+
+function getDefaultUnit(chemical: string) {
+  if (DRY_CHEMICALS.includes(chemical)) {
+    return '50 lb Bag';
+  }
+  return '5 Gallon';
+}
 
 export function ChemicalOrderModal({
   visible,
@@ -82,11 +117,12 @@ export function ChemicalOrderModal({
   const { user } = useAuth();
 
   const [rows, setRows] = useState<ChemicalRow[]>([
-    { id: '1', chemical: '', quantity: 1, unit: '1 Quart' },
+    { id: '1', chemical: '', quantity: 1, unit: '5 Gallon' },
   ]);
   const [notes, setNotes] = useState('');
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [tankPhotos, setTankPhotos] = useState<string[]>([]);
 
   useEffect(() => {
     if (visible && properties && properties.length > 0 && !selectedPropertyId) {
@@ -102,7 +138,7 @@ export function ChemicalOrderModal({
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
-    setRows([...rows, { id: String(Date.now()), chemical: '', quantity: 1, unit: '1 Quart' }]);
+    setRows([...rows, { id: String(Date.now()), chemical: '', quantity: 1, unit: '5 Gallon' }]);
   };
 
   const handleRemoveRow = (id: string) => {
@@ -115,7 +151,13 @@ export function ChemicalOrderModal({
   };
 
   const handleChemicalChange = (id: string, chemical: string) => {
-    setRows(rows.map((row) => (row.id === id ? { ...row, chemical } : row)));
+    setRows(rows.map((row) => {
+      if (row.id === id) {
+        const newUnit = getDefaultUnit(chemical);
+        return { ...row, chemical, unit: newUnit };
+      }
+      return row;
+    }));
   };
 
   const handleUnitChange = (id: string, unit: string) => {
@@ -135,6 +177,57 @@ export function ChemicalOrderModal({
         return row;
       })
     );
+  };
+
+  const handleTakePhoto = async () => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Required', 'Camera permission is needed to take tank photos.');
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: 'images',
+      allowsEditing: false,
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setTankPhotos([...tankPhotos, result.assets[0].uri]);
+    }
+  };
+
+  const handlePickImage = async () => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Required', 'Photo library permission is needed to select tank photos.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: 'images',
+      allowsEditing: false,
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setTankPhotos([...tankPhotos, result.assets[0].uri]);
+    }
+  };
+
+  const handleRemovePhoto = (index: number) => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    setTankPhotos(tankPhotos.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async () => {
@@ -180,6 +273,9 @@ export function ChemicalOrderModal({
       technicianName: user.name || user.email || 'Service Technician',
       chemicals: chemicalsOrderList,
       notes: notes.trim(),
+      hasPhotos: tankPhotos.length > 0,
+      photoUris: tankPhotos,
+      photoCount: tankPhotos.length,
     };
 
     console.log('[ChemicalOrder] Submitting to Tech Ops:', payload);
@@ -197,8 +293,9 @@ export function ChemicalOrderModal({
         [{ text: 'OK', onPress: () => {} }]
       );
       
-      setRows([{ id: '1', chemical: '', quantity: 1, unit: '1 Quart' }]);
+      setRows([{ id: '1', chemical: '', quantity: 1, unit: '5 Gallon' }]);
       setNotes('');
+      setTankPhotos([]);
       onClose();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
@@ -210,8 +307,9 @@ export function ChemicalOrderModal({
   };
 
   const handleCancel = () => {
-    setRows([{ id: '1', chemical: '', quantity: 1, unit: '1 Quart' }]);
+    setRows([{ id: '1', chemical: '', quantity: 1, unit: '5 Gallon' }]);
     setNotes('');
+    setTankPhotos([]);
     onClose();
   };
 
@@ -232,7 +330,10 @@ export function ChemicalOrderModal({
               <View style={styles.headerIconContainer}>
                 <Feather name="droplet" size={24} color="#FFFFFF" />
               </View>
-              <ThemedText style={styles.headerTitle}>Chemical Order</ThemedText>
+              <View>
+                <ThemedText style={styles.headerTitle}>Bulk Chemical Order</ThemedText>
+                <ThemedText style={styles.headerSubtitle}>Order chemicals for tank refills</ThemedText>
+              </View>
             </View>
             <Pressable style={styles.closeButton} onPress={onClose}>
               <Feather name="x" size={24} color="#FFFFFF" />
@@ -240,7 +341,7 @@ export function ChemicalOrderModal({
           </View>
 
           <View style={[styles.propertyHeader, { backgroundColor: BrandColors.azureBlue }]}>
-            <ThemedText style={styles.sectionLabel}>Select Property</ThemedText>
+            <ThemedText style={styles.sectionLabel}>Property</ThemedText>
             {properties ? (
               <View style={[styles.propertyPickerContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>
                 <Picker
@@ -269,64 +370,73 @@ export function ChemicalOrderModal({
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            {rows.map((row) => (
-              <View key={row.id} style={styles.chemicalRow}>
-                <View style={styles.chemicalMainRow}>
-                  <View style={styles.chemicalSelectContainer}>
-                    <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>CHEMICAL</ThemedText>
-                    <View style={[styles.pickerContainer, { borderColor: theme.border }]}>
-                      <Picker
-                        selectedValue={row.chemical}
-                        onValueChange={(value: string) => handleChemicalChange(row.id, value)}
-                        style={styles.picker}
-                      >
-                        {CHEMICALS.map((chem) => (
-                          <Picker.Item key={chem.value} label={chem.label} value={chem.value} />
-                        ))}
-                      </Picker>
-                    </View>
-                  </View>
+            <ThemedText style={[styles.sectionTitle, { color: theme.text }]}>Chemicals to Order</ThemedText>
+            
+            {rows.map((row, index) => (
+              <View key={row.id} style={[styles.chemicalRow, { backgroundColor: theme.backgroundSecondary }]}>
+                <View style={styles.rowHeader}>
+                  <ThemedText style={[styles.rowNumber, { color: BrandColors.azureBlue }]}>
+                    Item {index + 1}
+                  </ThemedText>
+                  {rows.length > 1 ? (
+                    <Pressable
+                      style={styles.deleteButton}
+                      onPress={() => handleRemoveRow(row.id)}
+                    >
+                      <Feather name="trash-2" size={18} color={BrandColors.danger} />
+                    </Pressable>
+                  ) : null}
+                </View>
 
-                  <View style={styles.qtyContainer}>
-                    <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>QTY</ThemedText>
-                    <View style={styles.quantityControls}>
-                      <Pressable
-                        style={[styles.quantityButton, { borderColor: theme.border }]}
-                        onPress={() => handleQuantityChange(row.id, -1)}
-                      >
-                        <Feather name="minus" size={16} color={theme.text} />
-                      </Pressable>
-                      <ThemedText style={styles.quantityValue}>{row.quantity}</ThemedText>
-                      <Pressable
-                        style={[styles.quantityButton, { borderColor: theme.border }]}
-                        onPress={() => handleQuantityChange(row.id, 1)}
-                      >
-                        <Feather name="plus" size={16} color={theme.text} />
-                      </Pressable>
-                    </View>
+                <View style={styles.chemicalSelectContainer}>
+                  <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>CHEMICAL</ThemedText>
+                  <View style={[styles.pickerContainer, { borderColor: theme.border, backgroundColor: theme.surface }]}>
+                    <Picker
+                      selectedValue={row.chemical}
+                      onValueChange={(value: string) => handleChemicalChange(row.id, value)}
+                      style={styles.picker}
+                    >
+                      {CHEMICALS.map((chem) => (
+                        <Picker.Item key={chem.value} label={chem.label} value={chem.value} />
+                      ))}
+                    </Picker>
                   </View>
-
-                  <Pressable
-                    style={styles.deleteButton}
-                    onPress={() => handleRemoveRow(row.id)}
-                  >
-                    <Feather name="trash-2" size={20} color={BrandColors.danger} />
-                  </Pressable>
                 </View>
 
                 {row.chemical ? (
-                  <View style={styles.unitRow}>
-                    <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>UNIT</ThemedText>
-                    <View style={[styles.pickerContainer, { borderColor: theme.border }]}>
-                      <Picker
-                        selectedValue={row.unit}
-                        onValueChange={(value: string) => handleUnitChange(row.id, value)}
-                        style={styles.picker}
-                      >
-                        {UNITS.map((unit) => (
-                          <Picker.Item key={unit.value} label={unit.label} value={unit.value} />
-                        ))}
-                      </Picker>
+                  <View style={styles.quantityUnitRow}>
+                    <View style={styles.qtyContainer}>
+                      <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>QUANTITY</ThemedText>
+                      <View style={styles.quantityControls}>
+                        <Pressable
+                          style={[styles.quantityButton, { borderColor: theme.border, backgroundColor: theme.surface }]}
+                          onPress={() => handleQuantityChange(row.id, -1)}
+                        >
+                          <Feather name="minus" size={18} color={theme.text} />
+                        </Pressable>
+                        <ThemedText style={styles.quantityValue}>{row.quantity}</ThemedText>
+                        <Pressable
+                          style={[styles.quantityButton, { borderColor: theme.border, backgroundColor: theme.surface }]}
+                          onPress={() => handleQuantityChange(row.id, 1)}
+                        >
+                          <Feather name="plus" size={18} color={theme.text} />
+                        </Pressable>
+                      </View>
+                    </View>
+
+                    <View style={styles.unitContainer}>
+                      <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>UNIT SIZE</ThemedText>
+                      <View style={[styles.pickerContainer, { borderColor: theme.border, backgroundColor: theme.surface }]}>
+                        <Picker
+                          selectedValue={row.unit}
+                          onValueChange={(value: string) => handleUnitChange(row.id, value)}
+                          style={styles.picker}
+                        >
+                          {getUnitsForChemical(row.chemical).map((unit) => (
+                            <Picker.Item key={unit.value} label={unit.label} value={unit.value} />
+                          ))}
+                        </Picker>
+                      </View>
                     </View>
                   </View>
                 ) : null}
@@ -336,9 +446,49 @@ export function ChemicalOrderModal({
             <Pressable style={[styles.addChemicalButton, { borderColor: BrandColors.azureBlue }]} onPress={handleAddRow}>
               <Feather name="plus" size={20} color={BrandColors.azureBlue} />
               <ThemedText style={[styles.addChemicalText, { color: BrandColors.azureBlue }]}>
-                Add Chemical
+                Add Another Chemical
               </ThemedText>
             </Pressable>
+
+            <View style={styles.photoSection}>
+              <ThemedText style={[styles.sectionTitle, { color: theme.text }]}>Tank Photo (Optional)</ThemedText>
+              <ThemedText style={[styles.photoHint, { color: theme.textSecondary }]}>
+                Take a photo of your empty tank to verify refill needed
+              </ThemedText>
+              
+              <View style={styles.photoButtonsRow}>
+                <Pressable
+                  style={[styles.photoButton, { backgroundColor: BrandColors.azureBlue }]}
+                  onPress={handleTakePhoto}
+                >
+                  <Feather name="camera" size={20} color="#FFFFFF" />
+                  <ThemedText style={styles.photoButtonText}>Take Photo</ThemedText>
+                </Pressable>
+                <Pressable
+                  style={[styles.photoButton, { backgroundColor: theme.backgroundSecondary, borderWidth: 1, borderColor: theme.border }]}
+                  onPress={handlePickImage}
+                >
+                  <Feather name="image" size={20} color={theme.text} />
+                  <ThemedText style={[styles.photoButtonText, { color: theme.text }]}>Choose Photo</ThemedText>
+                </Pressable>
+              </View>
+
+              {tankPhotos.length > 0 ? (
+                <View style={styles.photoPreviewContainer}>
+                  {tankPhotos.map((uri, index) => (
+                    <View key={index} style={styles.photoPreviewWrapper}>
+                      <Image source={{ uri }} style={styles.photoPreview} contentFit="cover" />
+                      <Pressable
+                        style={styles.removePhotoButton}
+                        onPress={() => handleRemovePhoto(index)}
+                      >
+                        <Feather name="x" size={16} color="#FFFFFF" />
+                      </Pressable>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+            </View>
 
             <View style={[styles.summarySection, { backgroundColor: theme.backgroundSecondary }]}>
               <ThemedText style={styles.summaryTitle}>ORDER SUMMARY</ThemedText>
@@ -346,21 +496,24 @@ export function ChemicalOrderModal({
                 selectedChemicals.map((row) => (
                   <View key={row.id} style={styles.summaryRow}>
                     <ThemedText style={styles.summaryChemical}>{row.chemical}</ThemedText>
-                    <ThemedText style={[styles.summaryQty, { color: theme.textSecondary }]}>
+                    <ThemedText style={[styles.summaryQty, { color: BrandColors.azureBlue }]}>
                       {row.quantity} x {row.unit}
                     </ThemedText>
                   </View>
                 ))
               ) : (
-                <View style={styles.summaryRow}>
-                  <ThemedText style={[styles.summaryChemical, { color: theme.textSecondary }]}>
-                    Not selected
-                  </ThemedText>
-                  <ThemedText style={[styles.summaryQty, { color: theme.textSecondary }]}>
-                    1 x —
+                <ThemedText style={[styles.emptyState, { color: theme.textSecondary }]}>
+                  No chemicals selected yet
+                </ThemedText>
+              )}
+              {tankPhotos.length > 0 ? (
+                <View style={[styles.photoIndicator, { borderTopColor: theme.border }]}>
+                  <Feather name="camera" size={16} color={BrandColors.emerald} />
+                  <ThemedText style={[styles.photoIndicatorText, { color: BrandColors.emerald }]}>
+                    {tankPhotos.length} tank photo{tankPhotos.length > 1 ? 's' : ''} attached
                   </ThemedText>
                 </View>
-              )}
+              ) : null}
             </View>
 
             <View style={styles.notesSection}>
@@ -370,7 +523,7 @@ export function ChemicalOrderModal({
               <DualVoiceInput
                 value={notes}
                 onTextChange={setNotes}
-                placeholder="Add delivery notes, timing preferences, or special instructions..."
+                placeholder="Add delivery notes, timing preferences, tank location, or special instructions..."
               />
             </View>
           </ScrollView>
@@ -416,7 +569,7 @@ const styles = StyleSheet.create({
   modalContainer: {
     borderTopLeftRadius: BorderRadius.xl,
     borderTopRightRadius: BorderRadius.xl,
-    minHeight: '70%',
+    minHeight: '75%',
   },
   header: {
     flexDirection: 'row',
@@ -430,12 +583,12 @@ const styles = StyleSheet.create({
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
+    gap: Spacing.md,
   },
   headerIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: BorderRadius.full,
+    width: 44,
+    height: 44,
+    borderRadius: BorderRadius.md,
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -444,6 +597,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  headerSubtitle: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 2,
   },
   closeButton: {
     width: 32,
@@ -470,17 +628,30 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: Spacing.lg,
+    paddingBottom: Spacing.xl,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: Spacing.md,
   },
   chemicalRow: {
-    marginBottom: Spacing.lg,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    marginBottom: Spacing.md,
   },
-  chemicalMainRow: {
+  rowHeader: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: Spacing.sm,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+  },
+  rowNumber: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   chemicalSelectContainer: {
-    flex: 1,
+    marginBottom: Spacing.sm,
   },
   fieldLabel: {
     fontSize: 11,
@@ -496,8 +667,12 @@ const styles = StyleSheet.create({
   picker: {
     height: 50,
   },
+  quantityUnitRow: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+  },
   qtyContainer: {
-    width: 100,
+    flex: 0.4,
   },
   quantityControls: {
     flexDirection: 'row',
@@ -505,30 +680,29 @@ const styles = StyleSheet.create({
     height: 50,
   },
   quantityButton: {
-    width: 32,
-    height: 32,
+    width: 40,
+    height: 40,
     borderWidth: 1,
-    borderRadius: BorderRadius.sm,
+    borderRadius: BorderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
   quantityValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    minWidth: 36,
+    fontSize: 18,
+    fontWeight: '700',
+    minWidth: 40,
     textAlign: 'center',
   },
+  unitContainer: {
+    flex: 0.6,
+  },
   deleteButton: {
-    width: 44,
-    height: 44,
+    width: 36,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: BrandColors.danger + '10',
+    backgroundColor: BrandColors.danger + '15',
     borderRadius: BorderRadius.md,
-    marginBottom: 4,
-  },
-  unitRow: {
-    marginTop: Spacing.sm,
   },
   addChemicalButton: {
     flexDirection: 'row',
@@ -544,6 +718,56 @@ const styles = StyleSheet.create({
   addChemicalText: {
     fontSize: 15,
     fontWeight: '600',
+  },
+  photoSection: {
+    marginBottom: Spacing.xl,
+  },
+  photoHint: {
+    fontSize: 13,
+    marginBottom: Spacing.md,
+  },
+  photoButtonsRow: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+  },
+  photoButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
+  },
+  photoButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  photoPreviewContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+    marginTop: Spacing.md,
+  },
+  photoPreviewWrapper: {
+    position: 'relative',
+  },
+  photoPreview: {
+    width: 80,
+    height: 80,
+    borderRadius: BorderRadius.md,
+  },
+  removePhotoButton: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: BrandColors.danger,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   summarySection: {
     padding: Spacing.md,
@@ -567,7 +791,26 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   summaryQty: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  emptyState: {
+    fontSize: 14,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    paddingVertical: Spacing.sm,
+  },
+  photoIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginTop: Spacing.sm,
+    paddingTop: Spacing.sm,
+    borderTopWidth: 1,
+  },
+  photoIndicatorText: {
     fontSize: 13,
+    fontWeight: '500',
   },
   notesSection: {
     marginBottom: Spacing.lg,
@@ -576,15 +819,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
     marginBottom: Spacing.sm,
-  },
-  textAreaContainer: {
-    borderWidth: 1,
-    borderRadius: BorderRadius.md,
-  },
-  textArea: {
-    padding: Spacing.md,
-    fontSize: 15,
-    minHeight: 80,
   },
   footer: {
     flexDirection: 'row',

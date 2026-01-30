@@ -271,7 +271,7 @@ export function ChemicalOrderModal({
       bodyOfWater: displayPropertyAddress,
       technicianId: user.id,
       technicianName: user.name || user.email || 'Service Technician',
-      chemicals: chemicalsOrderList,
+      chemicals: JSON.stringify(chemicalsOrderList),
       notes: notes.trim(),
       hasPhotos: tankPhotos.length > 0,
       photoUris: tankPhotos,

@@ -95,6 +95,10 @@ export default function AceEstimateBuilderScreen() {
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
   const chatScrollRef = useRef<ScrollView>(null);
+  
+  // AI Learning session tracking
+  const sessionIdRef = useRef(`session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
+  const lastInteractionIdRef = useRef<string | null>(null);
 
   const [estimateNumber] = useState(() => generateEstimateNumber());
   const [estimateDate] = useState(new Date());
@@ -249,7 +253,83 @@ export default function AceEstimateBuilderScreen() {
     setTimeout(() => chatScrollRef.current?.scrollToEnd({ animated: true }), 100);
   };
 
+  // AI Learning helper functions
+  const logAIInteraction = async (userQuery: string, suggestedProducts: AIProductMatch[]) => {
+    try {
+      const apiUrl = getLocalApiUrl();
+      const response = await fetch(joinUrl(apiUrl, '/api/ai-learning/log-interaction'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userQuery,
+          suggestedProducts: suggestedProducts.map(p => ({ 
+            sku: p.sku, 
+            name: p.name, 
+            confidence: p.confidence 
+          })),
+          sessionId: sessionIdRef.current,
+          propertyType: mockProperties.find(p => p.name === selectedProperty)?.type,
+        }),
+      });
+      const data = await response.json();
+      if (data.interactionId) {
+        lastInteractionIdRef.current = data.interactionId;
+      }
+    } catch (error) {
+      console.error('Failed to log AI interaction:', error);
+    }
+  };
+
+  const logProductFeedback = async (
+    productSku: string, 
+    productName: string, 
+    feedbackType: 'selected' | 'rejected', 
+    quantity?: number,
+    confidence?: number
+  ) => {
+    if (!lastInteractionIdRef.current) return;
+    try {
+      const apiUrl = getLocalApiUrl();
+      await fetch(joinUrl(apiUrl, '/api/ai-learning/log-feedback'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          interactionId: lastInteractionIdRef.current,
+          productSku,
+          productName,
+          feedbackType,
+          quantitySelected: quantity,
+          confidenceScore: confidence,
+        }),
+      });
+    } catch (error) {
+      console.error('Failed to log product feedback:', error);
+    }
+  };
+
+  const logEstimateCompletion = async () => {
+    if (lineItems.length === 0) return;
+    try {
+      const apiUrl = getLocalApiUrl();
+      await fetch(joinUrl(apiUrl, '/api/ai-learning/log-estimate-completion'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: sessionIdRef.current,
+          selectedProducts: lineItems.map(item => ({ 
+            sku: item.product.sku, 
+            quantity: item.quantity 
+          })),
+          propertyType: mockProperties.find(p => p.name === selectedProperty)?.type,
+        }),
+      });
+    } catch (error) {
+      console.error('Failed to log estimate completion:', error);
+    }
+  };
+
   const handleFinishEstimate = () => {
+    logEstimateCompletion();
     setShowAceModal(false);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setTimeout(() => {
@@ -303,10 +383,17 @@ export default function AceEstimateBuilderScreen() {
 
       if (data.matches && data.matches.length > 0) {
         const matches = data.matches.map((m: any) => ({ ...m, selected: true }));
-        addAceMessage(
-          `I found ${matches.length} product${matches.length > 1 ? 's' : ''} that match what you're looking for! Tap to select and add them to your estimate:`,
-          matches
-        );
+        
+        // Log AI interaction for learning
+        logAIInteraction(description, matches);
+        
+        let messageText = `I found ${matches.length} product${matches.length > 1 ? 's' : ''} that match what you're looking for!`;
+        if (data.learnedFromHistory) {
+          messageText += ' (Improved by learning from past estimates)';
+        }
+        messageText += ' Tap to select and add them to your estimate:';
+        
+        addAceMessage(messageText, matches);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } else {
         addAceMessage("Hmm, I couldn't find any exact matches for that. Try describing it differently, or give me more details like the brand or type of equipment.");
@@ -337,10 +424,22 @@ export default function AceEstimateBuilderScreen() {
     if (!msg?.products) return;
 
     const selected = msg.products.filter(p => p.selected);
+    const rejected = msg.products.filter(p => !p.selected);
+    
     if (selected.length === 0) {
       Alert.alert('No Selection', 'Please select at least one product to add.');
       return;
     }
+
+    // Log feedback for learning - selected products
+    selected.forEach(p => {
+      logProductFeedback(p.sku, p.name, 'selected', 1, p.confidence / 100);
+    });
+    
+    // Log feedback for learning - rejected products
+    rejected.forEach(p => {
+      logProductFeedback(p.sku, p.name, 'rejected', 0, p.confidence / 100);
+    });
 
     const currentLength = lineItems.length;
     const newItems: LineItem[] = selected.map((match, idx) => ({

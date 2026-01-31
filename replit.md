@@ -56,6 +56,20 @@ Breakpoint Commercial Pool Systems is a mobile-first field service management ap
             - Service Tech: NO pricing visible, items auto-track to commission when added
             - Supervisor: Full pricing visible, can create work orders with technician assignment
         - **Navigation**: Products tab available on all roles with package icon.
+    - **Ace AI Assistant**: AI-powered estimate creation with voice input and self-learning capabilities.
+        - **Entry Point**: `client/screens/RepairTech/AceEstimateBuilderScreen.tsx`
+        - **AI Search**: Uses GPT-4o-mini to match user descriptions to products
+        - **Voice Input**: Records audio via `expo-audio`, transcribes via OpenAI Whisper
+        - **Self-Learning System**: 
+            - **Database Tables**: `ai_learning_interactions`, `ai_product_feedback`, `ai_product_patterns`, `ai_query_mappings`
+            - **API Routes**: `server/routes/ai-learning.ts` - Logs interactions, feedback, and estimate completions
+            - **Learning Flow**: 
+                1. User queries are logged with suggested products
+                2. Product selections/rejections are recorded as feedback
+                3. Estimate completions track product co-occurrence patterns
+                4. Future searches use learned mappings to improve recommendations
+            - **Pattern Recognition**: Products frequently used together are suggested automatically
+            - **Query Mappings**: Successful user queries are mapped to products for future use
 
 ## External Dependencies
 - **Database**: PostgreSQL

@@ -491,9 +491,12 @@ export default function EstimateBuilderScreen() {
           <View style={styles.sectionHeader}>
             <ThemedText style={styles.sectionTitle}>Line Items</ThemedText>
             <View style={styles.lineItemButtons}>
-              <Pressable onPress={() => setShowAIFinder(true)} style={styles.aiButton}>
-                <Feather name="mic" size={16} color="#fff" />
-                <ThemedText style={styles.aiButtonText}>Ask AI</ThemedText>
+              <Pressable onPress={() => setShowAIFinder(true)} style={styles.askAceButton}>
+                <Image 
+                  source={require('../../../assets/images/ask-ace-button.png')} 
+                  style={styles.askAceImage}
+                  resizeMode="contain"
+                />
               </Pressable>
               <Pressable onPress={() => setShowProductCatalog(true)} style={styles.addLineButton}>
                 <Feather name="plus" size={16} color="#fff" />
@@ -1435,6 +1438,14 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 13,
     fontWeight: '500',
+  },
+  askAceButton: {
+    borderRadius: BorderRadius.md,
+    overflow: 'hidden',
+  },
+  askAceImage: {
+    width: 120,
+    height: 36,
   },
   aiFinderOverlay: {
     flex: 1,

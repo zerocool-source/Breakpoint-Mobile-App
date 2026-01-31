@@ -61,6 +61,7 @@ export default function EstimateBuilderScreen() {
   const [showPropertyPicker, setShowPropertyPicker] = useState(false);
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [showProductCatalog, setShowProductCatalog] = useState(false);
+  const [jobDescription, setJobDescription] = useState('');
   const [estimateMessage, setEstimateMessage] = useState('');
   const [photos, setPhotos] = useState<PhotoAttachment[]>([]);
   const [voiceNotes, setVoiceNotes] = useState<VoiceNote[]>([]);
@@ -312,6 +313,20 @@ export default function EstimateBuilderScreen() {
             </ThemedText>
             <Feather name="chevron-down" size={18} color={theme.textSecondary} />
           </Pressable>
+        </View>
+
+        <View style={[styles.section, { backgroundColor: theme.surface }]}>
+          <ThemedText style={styles.sectionTitle}>Job Description</ThemedText>
+          <TextInput
+            style={[styles.jobDescriptionInput, { color: theme.text, borderColor: theme.border, backgroundColor: theme.backgroundRoot }]}
+            placeholder="Describe the work to be performed..."
+            placeholderTextColor={theme.textSecondary}
+            value={jobDescription}
+            onChangeText={setJobDescription}
+            multiline
+            numberOfLines={4}
+            textAlignVertical="top"
+          />
         </View>
 
         <View style={[styles.section, { backgroundColor: theme.surface }]}>
@@ -747,6 +762,13 @@ const styles = StyleSheet.create({
   propertyPlaceholder: {
     flex: 1,
     fontSize: 15,
+  },
+  jobDescriptionInput: {
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    fontSize: 15,
+    minHeight: 100,
   },
   emptyState: {
     alignItems: 'center',

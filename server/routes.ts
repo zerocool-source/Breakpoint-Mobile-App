@@ -5,6 +5,7 @@ import { db } from "./db";
 import { users, properties, jobs, assignments, estimates, routeStops, propertyChannels, techOps } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 import transcribeRouter from "./routes/transcribe";
+import aiProductSearchRouter from "./routes/ai-product-search";
 
 // Render API base URLs for proxy
 const RENDER_API_URL = process.env.RENDER_API_URL || "https://breakpoint-api-v2.onrender.com";
@@ -92,6 +93,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.use("/api/auth", authRoutes);
   app.use("/api/transcribe", transcribeRouter);
+  app.use("/api/ai-product-search", aiProductSearchRouter);
 
   app.get("/api/properties", authMiddleware, async (req: AuthenticatedRequest, res) => {
     try {

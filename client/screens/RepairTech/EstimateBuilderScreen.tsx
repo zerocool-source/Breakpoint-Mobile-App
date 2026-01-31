@@ -10,6 +10,7 @@ import {
   FlatList,
   Alert,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useHeaderHeight } from '@react-navigation/elements';
@@ -17,7 +18,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
 import { useAudioRecorder, AudioModule, RecordingPresets, useAudioPlayer } from 'expo-audio';
+import { getApiUrl, joinUrl } from '@/lib/query-client';
 
 import { ThemedText } from '@/components/ThemedText';
 import { useTheme } from '@/hooks/useTheme';
@@ -49,6 +52,19 @@ interface PhotoAttachment {
   timestamp: Date;
 }
 
+interface AIProductMatch {
+  sku: string;
+  name: string;
+  category: string;
+  subcategory: string;
+  manufacturer: string;
+  price: number;
+  unit: string;
+  confidence: number;
+  reason: string;
+  selected: boolean;
+}
+
 export default function EstimateBuilderScreen() {
   const navigation = useNavigation();
   const { theme } = useTheme();
@@ -75,8 +91,15 @@ export default function EstimateBuilderScreen() {
   const [overallDiscountType, setOverallDiscountType] = useState<'percent' | 'fixed'>('percent');
   const [taxRate] = useState(9);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showAIFinder, setShowAIFinder] = useState(false);
+  const [isAIRecording, setIsAIRecording] = useState(false);
+  const [isAISearching, setIsAISearching] = useState(false);
+  const [aiDescription, setAIDescription] = useState('');
+  const [aiMatches, setAIMatches] = useState<AIProductMatch[]>([]);
+  const [showAIResults, setShowAIResults] = useState(false);
 
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const aiAudioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleAddProduct = useCallback((product: HeritageProduct, quantity: number) => {
@@ -240,6 +263,143 @@ export default function EstimateBuilderScreen() {
     setVoiceNotes(prev => prev.filter(v => v.id !== id));
   };
 
+  const startAIRecording = async () => {
+    if (Platform.OS === 'web') {
+      Alert.alert(
+        'Voice Search',
+        'Voice search requires running in Expo Go on your mobile device.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    try {
+      const status = await AudioModule.requestRecordingPermissionsAsync();
+      if (!status.granted) {
+        Alert.alert('Permission Required', 'Microphone permission is needed.');
+        return;
+      }
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      aiAudioRecorder.record();
+      setIsAIRecording(true);
+    } catch (error) {
+      console.error('Failed to start AI recording:', error);
+      Alert.alert('Error', 'Failed to start recording.');
+    }
+  };
+
+  const stopAIRecording = async () => {
+    try {
+      await aiAudioRecorder.stop();
+      setIsAIRecording(false);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+      const uri = aiAudioRecorder.uri;
+      if (!uri) return;
+
+      setIsAISearching(true);
+      const base64Audio = await FileSystem.readAsStringAsync(uri, {
+        encoding: 'base64',
+      });
+
+      const apiUrl = getApiUrl();
+      const transcribeResponse = await fetch(joinUrl(apiUrl, '/api/transcribe'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audio: base64Audio }),
+      });
+
+      if (!transcribeResponse.ok) {
+        throw new Error('Transcription failed');
+      }
+
+      const transcribeData = await transcribeResponse.json();
+      const description = transcribeData.text;
+      if (!description) {
+        setIsAISearching(false);
+        Alert.alert('No Speech Detected', 'Please try again and speak clearly.');
+        return;
+      }
+
+      setAIDescription(description);
+      await searchProductsWithAI(description);
+    } catch (error) {
+      console.error('Failed to process AI recording:', error);
+      setIsAISearching(false);
+      Alert.alert('Error', 'Failed to process voice. Please try again.');
+    }
+  };
+
+  const searchProductsWithAI = async (description: string) => {
+    try {
+      setIsAISearching(true);
+      const apiUrl = getApiUrl();
+      const response = await fetch(joinUrl(apiUrl, '/api/ai-product-search'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description }),
+      });
+
+      if (!response.ok) {
+        throw new Error('AI search failed');
+      }
+
+      const data = await response.json();
+      if (data.matches && data.matches.length > 0) {
+        setAIMatches(data.matches.map((m: any) => ({ ...m, selected: true })));
+        setShowAIFinder(false);
+        setShowAIResults(true);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        Alert.alert('No Matches', 'No products matched your description. Try being more specific.');
+      }
+      setIsAISearching(false);
+    } catch (error) {
+      console.error('AI search error:', error);
+      setIsAISearching(false);
+      Alert.alert('Error', 'Failed to search products. Please try again.');
+    }
+  };
+
+  const toggleAIMatch = (sku: string) => {
+    setAIMatches(prev => prev.map(m =>
+      m.sku === sku ? { ...m, selected: !m.selected } : m
+    ));
+  };
+
+  const addSelectedAIProducts = () => {
+    const selected = aiMatches.filter(m => m.selected);
+    if (selected.length === 0) {
+      Alert.alert('No Selection', 'Please select at least one product to add.');
+      return;
+    }
+
+    const newItems: LineItem[] = selected.map(match => ({
+      id: `item-${Date.now()}-${match.sku}`,
+      product: {
+        sku: match.sku,
+        heritageNumber: '',
+        name: match.name,
+        description: '',
+        category: match.category as any,
+        subcategory: match.subcategory,
+        manufacturer: match.manufacturer,
+        price: match.price,
+        unit: match.unit as any,
+      },
+      description: '',
+      quantity: 1,
+      rate: match.price,
+      discount: 0,
+      discountType: 'percent',
+    }));
+
+    setLineItems(prev => [...prev, ...newItems]);
+    setShowAIResults(false);
+    setAIMatches([]);
+    setAIDescription('');
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
+
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -332,10 +492,16 @@ export default function EstimateBuilderScreen() {
         <View style={[styles.section, { backgroundColor: theme.surface }]}>
           <View style={styles.sectionHeader}>
             <ThemedText style={styles.sectionTitle}>Line Items</ThemedText>
-            <Pressable onPress={() => setShowProductCatalog(true)} style={styles.addLineButton}>
-              <Feather name="plus" size={16} color="#fff" />
-              <ThemedText style={styles.addLineButtonText}>Add Item</ThemedText>
-            </Pressable>
+            <View style={styles.lineItemButtons}>
+              <Pressable onPress={() => setShowAIFinder(true)} style={styles.aiButton}>
+                <Feather name="mic" size={16} color="#fff" />
+                <ThemedText style={styles.aiButtonText}>Ask AI</ThemedText>
+              </Pressable>
+              <Pressable onPress={() => setShowProductCatalog(true)} style={styles.addLineButton}>
+                <Feather name="plus" size={16} color="#fff" />
+                <ThemedText style={styles.addLineButtonText}>Add Item</ThemedText>
+              </Pressable>
+            </View>
           </View>
 
           {lineItems.length === 0 ? (
@@ -669,6 +835,147 @@ export default function EstimateBuilderScreen() {
             </View>
           </View>
         </Pressable>
+      </Modal>
+
+      <Modal
+        visible={showAIFinder}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowAIFinder(false)}
+      >
+        <View style={styles.aiFinderOverlay}>
+          <View style={[styles.aiFinderModal, { backgroundColor: theme.surface }]}>
+            <View style={styles.aiFinderHeader}>
+              <ThemedText style={styles.aiFinderTitle}>Ask AI to Find Products</ThemedText>
+              <Pressable onPress={() => setShowAIFinder(false)}>
+                <Feather name="x" size={24} color={theme.text} />
+              </Pressable>
+            </View>
+            
+            <ThemedText style={[styles.aiFinderDescription, { color: theme.textSecondary }]}>
+              Describe what you need and AI will find matching products from the catalog.
+            </ThemedText>
+
+            <TextInput
+              style={[styles.aiInput, { color: theme.text, borderColor: theme.border, backgroundColor: theme.backgroundRoot }]}
+              placeholder="e.g., Variable speed pump for 50,000 gallon pool..."
+              placeholderTextColor={theme.textSecondary}
+              value={aiDescription}
+              onChangeText={setAIDescription}
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+            />
+
+            <View style={styles.aiActions}>
+              <Pressable
+                onPress={isAIRecording ? stopAIRecording : startAIRecording}
+                style={[
+                  styles.aiVoiceButton,
+                  isAIRecording && { backgroundColor: BrandColors.danger },
+                ]}
+                disabled={isAISearching}
+              >
+                {isAISearching ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Feather
+                      name={isAIRecording ? "stop-circle" : "mic"}
+                      size={24}
+                      color="#fff"
+                    />
+                    <ThemedText style={styles.aiVoiceButtonText}>
+                      {isAIRecording ? 'Stop' : 'Speak'}
+                    </ThemedText>
+                  </>
+                )}
+              </Pressable>
+
+              <Pressable
+                onPress={() => searchProductsWithAI(aiDescription)}
+                style={[styles.aiSearchButton, !aiDescription.trim() && { opacity: 0.5 }]}
+                disabled={!aiDescription.trim() || isAISearching}
+              >
+                {isAISearching ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Feather name="search" size={20} color="#fff" />
+                    <ThemedText style={styles.aiSearchButtonText}>Search</ThemedText>
+                  </>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={showAIResults}
+        animationType="slide"
+        onRequestClose={() => setShowAIResults(false)}
+      >
+        <View style={[styles.aiResultsModal, { backgroundColor: theme.backgroundRoot }]}>
+          <View style={[styles.aiResultsHeader, { backgroundColor: theme.surface, paddingTop: insets.top }]}>
+            <Pressable onPress={() => setShowAIResults(false)}>
+              <Feather name="x" size={24} color={theme.text} />
+            </Pressable>
+            <ThemedText style={styles.aiResultsTitle}>AI Suggestions</ThemedText>
+            <Pressable onPress={addSelectedAIProducts} style={styles.aiAddButton}>
+              <ThemedText style={styles.aiAddButtonText}>Add Selected</ThemedText>
+            </Pressable>
+          </View>
+
+          <View style={styles.aiQueryContainer}>
+            <ThemedText style={[styles.aiQueryLabel, { color: theme.textSecondary }]}>Your request:</ThemedText>
+            <ThemedText style={styles.aiQueryText}>"{aiDescription}"</ThemedText>
+          </View>
+
+          <FlatList
+            data={aiMatches}
+            keyExtractor={(item) => item.sku}
+            contentContainerStyle={{ padding: Spacing.md, paddingBottom: insets.bottom + 20 }}
+            keyboardShouldPersistTaps="handled"
+            renderItem={({ item }) => (
+              <Pressable
+                onPress={() => toggleAIMatch(item.sku)}
+                style={[
+                  styles.aiMatchCard,
+                  { backgroundColor: theme.surface, borderColor: item.selected ? BrandColors.azureBlue : theme.border },
+                  item.selected && styles.aiMatchCardSelected,
+                ]}
+              >
+                <View style={styles.aiMatchCheckbox}>
+                  <Feather
+                    name={item.selected ? "check-square" : "square"}
+                    size={24}
+                    color={item.selected ? BrandColors.azureBlue : theme.textSecondary}
+                  />
+                </View>
+                <View style={styles.aiMatchContent}>
+                  <ThemedText style={styles.aiMatchName}>{item.name}</ThemedText>
+                  <ThemedText style={[styles.aiMatchMeta, { color: theme.textSecondary }]}>
+                    {item.manufacturer} | {item.category}
+                  </ThemedText>
+                  <View style={styles.aiMatchReason}>
+                    <Feather name="info" size={14} color={BrandColors.tropicalTeal} />
+                    <ThemedText style={[styles.aiMatchReasonText, { color: theme.textSecondary }]}>
+                      {item.reason}
+                    </ThemedText>
+                  </View>
+                </View>
+                <View style={styles.aiMatchPrice}>
+                  <ThemedText style={styles.aiMatchPriceValue}>${item.price.toFixed(2)}</ThemedText>
+                  <ThemedText style={[styles.aiMatchPriceUnit, { color: theme.textSecondary }]}>/{item.unit}</ThemedText>
+                  <View style={[styles.aiConfidenceBadge, { backgroundColor: item.confidence >= 80 ? BrandColors.emerald : BrandColors.vividTangerine }]}>
+                    <ThemedText style={styles.aiConfidenceText}>{item.confidence}%</ThemedText>
+                  </View>
+                </View>
+              </Pressable>
+            )}
+          />
+        </View>
       </Modal>
     </View>
   );
@@ -1103,5 +1410,190 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     borderRadius: BorderRadius.md,
     alignItems: 'center',
+  },
+  lineItemButtons: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  aiButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: BrandColors.tropicalTeal,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.sm,
+    gap: 4,
+  },
+  aiButtonText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  aiFinderOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  aiFinderModal: {
+    borderTopLeftRadius: BorderRadius.xl,
+    borderTopRightRadius: BorderRadius.xl,
+    padding: Spacing.xl,
+    ...Shadows.card,
+  },
+  aiFinderHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.md,
+  },
+  aiFinderTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  aiFinderDescription: {
+    fontSize: 14,
+    marginBottom: Spacing.lg,
+  },
+  aiInput: {
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    fontSize: 15,
+    minHeight: 80,
+    marginBottom: Spacing.lg,
+  },
+  aiActions: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+  },
+  aiVoiceButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: BrandColors.tropicalTeal,
+    paddingVertical: Spacing.lg,
+    borderRadius: BorderRadius.md,
+    gap: Spacing.sm,
+  },
+  aiVoiceButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  aiSearchButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: BrandColors.azureBlue,
+    paddingVertical: Spacing.lg,
+    borderRadius: BorderRadius.md,
+    gap: Spacing.sm,
+  },
+  aiSearchButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  aiResultsModal: {
+    flex: 1,
+  },
+  aiResultsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.md,
+    ...Shadows.card,
+  },
+  aiResultsTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  aiAddButton: {
+    backgroundColor: BrandColors.azureBlue,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.md,
+  },
+  aiAddButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  aiQueryContainer: {
+    padding: Spacing.md,
+    marginHorizontal: Spacing.md,
+    marginTop: Spacing.md,
+    backgroundColor: 'rgba(0,120,212,0.1)',
+    borderRadius: BorderRadius.md,
+  },
+  aiQueryLabel: {
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  aiQueryText: {
+    fontSize: 15,
+    fontStyle: 'italic',
+  },
+  aiMatchCard: {
+    flexDirection: 'row',
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    marginBottom: Spacing.md,
+    borderWidth: 2,
+    ...Shadows.card,
+  },
+  aiMatchCardSelected: {
+    borderColor: BrandColors.azureBlue,
+  },
+  aiMatchCheckbox: {
+    marginRight: Spacing.md,
+    justifyContent: 'center',
+  },
+  aiMatchContent: {
+    flex: 1,
+  },
+  aiMatchName: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  aiMatchMeta: {
+    fontSize: 13,
+    marginBottom: 4,
+  },
+  aiMatchReason: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    marginTop: 4,
+  },
+  aiMatchReasonText: {
+    fontSize: 12,
+    flex: 1,
+  },
+  aiMatchPrice: {
+    alignItems: 'flex-end',
+  },
+  aiMatchPriceValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: BrandColors.azureBlue,
+  },
+  aiMatchPriceUnit: {
+    fontSize: 12,
+  },
+  aiConfidenceBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.full,
+    marginTop: 4,
+  },
+  aiConfidenceText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '600',
   },
 });

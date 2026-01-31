@@ -98,7 +98,7 @@ export function ProductCatalog({ role, onSelectProduct, selectionMode = false }:
       }
 
       const base64Audio = await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType.Base64,
+        encoding: 'base64',
       });
 
       const apiUrl = getApiUrl();

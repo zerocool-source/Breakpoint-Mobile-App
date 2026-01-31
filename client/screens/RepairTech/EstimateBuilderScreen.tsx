@@ -323,14 +323,6 @@ export default function EstimateBuilderScreen() {
             </Pressable>
           </View>
 
-          <View style={[styles.tableHeader, { backgroundColor: theme.backgroundRoot }]}>
-            <ThemedText style={[styles.tableHeaderText, { flex: 0.4 }]}>#</ThemedText>
-            <ThemedText style={[styles.tableHeaderText, { flex: 2 }]}>Product/Service</ThemedText>
-            <ThemedText style={[styles.tableHeaderText, { flex: 1 }]}>Qty</ThemedText>
-            <ThemedText style={[styles.tableHeaderText, { flex: 1 }]}>Rate</ThemedText>
-            <ThemedText style={[styles.tableHeaderText, { flex: 1.2 }]}>Amount</ThemedText>
-          </View>
-
           {lineItems.length === 0 ? (
             <View style={styles.emptyState}>
               <Feather name="file-text" size={40} color={theme.textSecondary} />
@@ -343,62 +335,75 @@ export default function EstimateBuilderScreen() {
             </View>
           ) : (
             lineItems.map((item, index) => (
-              <View key={item.id} style={[styles.lineItemRow, { borderBottomColor: theme.border }]}>
-                <View style={styles.lineItemMain}>
-                  <ThemedText style={[styles.lineItemNum, { flex: 0.4 }]}>{index + 1}</ThemedText>
-                  <View style={{ flex: 2 }}>
-                    <ThemedText style={styles.lineItemName} numberOfLines={1}>{item.product.name}</ThemedText>
+              <View key={item.id} style={[styles.lineItemCard, { backgroundColor: theme.backgroundRoot, borderColor: theme.border }]}>
+                <View style={styles.lineItemHeader}>
+                  <View style={styles.lineItemNumBadge}>
+                    <ThemedText style={styles.lineItemNumText}>{index + 1}</ThemedText>
+                  </View>
+                  <View style={styles.lineItemInfo}>
+                    <ThemedText style={styles.lineItemName} numberOfLines={2}>{item.product.name}</ThemedText>
                     <ThemedText style={[styles.lineItemSku, { color: theme.textSecondary }]}>{item.product.sku}</ThemedText>
                   </View>
-                  <TextInput
-                    style={[styles.lineItemInput, { flex: 1, color: theme.text, borderColor: theme.border }]}
-                    value={String(item.quantity)}
-                    onChangeText={(v) => updateLineItem(item.id, { quantity: parseInt(v) || 1 })}
-                    keyboardType="numeric"
-                  />
-                  <TextInput
-                    style={[styles.lineItemInput, { flex: 1, color: theme.text, borderColor: theme.border }]}
-                    value={String(item.rate)}
-                    onChangeText={(v) => updateLineItem(item.id, { rate: parseFloat(v) || 0 })}
-                    keyboardType="decimal-pad"
-                  />
-                  <ThemedText style={[styles.lineItemAmount, { flex: 1.2 }]}>
-                    ${calculateItemAmount(item).toFixed(2)}
-                  </ThemedText>
+                  <View style={styles.lineItemActions}>
+                    <Pressable
+                      onPress={() => {
+                        setSelectedItemForDiscount(item.id);
+                        setDiscountValue(String(item.discount));
+                        setDiscountType(item.discountType);
+                        setShowDiscountModal(true);
+                      }}
+                      style={styles.actionButton}
+                    >
+                      <Feather name="percent" size={16} color={BrandColors.tropicalTeal} />
+                    </Pressable>
+                    <Pressable onPress={() => removeLineItem(item.id)} style={styles.actionButton}>
+                      <Feather name="trash-2" size={16} color={BrandColors.danger} />
+                    </Pressable>
+                  </View>
                 </View>
-                <View style={styles.lineItemDescription}>
-                  <TextInput
-                    style={[styles.descriptionInput, { color: theme.text, borderColor: theme.border }]}
-                    placeholder="Add description..."
-                    placeholderTextColor={theme.textSecondary}
-                    value={item.description}
-                    onChangeText={(v) => updateLineItem(item.id, { description: v })}
-                    multiline
-                  />
+                
+                <View style={styles.lineItemDetails}>
+                  <View style={styles.lineItemField}>
+                    <ThemedText style={[styles.lineItemFieldLabel, { color: theme.textSecondary }]}>Qty</ThemedText>
+                    <TextInput
+                      style={[styles.lineItemFieldInput, { color: theme.text, borderColor: theme.border }]}
+                      value={String(item.quantity)}
+                      onChangeText={(v) => updateLineItem(item.id, { quantity: parseInt(v) || 1 })}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                  <View style={styles.lineItemField}>
+                    <ThemedText style={[styles.lineItemFieldLabel, { color: theme.textSecondary }]}>Rate</ThemedText>
+                    <TextInput
+                      style={[styles.lineItemFieldInput, { color: theme.text, borderColor: theme.border }]}
+                      value={String(item.rate.toFixed(2))}
+                      onChangeText={(v) => updateLineItem(item.id, { rate: parseFloat(v) || 0 })}
+                      keyboardType="decimal-pad"
+                    />
+                  </View>
+                  <View style={styles.lineItemField}>
+                    <ThemedText style={[styles.lineItemFieldLabel, { color: theme.textSecondary }]}>Amount</ThemedText>
+                    <ThemedText style={styles.lineItemAmount}>${calculateItemAmount(item).toFixed(2)}</ThemedText>
+                  </View>
                 </View>
-                <View style={styles.lineItemActions}>
-                  {item.discount > 0 ? (
-                    <View style={styles.discountBadge}>
-                      <ThemedText style={styles.discountBadgeText}>
-                        -{item.discountType === 'percent' ? `${item.discount}%` : `$${item.discount}`}
-                      </ThemedText>
-                    </View>
-                  ) : null}
-                  <Pressable
-                    onPress={() => {
-                      setSelectedItemForDiscount(item.id);
-                      setDiscountValue(String(item.discount));
-                      setDiscountType(item.discountType);
-                      setShowDiscountModal(true);
-                    }}
-                    style={styles.actionButton}
-                  >
-                    <Feather name="percent" size={16} color={BrandColors.tropicalTeal} />
-                  </Pressable>
-                  <Pressable onPress={() => removeLineItem(item.id)} style={styles.actionButton}>
-                    <Feather name="trash-2" size={16} color={BrandColors.danger} />
-                  </Pressable>
-                </View>
+
+                {item.discount > 0 ? (
+                  <View style={styles.discountBadge}>
+                    <Feather name="tag" size={12} color={BrandColors.tropicalTeal} />
+                    <ThemedText style={styles.discountBadgeText}>
+                      {item.discountType === 'percent' ? `${item.discount}% off` : `$${item.discount} off`}
+                    </ThemedText>
+                  </View>
+                ) : null}
+
+                <TextInput
+                  style={[styles.descriptionInput, { color: theme.text, borderColor: theme.border }]}
+                  placeholder="Add notes..."
+                  placeholderTextColor={theme.textSecondary}
+                  value={item.description}
+                  onChangeText={(v) => updateLineItem(item.id, { description: v })}
+                  multiline
+                />
               </View>
             ))
           )}
@@ -743,19 +748,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
   },
-  tableHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: Spacing.sm,
-    borderRadius: BorderRadius.sm,
-    marginBottom: Spacing.sm,
-  },
-  tableHeaderText: {
-    fontSize: 11,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    color: '#888',
-  },
   emptyState: {
     alignItems: 'center',
     paddingVertical: Spacing.xl * 2,
@@ -769,65 +761,95 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: Spacing.xs,
   },
-  lineItemRow: {
-    borderBottomWidth: 1,
-    paddingVertical: Spacing.md,
+  lineItemCard: {
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
   },
-  lineItemMain: {
+  lineItemHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
   },
-  lineItemNum: {
-    fontSize: 14,
-    fontWeight: '500',
+  lineItemNumBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: BrandColors.azureBlue,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  lineItemNumText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  lineItemInfo: {
+    flex: 1,
   },
   lineItemName: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 15,
+    fontWeight: '600',
   },
   lineItemSku: {
-    fontSize: 11,
+    fontSize: 12,
+    marginTop: 2,
   },
-  lineItemInput: {
+  lineItemDetails: {
+    flexDirection: 'row',
+    marginTop: Spacing.md,
+    gap: Spacing.md,
+  },
+  lineItemField: {
+    flex: 1,
+  },
+  lineItemFieldLabel: {
+    fontSize: 11,
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  lineItemFieldInput: {
     borderWidth: 1,
     borderRadius: BorderRadius.sm,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    fontSize: 14,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.sm,
+    fontSize: 15,
     textAlign: 'center',
-    marginHorizontal: 4,
   },
   lineItemAmount: {
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'right',
-  },
-  lineItemDescription: {
-    marginTop: Spacing.sm,
-    marginLeft: 30,
+    fontSize: 16,
+    fontWeight: '700',
+    color: BrandColors.emerald,
+    paddingVertical: Spacing.sm,
   },
   descriptionInput: {
     borderWidth: 1,
     borderRadius: BorderRadius.sm,
     padding: Spacing.sm,
     fontSize: 13,
-    minHeight: 40,
+    minHeight: 36,
+    marginTop: Spacing.sm,
   },
   lineItemActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
-    marginTop: Spacing.sm,
-    gap: Spacing.sm,
+    gap: Spacing.xs,
   },
   actionButton: {
-    padding: Spacing.sm,
+    padding: Spacing.xs,
   },
   discountBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: BrandColors.tropicalTeal + '20',
     paddingHorizontal: Spacing.sm,
-    paddingVertical: 2,
+    paddingVertical: 4,
     borderRadius: BorderRadius.sm,
+    marginTop: Spacing.sm,
+    alignSelf: 'flex-start',
+    gap: 4,
   },
   discountBadgeText: {
     color: BrandColors.tropicalTeal,

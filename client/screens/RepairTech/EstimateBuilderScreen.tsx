@@ -17,7 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
-import { Audio } from 'expo-av';
+import { useAudioRecorder, AudioModule, RecordingPresets, useAudioPlayer } from 'expo-audio';
 
 import { ThemedText } from '@/components/ThemedText';
 import { useTheme } from '@/hooks/useTheme';
@@ -75,7 +75,7 @@ export default function EstimateBuilderScreen() {
   const [taxRate] = useState(9);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const recordingRef = useRef<Audio.Recording | null>(null);
+  const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleAddProduct = useCallback((product: HeritageProduct, quantity: number) => {
@@ -176,21 +176,13 @@ export default function EstimateBuilderScreen() {
 
   const startRecording = async () => {
     try {
-      const { status } = await Audio.requestPermissionsAsync();
-      if (status !== 'granted') {
+      const status = await AudioModule.requestRecordingPermissionsAsync();
+      if (!status.granted) {
         Alert.alert('Permission needed', 'Microphone permission is required for voice notes.');
         return;
       }
 
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-      });
-
-      const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
-      );
-      recordingRef.current = recording;
+      audioRecorder.record();
       setIsRecording(true);
       setRecordingDuration(0);
 
@@ -206,15 +198,13 @@ export default function EstimateBuilderScreen() {
   };
 
   const stopRecording = async () => {
-    if (!recordingRef.current) return;
-
     try {
       if (recordingTimerRef.current) {
         clearInterval(recordingTimerRef.current);
       }
 
-      await recordingRef.current.stopAndUnloadAsync();
-      const uri = recordingRef.current.getURI();
+      await audioRecorder.stop();
+      const uri = audioRecorder.uri;
 
       if (uri) {
         const newVoiceNote: VoiceNote = {
@@ -226,7 +216,6 @@ export default function EstimateBuilderScreen() {
         setVoiceNotes(prev => [...prev, newVoiceNote]);
       }
 
-      recordingRef.current = null;
       setIsRecording(false);
       setRecordingDuration(0);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -237,8 +226,10 @@ export default function EstimateBuilderScreen() {
 
   const playVoiceNote = async (uri: string) => {
     try {
-      const { sound } = await Audio.Sound.createAsync({ uri });
-      await sound.playAsync();
+      const { sound } = await AudioModule.Sound.createAsync({ uri });
+      if (sound) {
+        await sound.playAsync();
+      }
     } catch (error) {
       console.error('Failed to play voice note:', error);
     }

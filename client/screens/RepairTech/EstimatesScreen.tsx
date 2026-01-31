@@ -50,7 +50,7 @@ export default function EstimatesScreen() {
       title="No Estimates Yet"
       message="Create your first estimate to get started"
       actionLabel="Create Estimate"
-      onAction={() => navigation.navigate('CreateEstimate')}
+      onAction={() => navigation.navigate('EstimateBuilder')}
     />
   );
 

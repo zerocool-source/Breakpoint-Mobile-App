@@ -8,6 +8,7 @@ import RepairTechTabNavigator from '@/navigation/RepairTechTabNavigator';
 import ReportIssueModal from '@/screens/Modals/ReportIssueModal';
 import ChatModal from '@/screens/Modals/ChatModal';
 import CreateEstimateModal from '@/screens/Modals/CreateEstimateModal';
+import EstimateBuilderScreen from '@/screens/RepairTech/EstimateBuilderScreen';
 import { useScreenOptions } from '@/hooks/useScreenOptions';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors } from '@/constants/theme';
@@ -17,6 +18,7 @@ export type RootStackParamList = {
   ReportIssue: undefined;
   Chat: undefined;
   CreateEstimate: undefined;
+  EstimateBuilder: undefined;
   EstimateDetail: { estimateId: string };
 };
 
@@ -75,6 +77,14 @@ export default function RootStackNavigator() {
             </HeaderButton>
           ),
         })}
+      />
+      <Stack.Screen
+        name="EstimateBuilder"
+        component={EstimateBuilderScreen}
+        options={{
+          headerShown: false,
+          presentation: 'fullScreenModal',
+        }}
       />
     </Stack.Navigator>
   );

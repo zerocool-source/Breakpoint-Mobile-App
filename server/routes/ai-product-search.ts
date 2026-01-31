@@ -2,6 +2,8 @@ import { Router, Request, Response } from "express";
 import express from "express";
 import OpenAI from "openai";
 import { HERITAGE_PRODUCTS } from "../../client/lib/heritageProducts";
+import { db } from "../db";
+import { sql } from "drizzle-orm";
 
 const router = Router();
 
@@ -9,6 +11,43 @@ const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
+
+async function getLearnedMappings(query: string): Promise<string[]> {
+  try {
+    const result = await db.execute(sql`
+      SELECT mapped_product_sku, success_count, total_count
+      FROM ai_query_mappings
+      WHERE query_term ILIKE ${'%' + query + '%'}
+        AND (success_count::float / NULLIF(total_count::float, 0)) > 0.5
+      ORDER BY success_count DESC
+      LIMIT 5
+    `);
+    return result.rows.map((r: any) => r.mapped_product_sku);
+  } catch (error) {
+    console.error("Error fetching learned mappings:", error);
+    return [];
+  }
+}
+
+async function getRelatedProducts(productSkus: string[], propertyType?: string): Promise<Array<{ sku: string; count: number }>> {
+  try {
+    if (productSkus.length === 0) return [];
+    
+    const skuList = productSkus.map(s => `'${s}'`).join(',');
+    const result = await db.execute(sql`
+      SELECT related_product_sku as sku, SUM(co_occurrence_count) as count
+      FROM ai_product_patterns
+      WHERE primary_product_sku IN (${sql.raw(skuList)})
+      GROUP BY related_product_sku
+      ORDER BY count DESC
+      LIMIT 3
+    `);
+    return result.rows.map((r: any) => ({ sku: r.sku, count: Number(r.count) }));
+  } catch (error) {
+    console.error("Error fetching related products:", error);
+    return [];
+  }
+}
 
 interface ProductMatch {
   sku: string;
@@ -58,6 +97,12 @@ router.post("/", express.json(), async (req: Request, res: Response) => {
       unit: p.unit,
     }));
 
+    // Get learned mappings from past successful selections
+    const learnedMappings = await getLearnedMappings(searchText);
+    const learnedContext = learnedMappings.length > 0
+      ? `\n\nPREVIOUSLY SUCCESSFUL PRODUCTS for similar queries (prioritize these): ${learnedMappings.join(', ')}`
+      : '';
+
     const systemPrompt = `You are a commercial pool equipment expert assistant. Your job is to match customer descriptions of needed parts or equipment to products in our catalog.
 
 Given a description of what the customer needs, find the most relevant products from our catalog. Consider:
@@ -65,10 +110,12 @@ Given a description of what the customer needs, find the most relevant products 
 - Brand preferences if mentioned
 - Specifications like horsepower, size, or model numbers
 - Common pool industry terminology
+- Historical data showing which products were previously selected for similar queries
 
 Return a JSON array of matched products with confidence scores (0-100) and brief reasons why each product matches.
 
 IMPORTANT: Only return products that genuinely match the description. If nothing matches well, return an empty array.
+Prioritize products that have been successfully used for similar queries in the past.
 Return at most 5 products, ordered by relevance.
 
 Response format:
@@ -88,7 +135,7 @@ Response format:
         { role: "system", content: systemPrompt },
         { 
           role: "user", 
-          content: `Customer description: "${searchText}"
+          content: `Customer description: "${searchText}"${learnedContext}
 
 Product catalog (${productList.length} products):
 ${JSON.stringify(productList, null, 2)}` 
@@ -123,7 +170,35 @@ ${JSON.stringify(productList, null, 2)}`
       }
     }
 
-    res.json({ matches });
+    // Get frequently paired products based on learned patterns
+    const matchedSkus = matches.map(m => m.sku);
+    const relatedProducts = await getRelatedProducts(matchedSkus);
+    const suggestions: ProductMatch[] = [];
+    
+    for (const related of relatedProducts) {
+      if (!matchedSkus.includes(related.sku)) {
+        const product = HERITAGE_PRODUCTS.find(p => p.sku === related.sku);
+        if (product) {
+          suggestions.push({
+            sku: product.sku,
+            name: product.name,
+            category: product.category,
+            subcategory: product.subcategory,
+            manufacturer: product.manufacturer,
+            price: product.price,
+            unit: product.unit,
+            confidence: Math.min(90, 50 + related.count * 5),
+            reason: `Frequently used together (${related.count} times)`,
+          });
+        }
+      }
+    }
+
+    res.json({ 
+      matches, 
+      suggestions,
+      learnedFromHistory: learnedMappings.length > 0,
+    });
   } catch (error) {
     console.error("AI product search error:", error);
     res.status(500).json({ error: "Failed to search products" });

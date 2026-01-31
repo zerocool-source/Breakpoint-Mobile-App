@@ -20,7 +20,7 @@ import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { useAudioRecorder, AudioModule, RecordingPresets, useAudioPlayer } from 'expo-audio';
-import { getApiUrl, joinUrl } from '@/lib/query-client';
+import { getLocalApiUrl, joinUrl } from '@/lib/query-client';
 
 import { ThemedText } from '@/components/ThemedText';
 import { useTheme } from '@/hooks/useTheme';
@@ -299,7 +299,7 @@ export default function EstimateBuilderScreen() {
         encoding: 'base64',
       });
 
-      const apiUrl = getApiUrl();
+      const apiUrl = getLocalApiUrl();
       const transcribeResponse = await fetch(joinUrl(apiUrl, '/api/transcribe'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -330,7 +330,7 @@ export default function EstimateBuilderScreen() {
   const searchProductsWithAI = async (description: string) => {
     try {
       setIsAISearching(true);
-      const apiUrl = getApiUrl();
+      const apiUrl = getLocalApiUrl();
       const response = await fetch(joinUrl(apiUrl, '/api/ai-product-search'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

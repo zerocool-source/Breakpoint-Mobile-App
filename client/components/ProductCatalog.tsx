@@ -15,7 +15,7 @@ import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useAudioRecorder, AudioModule, RecordingPresets } from 'expo-audio';
 import * as FileSystem from 'expo-file-system';
-import { getApiUrl, joinUrl } from '@/lib/query-client';
+import { getLocalApiUrl, joinUrl } from '@/lib/query-client';
 
 import { ThemedText } from '@/components/ThemedText';
 import { useTheme } from '@/hooks/useTheme';
@@ -101,7 +101,7 @@ export function ProductCatalog({ role, onSelectProduct, selectionMode = false }:
         encoding: 'base64',
       });
 
-      const apiUrl = getApiUrl();
+      const apiUrl = getLocalApiUrl();
       const response = await fetch(joinUrl(apiUrl, '/api/transcribe'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

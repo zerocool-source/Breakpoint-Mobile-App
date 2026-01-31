@@ -76,6 +76,26 @@ export function getAuthApiUrl(): string {
 }
 
 /**
+ * Returns the local backend URL for endpoints that exist on Replit server.
+ * Web browser: Uses local backend directly
+ * Mobile (Expo Go): Uses Replit domain
+ */
+export function getLocalApiUrl(): string {
+  if (Platform.OS === 'web') {
+    const domain = process.env.EXPO_PUBLIC_DOMAIN;
+    if (domain) {
+      return `https://${domain}`;
+    }
+    return 'http://localhost:5000';
+  }
+  const domain = process.env.EXPO_PUBLIC_DOMAIN;
+  if (domain) {
+    return `https://${domain}`;
+  }
+  return 'http://localhost:5000';
+}
+
+/**
  * Returns the Tech Ops API URL for repair submissions.
  * Falls back to EXPO_PUBLIC_API_URL if EXPO_PUBLIC_TECHOPS_URL is not set.
  */

@@ -327,6 +327,63 @@ export const insertEstimateSchema = createInsertSchema(estimates).omit({
   updatedAt: true,
 });
 
+// AI Learning System - Self-improving estimates
+export const feedbackTypeEnum = pgEnum('feedback_type', ['selected', 'rejected', 'modified', 'ignored']);
+
+// Tracks each AI search interaction
+export const aiLearningInteractions = pgTable("ai_learning_interactions", {
+  id: varchar("id", { length: 36 })
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: varchar("user_id", { length: 36 }).references(() => users.id),
+  propertyId: varchar("property_id", { length: 36 }).references(() => properties.id),
+  propertyType: text("property_type"),
+  userQuery: text("user_query").notNull(),
+  suggestedProducts: text("suggested_products").notNull(), // JSON array of product SKUs
+  selectedProducts: text("selected_products"), // JSON array of products user actually added
+  sessionId: varchar("session_id", { length: 36 }), // Groups interactions in same estimate session
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Tracks individual product feedback for learning
+export const aiProductFeedback = pgTable("ai_product_feedback", {
+  id: varchar("id", { length: 36 })
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  interactionId: varchar("interaction_id", { length: 36 }).references(() => aiLearningInteractions.id),
+  productSku: text("product_sku").notNull(),
+  productName: text("product_name").notNull(),
+  feedbackType: feedbackTypeEnum("feedback_type").notNull(),
+  quantitySelected: integer("quantity_selected"),
+  confidenceScore: decimal("confidence_score", { precision: 3, scale: 2 }), // AI's original confidence
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Learned product patterns - products frequently used together
+export const aiProductPatterns = pgTable("ai_product_patterns", {
+  id: varchar("id", { length: 36 })
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  primaryProductSku: text("primary_product_sku").notNull(),
+  relatedProductSku: text("related_product_sku").notNull(),
+  coOccurrenceCount: integer("co_occurrence_count").notNull().default(1),
+  propertyType: text("property_type"), // Pattern may vary by property type
+  avgQuantityRatio: decimal("avg_quantity_ratio", { precision: 5, scale: 2 }), // Avg qty of related vs primary
+  lastUpdated: timestamp("last_updated").notNull().defaultNow(),
+});
+
+// Query term mappings - learns synonyms and user terminology
+export const aiQueryMappings = pgTable("ai_query_mappings", {
+  id: varchar("id", { length: 36 })
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  queryTerm: text("query_term").notNull(),
+  mappedProductSku: text("mapped_product_sku").notNull(),
+  successCount: integer("success_count").notNull().default(1), // Times this mapping led to selection
+  totalCount: integer("total_count").notNull().default(1), // Total times suggested
+  lastUsed: timestamp("last_used").notNull().defaultNow(),
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type Property = typeof properties.$inferSelect;
@@ -336,5 +393,11 @@ export type Estimate = typeof estimates.$inferSelect;
 export type RouteStop = typeof routeStops.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
 export type TechOps = typeof techOps.$inferSelect;
+
+// AI Learning System types
+export type AILearningInteraction = typeof aiLearningInteractions.$inferSelect;
+export type AIProductFeedback = typeof aiProductFeedback.$inferSelect;
+export type AIProductPattern = typeof aiProductPatterns.$inferSelect;
+export type AIQueryMapping = typeof aiQueryMappings.$inferSelect;
 
 export * from "./models/chat";

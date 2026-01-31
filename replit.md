@@ -56,20 +56,24 @@ Breakpoint Commercial Pool Systems is a mobile-first field service management ap
             - Service Tech: NO pricing visible, items auto-track to commission when added
             - Supervisor: Full pricing visible, can create work orders with technician assignment
         - **Navigation**: Products tab available on all roles with package icon.
-    - **Ace AI Assistant**: AI-powered estimate creation with voice input and self-learning capabilities.
+    - **Ace AI Assistant**: AI-powered estimate creation with voice input and personalized self-learning capabilities.
         - **Entry Point**: `client/screens/RepairTech/AceEstimateBuilderScreen.tsx`
         - **AI Search**: Uses GPT-4o-mini to match user descriptions to products
         - **Voice Input**: Records audio via `expo-audio`, transcribes via OpenAI Whisper
+        - **Personalized Experience**:
+            - Greets each user by their first name (e.g., "Hey Alan!")
+            - Shows personalized messages when using learned data (e.g., "Based on your past estimates, Alan")
+            - All learning is tracked per-user via `userId` in all learning tables
         - **Self-Learning System**: 
-            - **Database Tables**: `ai_learning_interactions`, `ai_product_feedback`, `ai_product_patterns`, `ai_query_mappings`
-            - **API Routes**: `server/routes/ai-learning.ts` - Logs interactions, feedback, and estimate completions
+            - **Database Tables**: `ai_learning_interactions`, `ai_product_feedback`, `ai_product_patterns`, `ai_query_mappings` (all include `user_id` for per-user learning)
+            - **API Routes**: `server/routes/ai-learning.ts` - Logs interactions, feedback, and estimate completions with user context
             - **Learning Flow**: 
-                1. User queries are logged with suggested products
-                2. Product selections/rejections are recorded as feedback
-                3. Estimate completions track product co-occurrence patterns
-                4. Future searches use learned mappings to improve recommendations
-            - **Pattern Recognition**: Products frequently used together are suggested automatically
-            - **Query Mappings**: Successful user queries are mapped to products for future use
+                1. User queries are logged with userId and suggested products
+                2. Product selections/rejections are recorded as user-specific feedback
+                3. Estimate completions track per-user product co-occurrence patterns
+                4. Future searches prioritize user-specific learned mappings, with fallback to global patterns
+            - **Pattern Recognition**: Products frequently used together by each user are suggested automatically
+            - **Query Mappings**: Successful user queries are mapped to products per-user for future use
 
 ## External Dependencies
 - **Database**: PostgreSQL

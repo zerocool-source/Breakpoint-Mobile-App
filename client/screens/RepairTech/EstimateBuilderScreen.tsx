@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -11,6 +11,8 @@ import {
   Alert,
   Platform,
   ActivityIndicator,
+  Animated,
+  Easing,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useHeaderHeight } from '@react-navigation/elements';
@@ -98,6 +100,83 @@ export default function EstimateBuilderScreen() {
   const [aiMatches, setAIMatches] = useState<AIProductMatch[]>([]);
   const [showAIResults, setShowAIResults] = useState(false);
   const [showWebWarning, setShowWebWarning] = useState(false);
+  const [aiThinkingMessage, setAIThinkingMessage] = useState('');
+  
+  // Animated thinking bubble
+  const thinkingBubbleAnim = useRef(new Animated.Value(0)).current;
+  const thinkingPulseAnim = useRef(new Animated.Value(1)).current;
+  const dot1Anim = useRef(new Animated.Value(0)).current;
+  const dot2Anim = useRef(new Animated.Value(0)).current;
+  const dot3Anim = useRef(new Animated.Value(0)).current;
+  
+  const thinkingMessages = [
+    "Hmm, let me think about that...",
+    "Searching through 600+ products...",
+    "Looking for the best matches...",
+    "Analyzing your description...",
+    "Almost there...",
+  ];
+  
+  useEffect(() => {
+    if (isAISearching) {
+      // Animate thinking bubble in
+      Animated.spring(thinkingBubbleAnim, {
+        toValue: 1,
+        friction: 8,
+        tension: 100,
+        useNativeDriver: true,
+      }).start();
+      
+      // Pulsing animation
+      const pulseLoop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(thinkingPulseAnim, { toValue: 1.05, duration: 800, useNativeDriver: true }),
+          Animated.timing(thinkingPulseAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+        ])
+      );
+      pulseLoop.start();
+      
+      // Dot bouncing animation
+      const dotAnimation = Animated.loop(
+        Animated.stagger(150, [
+          Animated.sequence([
+            Animated.timing(dot1Anim, { toValue: -8, duration: 300, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+            Animated.timing(dot1Anim, { toValue: 0, duration: 300, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+          ]),
+          Animated.sequence([
+            Animated.timing(dot2Anim, { toValue: -8, duration: 300, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+            Animated.timing(dot2Anim, { toValue: 0, duration: 300, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+          ]),
+          Animated.sequence([
+            Animated.timing(dot3Anim, { toValue: -8, duration: 300, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+            Animated.timing(dot3Anim, { toValue: 0, duration: 300, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+          ]),
+        ])
+      );
+      dotAnimation.start();
+      
+      // Cycle through thinking messages
+      let messageIndex = 0;
+      setAIThinkingMessage(thinkingMessages[0]);
+      const messageInterval = setInterval(() => {
+        messageIndex = (messageIndex + 1) % thinkingMessages.length;
+        setAIThinkingMessage(thinkingMessages[messageIndex]);
+      }, 2000);
+      
+      return () => {
+        pulseLoop.stop();
+        dotAnimation.stop();
+        clearInterval(messageInterval);
+      };
+    } else {
+      // Animate out
+      Animated.timing(thinkingBubbleAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [isAISearching]);
 
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const aiAudioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
@@ -867,56 +946,80 @@ export default function EstimateBuilderScreen() {
             ) : null}
 
             <TextInput
-              style={[styles.aiInput, { color: theme.text, borderColor: theme.border, backgroundColor: theme.backgroundRoot }]}
-              placeholder="e.g., Variable speed pump for 50,000 gallon pool..."
+              style={[styles.aiInputLarge, { color: theme.text, borderColor: theme.border, backgroundColor: theme.backgroundRoot }]}
+              placeholder="e.g., Variable speed pump for 50,000 gallon pool, heater parts, fireblocks..."
               placeholderTextColor={theme.textSecondary}
               value={aiDescription}
               onChangeText={setAIDescription}
               multiline
-              numberOfLines={3}
+              numberOfLines={5}
               textAlignVertical="top"
+              editable={!isAISearching}
             />
 
-            <View style={styles.aiActions}>
-              <Pressable
-                onPress={isAIRecording ? stopAIRecording : startAIRecording}
+            {isAISearching ? (
+              <Animated.View 
                 style={[
-                  styles.aiVoiceButton,
-                  isAIRecording && { backgroundColor: BrandColors.danger },
+                  styles.thinkingBubbleContainer,
+                  { 
+                    opacity: thinkingBubbleAnim,
+                    transform: [
+                      { scale: Animated.multiply(thinkingBubbleAnim, thinkingPulseAnim) },
+                    ],
+                  }
                 ]}
-                disabled={isAISearching}
               >
-                {isAISearching ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <>
-                    <Feather
-                      name={isAIRecording ? "stop-circle" : "mic"}
-                      size={24}
-                      color="#fff"
+                <View style={styles.thinkingBubble}>
+                  <View style={styles.thinkingBubbleContent}>
+                    <Image 
+                      source={require('../../../assets/images/ask-ace-button.png')} 
+                      style={styles.thinkingAvatar}
+                      resizeMode="contain"
                     />
-                    <ThemedText style={[styles.aiVoiceButtonText, { color: '#fff' }]}>
-                      {isAIRecording ? 'Stop' : 'Speak'}
-                    </ThemedText>
-                  </>
-                )}
-              </Pressable>
+                    <View style={styles.thinkingTextContainer}>
+                      <ThemedText style={styles.thinkingTitle}>Ace is thinking...</ThemedText>
+                      <ThemedText style={[styles.thinkingMessage, { color: theme.textSecondary }]}>
+                        {aiThinkingMessage}
+                      </ThemedText>
+                      <View style={styles.thinkingDots}>
+                        <Animated.View style={[styles.thinkingDot, { transform: [{ translateY: dot1Anim }] }]} />
+                        <Animated.View style={[styles.thinkingDot, { transform: [{ translateY: dot2Anim }] }]} />
+                        <Animated.View style={[styles.thinkingDot, { transform: [{ translateY: dot3Anim }] }]} />
+                      </View>
+                    </View>
+                  </View>
+                  <View style={styles.thinkingBubbleTail} />
+                </View>
+              </Animated.View>
+            ) : (
+              <View style={styles.aiActions}>
+                <Pressable
+                  onPress={isAIRecording ? stopAIRecording : startAIRecording}
+                  style={[
+                    styles.aiVoiceButton,
+                    isAIRecording && { backgroundColor: BrandColors.danger },
+                  ]}
+                >
+                  <Feather
+                    name={isAIRecording ? "stop-circle" : "mic"}
+                    size={24}
+                    color="#fff"
+                  />
+                  <ThemedText style={[styles.aiVoiceButtonText, { color: '#fff' }]}>
+                    {isAIRecording ? 'Stop' : 'Speak'}
+                  </ThemedText>
+                </Pressable>
 
-              <Pressable
-                onPress={() => searchProductsWithAI(aiDescription)}
-                style={[styles.aiSearchButton, !aiDescription.trim() && { opacity: 0.5 }]}
-                disabled={!aiDescription.trim() || isAISearching}
-              >
-                {isAISearching ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <>
-                    <Feather name="search" size={20} color="#fff" />
-                    <ThemedText style={[styles.aiSearchButtonText, { color: '#fff' }]}>Search</ThemedText>
-                  </>
-                )}
-              </Pressable>
-            </View>
+                <Pressable
+                  onPress={() => searchProductsWithAI(aiDescription)}
+                  style={[styles.aiSearchButton, !aiDescription.trim() && { opacity: 0.5 }]}
+                  disabled={!aiDescription.trim()}
+                >
+                  <Feather name="search" size={20} color="#fff" />
+                  <ThemedText style={[styles.aiSearchButtonText, { color: '#fff' }]}>Search</ThemedText>
+                </Pressable>
+              </View>
+            )}
           </View>
         </View>
       </Modal>
@@ -1479,6 +1582,73 @@ const styles = StyleSheet.create({
     fontSize: 15,
     minHeight: 80,
     marginBottom: Spacing.lg,
+  },
+  aiInputLarge: {
+    borderWidth: 2,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+    fontSize: 16,
+    minHeight: 120,
+    marginBottom: Spacing.lg,
+    lineHeight: 24,
+  },
+  thinkingBubbleContainer: {
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+  },
+  thinkingBubble: {
+    backgroundColor: '#E8F4FD',
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
+    width: '100%',
+    position: 'relative',
+  },
+  thinkingBubbleContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  thinkingAvatar: {
+    width: 60,
+    height: 50,
+    borderRadius: BorderRadius.md,
+  },
+  thinkingTextContainer: {
+    flex: 1,
+  },
+  thinkingTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: BrandColors.azureBlue,
+    marginBottom: 4,
+  },
+  thinkingMessage: {
+    fontSize: 14,
+    marginBottom: Spacing.sm,
+  },
+  thinkingDots: {
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 4,
+  },
+  thinkingDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: BrandColors.azureBlue,
+  },
+  thinkingBubbleTail: {
+    position: 'absolute',
+    bottom: -10,
+    left: 30,
+    width: 0,
+    height: 0,
+    borderLeftWidth: 12,
+    borderRightWidth: 12,
+    borderTopWidth: 12,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: '#E8F4FD',
   },
   aiActions: {
     flexDirection: 'row',

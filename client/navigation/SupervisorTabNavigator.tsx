@@ -9,6 +9,7 @@ import SupervisorAssignScreen from '@/screens/Supervisor/AssignScreen';
 import QCInspectionsScreen from '@/screens/Supervisor/QCInspectionsScreen';
 import SupervisorChatChannelsWrapper from '@/screens/Supervisor/ChatChannelsWrapper';
 import SupervisorProfileScreen from '@/screens/Supervisor/ProfileScreen';
+import ProductsScreen from '@/screens/Supervisor/ProductsScreen';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, Spacing } from '@/constants/theme';
 
@@ -65,6 +66,15 @@ export default function SupervisorTabNavigator() {
         options={{
           tabBarIcon: ({ color, size }) => (
             <Feather name="clipboard" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Products"
+        component={ProductsScreen}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="package" size={size} color={color} />
           ),
         }}
       />

@@ -8,6 +8,7 @@ import HomeScreen from '@/screens/RepairTech/HomeScreen';
 import QueueScreen from '@/screens/RepairTech/QueueScreen';
 import EstimatesScreen from '@/screens/RepairTech/EstimatesScreen';
 import JobsScreen from '@/screens/RepairTech/JobsScreen';
+import ProductsScreen from '@/screens/RepairTech/ProductsScreen';
 import ProfileScreen from '@/screens/RepairTech/ProfileScreen';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, Spacing } from '@/constants/theme';
@@ -15,6 +16,7 @@ import { BrandColors, Spacing } from '@/constants/theme';
 export type RepairTechTabParamList = {
   Home: undefined;
   Queue: undefined;
+  Products: undefined;
   Estimates: undefined;
   Jobs: undefined;
   Profile: undefined;
@@ -76,6 +78,15 @@ export default function RepairTechTabNavigator() {
         options={{
           tabBarIcon: ({ color, size }) => (
             <Feather name="tool" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Products"
+        component={ProductsScreen}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="package" size={size} color={color} />
           ),
         }}
       />

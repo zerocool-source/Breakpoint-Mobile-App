@@ -9,6 +9,7 @@ import ProfileScreen from '@/screens/ServiceTech/ProfileScreen';
 import TruckScreen from '@/screens/ServiceTech/TruckScreen';
 import EmergencyScreen from '@/screens/ServiceTech/EmergencyScreen';
 import RoadToSuccessScreen from '@/screens/ServiceTech/RoadToSuccessScreen';
+import ProductsScreen from '@/screens/ServiceTech/ProductsScreen';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, Spacing, BorderRadius } from '@/constants/theme';
 
@@ -47,6 +48,15 @@ export default function ServiceTechTabNavigator() {
         options={{
           tabBarIcon: ({ color, size }) => (
             <Feather name="home" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Products"
+        component={ProductsScreen}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="package" size={size} color={color} />
           ),
         }}
       />

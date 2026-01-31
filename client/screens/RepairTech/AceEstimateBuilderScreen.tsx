@@ -1672,9 +1672,9 @@ const styles = StyleSheet.create({
     borderColor: ESTIMATE_COLORS.secondary,
   },
   askAceSmallImg: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
   },
   askAceSmallText: {
     fontSize: 14,
@@ -1810,9 +1810,9 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   aceButtonInner: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
     backgroundColor: ESTIMATE_COLORS.bgWhite,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1823,9 +1823,9 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   aceButtonImage: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: 110,
+    height: 110,
+    borderRadius: 55,
   },
   floatingTotals: {
     position: 'absolute',

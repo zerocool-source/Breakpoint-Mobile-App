@@ -1552,9 +1552,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   askAceImage: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
   },
   aiFinderOverlay: {
     flex: 1,

@@ -142,9 +142,9 @@ const styles = StyleSheet.create({
     ...Shadows.card,
   },
   aceCardImage: {
-    width: 80,
-    height: 80,
-    borderRadius: BorderRadius.md,
+    width: 120,
+    height: 120,
+    borderRadius: BorderRadius.lg,
   },
   aceCardContent: {
     flex: 1,

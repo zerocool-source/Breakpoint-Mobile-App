@@ -97,6 +97,7 @@ export default function EstimateBuilderScreen() {
   const [aiDescription, setAIDescription] = useState('');
   const [aiMatches, setAIMatches] = useState<AIProductMatch[]>([]);
   const [showAIResults, setShowAIResults] = useState(false);
+  const [showWebWarning, setShowWebWarning] = useState(false);
 
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const aiAudioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
@@ -265,11 +266,8 @@ export default function EstimateBuilderScreen() {
 
   const startAIRecording = async () => {
     if (Platform.OS === 'web') {
-      Alert.alert(
-        'Voice Search',
-        'Voice search requires running in Expo Go on your mobile device.',
-        [{ text: 'OK' }]
-      );
+      setShowWebWarning(true);
+      setTimeout(() => setShowWebWarning(false), 4000);
       return;
     }
     try {
@@ -855,6 +853,15 @@ export default function EstimateBuilderScreen() {
             <ThemedText style={[styles.aiFinderDescription, { color: theme.textSecondary }]}>
               Describe what you need and AI will find matching products from the catalog.
             </ThemedText>
+
+            {showWebWarning ? (
+              <View style={styles.webWarningBanner}>
+                <Feather name="info" size={16} color="#fff" />
+                <ThemedText style={styles.webWarningText}>
+                  Voice requires Expo Go on your mobile device. Type your description instead.
+                </ThemedText>
+              </View>
+            ) : null}
 
             <TextInput
               style={[styles.aiInput, { color: theme.text, borderColor: theme.border, backgroundColor: theme.backgroundRoot }]}
@@ -1595,5 +1602,19 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 11,
     fontWeight: '600',
+  },
+  webWarningBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: BrandColors.vividTangerine,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    marginBottom: Spacing.md,
+    gap: Spacing.sm,
+  },
+  webWarningText: {
+    color: '#fff',
+    fontSize: 13,
+    flex: 1,
   },
 });

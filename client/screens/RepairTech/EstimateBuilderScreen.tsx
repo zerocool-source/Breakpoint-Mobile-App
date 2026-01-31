@@ -885,7 +885,7 @@ export default function EstimateBuilderScreen() {
                       size={24}
                       color="#fff"
                     />
-                    <ThemedText style={styles.aiVoiceButtonText}>
+                    <ThemedText style={[styles.aiVoiceButtonText, { color: '#fff' }]}>
                       {isAIRecording ? 'Stop' : 'Speak'}
                     </ThemedText>
                   </>
@@ -902,7 +902,7 @@ export default function EstimateBuilderScreen() {
                 ) : (
                   <>
                     <Feather name="search" size={20} color="#fff" />
-                    <ThemedText style={styles.aiSearchButtonText}>Search</ThemedText>
+                    <ThemedText style={[styles.aiSearchButtonText, { color: '#fff' }]}>Search</ThemedText>
                   </>
                 )}
               </Pressable>

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -6,10 +6,15 @@ import {
   Pressable,
   TextInput,
   Modal,
+  ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useAudioRecorder, AudioModule, RecordingPresets } from 'expo-audio';
+import * as FileSystem from 'expo-file-system';
+import { getApiUrl, joinUrl } from '@/lib/query-client';
 
 import { ThemedText } from '@/components/ThemedText';
 import { useTheme } from '@/hooks/useTheme';
@@ -44,8 +49,63 @@ export function ProductCatalog({ role, onSelectProduct, selectionMode = false }:
   const [quantityModalVisible, setQuantityModalVisible] = useState(false);
   const [selectedForQuantity, setSelectedForQuantity] = useState<HeritageProduct | null>(null);
   const [quantity, setQuantity] = useState('1');
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
 
   const showPricing = role === 'repair_tech' || role === 'supervisor';
+
+  const startVoiceSearch = async () => {
+    try {
+      const status = await AudioModule.requestRecordingPermissionsAsync();
+      if (!status.granted) {
+        return;
+      }
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      audioRecorder.record();
+      setIsRecording(true);
+    } catch (error) {
+      console.error('Failed to start voice recording:', error);
+    }
+  };
+
+  const stopVoiceSearch = async () => {
+    try {
+      await audioRecorder.stop();
+      setIsRecording(false);
+      setIsTranscribing(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+      const uri = audioRecorder.uri;
+      if (!uri) {
+        setIsTranscribing(false);
+        return;
+      }
+
+      const base64Audio = await FileSystem.readAsStringAsync(uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      const apiUrl = getApiUrl();
+      const response = await fetch(joinUrl(apiUrl, '/api/transcribe'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audio: base64Audio }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.text) {
+          setSearch(data.text);
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+      }
+      setIsTranscribing(false);
+    } catch (error) {
+      console.error('Failed to transcribe audio:', error);
+      setIsTranscribing(false);
+    }
+  };
 
   const subcategories = useMemo(() => {
     if (!selectedCategory) return [];
@@ -196,6 +256,23 @@ export function ProductCatalog({ role, onSelectProduct, selectionMode = false }:
             <Feather name="x" size={20} color={theme.textSecondary} />
           </Pressable>
         ) : null}
+        {isTranscribing ? (
+          <ActivityIndicator size="small" color={BrandColors.azureBlue} style={styles.voiceButton} />
+        ) : (
+          <Pressable
+            onPress={isRecording ? stopVoiceSearch : startVoiceSearch}
+            style={[
+              styles.voiceButton,
+              isRecording && { backgroundColor: BrandColors.danger },
+            ]}
+          >
+            <Feather
+              name={isRecording ? "stop-circle" : "mic"}
+              size={20}
+              color={isRecording ? '#fff' : BrandColors.azureBlue}
+            />
+          </Pressable>
+        )}
       </View>
 
       <FlatList
@@ -341,6 +418,10 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
+  },
+  voiceButton: {
+    padding: Spacing.xs,
+    borderRadius: BorderRadius.full,
   },
   categoryList: {
     maxHeight: 44,

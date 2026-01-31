@@ -336,3 +336,5 @@ export type Estimate = typeof estimates.$inferSelect;
 export type RouteStop = typeof routeStops.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
 export type TechOps = typeof techOps.$inferSelect;
+
+export * from "./models/chat";

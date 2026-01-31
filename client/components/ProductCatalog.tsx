@@ -8,6 +8,7 @@ import {
   Modal,
   ActivityIndicator,
   Platform,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -56,9 +57,22 @@ export function ProductCatalog({ role, onSelectProduct, selectionMode = false }:
   const showPricing = role === 'repair_tech' || role === 'supervisor';
 
   const startVoiceSearch = async () => {
+    if (Platform.OS === 'web') {
+      Alert.alert(
+        'Voice Search',
+        'Voice search requires running in Expo Go on your mobile device. Scan the QR code to use this feature.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
     try {
       const status = await AudioModule.requestRecordingPermissionsAsync();
       if (!status.granted) {
+        Alert.alert(
+          'Permission Required',
+          'Microphone permission is needed for voice search.',
+          [{ text: 'OK' }]
+        );
         return;
       }
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -66,6 +80,7 @@ export function ProductCatalog({ role, onSelectProduct, selectionMode = false }:
       setIsRecording(true);
     } catch (error) {
       console.error('Failed to start voice recording:', error);
+      Alert.alert('Error', 'Failed to start voice recording. Please try again.');
     }
   };
 

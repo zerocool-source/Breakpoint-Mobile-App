@@ -10,6 +10,7 @@ import {
   FlatList,
   Alert,
   Platform,
+  Switch,
   ActivityIndicator,
   Animated,
   Easing,
@@ -19,15 +20,17 @@ import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { useAudioRecorder, AudioModule, RecordingPresets } from 'expo-audio';
 import { getLocalApiUrl, joinUrl } from '@/lib/query-client';
 
 import { ThemedText } from '@/components/ThemedText';
 import { useTheme } from '@/hooks/useTheme';
+import { ProductCatalog } from '@/components/ProductCatalog';
 import { HeritageProduct } from '@/lib/heritageProducts';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
-import { ESTIMATE_COLORS, formatCurrencyDollars, calculateTotals } from '@/constants/estimateDesign';
+import { ESTIMATE_COLORS, STATUS_BADGES, generateEstimateNumber, calculateTotals, formatCurrencyDollars } from '@/constants/estimateDesign';
 import { mockProperties } from '@/lib/mockData';
 
 interface LineItem {
@@ -38,6 +41,11 @@ interface LineItem {
   quantity: number;
   rate: number;
   taxable: boolean;
+}
+
+interface PhotoAttachment {
+  id: string;
+  uri: string;
 }
 
 interface AIProductMatch {
@@ -65,15 +73,44 @@ export default function AceEstimateBuilderScreen() {
   const navigation = useNavigation();
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
+  const scrollRef = useRef<ScrollView>(null);
+  const chatScrollRef = useRef<ScrollView>(null);
 
-  const [estimateNumber] = useState(() => `ACE-${Date.now().toString().slice(-6)}`);
+  const [estimateNumber] = useState(() => generateEstimateNumber());
+  const [estimateDate] = useState(new Date());
+  const [expirationDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 30);
+    return d;
+  });
+  const [status] = useState<'draft'>('draft');
+
   const [selectedProperty, setSelectedProperty] = useState('');
   const [propertySearch, setPropertySearch] = useState('');
   const [showPropertyPicker, setShowPropertyPicker] = useState(false);
-  const [lineItems, setLineItems] = useState<LineItem[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [taxRate] = useState(9);
 
+  const [woReceived, setWoReceived] = useState(false);
+  const [woNumber, setWoNumber] = useState('');
+
+  const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  const [showProductCatalog, setShowProductCatalog] = useState(false);
+
+  const [customerNote, setCustomerNote] = useState('');
+  const [memoOnStatement, setMemoOnStatement] = useState('');
+  const [techNotes, setTechNotes] = useState('');
+
+  const [photos, setPhotos] = useState<PhotoAttachment[]>([]);
+
+  const [discountType, setDiscountType] = useState<'percent' | 'fixed'>('percent');
+  const [discountValue, setDiscountValue] = useState(0);
+  const [showDiscountModal, setShowDiscountModal] = useState(false);
+  const [tempDiscountValue, setTempDiscountValue] = useState('');
+  const [tempDiscountType, setTempDiscountType] = useState<'percent' | 'fixed'>('percent');
+
+  const [salesTaxRate] = useState(9);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [showAceModal, setShowAceModal] = useState(false);
   const [messages, setMessages] = useState<AceMessage[]>([
     {
       id: '1',
@@ -87,9 +124,8 @@ export default function AceEstimateBuilderScreen() {
   const [isRecording, setIsRecording] = useState(false);
   const [showWebWarning, setShowWebWarning] = useState(false);
 
-  const scrollViewRef = useRef<ScrollView>(null);
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
-
+  const pulseAnim = useRef(new Animated.Value(1)).current;
   const thinkingAnim = useRef(new Animated.Value(0)).current;
   const dot1Anim = useRef(new Animated.Value(0)).current;
   const dot2Anim = useRef(new Animated.Value(0)).current;
@@ -102,6 +138,17 @@ export default function AceEstimateBuilderScreen() {
     "Almost got it...",
   ];
   const [currentThinkingMsg, setCurrentThinkingMsg] = useState(thinkingMessages[0]);
+
+  useEffect(() => {
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.1, duration: 1000, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
+      ])
+    );
+    pulse.start();
+    return () => pulse.stop();
+  }, []);
 
   useEffect(() => {
     if (isThinking) {
@@ -157,7 +204,7 @@ export default function AceEstimateBuilderScreen() {
       timestamp: new Date(),
     };
     setMessages(prev => [...prev, newMsg]);
-    scrollViewRef.current?.scrollToEnd({ animated: true });
+    setTimeout(() => chatScrollRef.current?.scrollToEnd({ animated: true }), 100);
   };
 
   const addAceMessage = (text: string, products?: AIProductMatch[]) => {
@@ -169,7 +216,7 @@ export default function AceEstimateBuilderScreen() {
       products,
     };
     setMessages(prev => [...prev, newMsg]);
-    setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
+    setTimeout(() => chatScrollRef.current?.scrollToEnd({ animated: true }), 100);
   };
 
   const searchProductsWithAI = async (description: string) => {
@@ -305,7 +352,7 @@ export default function AceEstimateBuilderScreen() {
 
       const transcribeData = await transcribeResponse.json();
       const description = transcribeData.text;
-      
+
       if (!description) {
         setIsThinking(false);
         addAceMessage("I didn't catch that. Could you try speaking again or type what you need?");
@@ -320,10 +367,18 @@ export default function AceEstimateBuilderScreen() {
     }
   };
 
-  const removeLineItem = (id: string) => {
-    setLineItems(prev => 
-      prev.filter(item => item.id !== id).map((item, idx) => ({ ...item, lineNumber: idx + 1 }))
-    );
+  const handleAddProduct = (product: HeritageProduct) => {
+    const newItem: LineItem = {
+      id: `item-${Date.now()}`,
+      lineNumber: lineItems.length + 1,
+      product,
+      description: '',
+      quantity: 1,
+      rate: product.price,
+      taxable: true,
+    };
+    setLineItems(prev => [...prev, newItem]);
+    setShowProductCatalog(false);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
@@ -331,46 +386,81 @@ export default function AceEstimateBuilderScreen() {
     setLineItems(prev => prev.map(item => item.id === id ? { ...item, ...updates } : item));
   };
 
+  const removeLineItem = (id: string) => {
+    setLineItems(prev => prev.filter(item => item.id !== id).map((item, idx) => ({ ...item, lineNumber: idx + 1 })));
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const clearAllItems = () => {
+    Alert.alert('Clear All Items', 'Are you sure you want to remove all line items?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Clear', style: 'destructive', onPress: () => setLineItems([]) },
+    ]);
+  };
+
+  const pickPhoto = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      quality: 0.8,
+      allowsMultipleSelection: true,
+      selectionLimit: 5,
+    });
+
+    if (!result.canceled && result.assets) {
+      const newPhotos = result.assets.map((asset, idx) => ({
+        id: `photo-${Date.now()}-${idx}`,
+        uri: asset.uri,
+      }));
+      setPhotos(prev => [...prev, ...newPhotos]);
+    }
+  };
+
+  const takePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Required', 'Camera permission is needed to take photos.');
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setPhotos(prev => [...prev, { id: `photo-${Date.now()}`, uri: result.assets[0].uri }]);
+    }
+  };
+
+  const removePhoto = (id: string) => {
+    setPhotos(prev => prev.filter(p => p.id !== id));
+  };
+
   const items = lineItems.map(item => ({
     ...item,
     amount: item.quantity * item.rate,
   }));
 
-  const { subtotal, salesTaxAmount, totalAmount } = calculateTotals(
+  const { subtotal, discountAmount, salesTaxAmount, totalAmount } = calculateTotals(
     items.map(i => ({ ...i, productService: i.product.name, sku: i.product.sku })),
-    'percent',
-    0,
-    taxRate
+    discountType,
+    discountValue,
+    salesTaxRate
   );
 
-  const handleSubmit = async () => {
-    if (!selectedProperty) {
-      Alert.alert('Select Property', 'Please select a property for this estimate.');
-      return;
-    }
-    if (lineItems.length === 0) {
-      Alert.alert('Add Items', 'Ask me to find products to add to your estimate.');
-      return;
-    }
-
-    setIsSubmitting(true);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-    setTimeout(() => {
-      setIsSubmitting(false);
-      Alert.alert('Estimate Created!', `Estimate ${estimateNumber} has been created successfully.`, [
-        { text: 'OK', onPress: () => navigation.goBack() }
-      ]);
-    }, 1500);
+  const applyDiscount = () => {
+    const val = parseFloat(tempDiscountValue) || 0;
+    setDiscountType(tempDiscountType);
+    setDiscountValue(val);
+    setShowDiscountModal(false);
   };
 
-  const handleSendToOffice = async () => {
+  const handleSubmit = async (sendToCustomer: boolean) => {
     if (!selectedProperty) {
-      Alert.alert('Select Property', 'Please select a property before sending.');
+      Alert.alert('Property Required', 'Please select a property for this estimate.');
       return;
     }
     if (lineItems.length === 0) {
-      Alert.alert('No Items', 'Add products to your estimate first.');
+      Alert.alert('Items Required', 'Please add at least one item to the estimate.');
       return;
     }
 
@@ -380,8 +470,8 @@ export default function AceEstimateBuilderScreen() {
     setTimeout(() => {
       setIsSubmitting(false);
       Alert.alert(
-        'Sent to Office!',
-        `Estimate ${estimateNumber} for ${selectedProperty} (${formatCurrencyDollars(totalAmount)}) has been sent to the office for review.`,
+        sendToCustomer ? 'Estimate Sent!' : 'Estimate Saved!',
+        `Estimate ${estimateNumber} has been ${sendToCustomer ? 'sent to the customer' : 'saved as draft'}.`,
         [{ text: 'OK', onPress: () => navigation.goBack() }]
       );
     }, 1500);
@@ -392,6 +482,8 @@ export default function AceEstimateBuilderScreen() {
     p.address?.toLowerCase().includes(propertySearch.toLowerCase())
   );
 
+  const formatDate = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
   const getConfidenceColor = (confidence: number) => {
     if (confidence >= 80) return BrandColors.emerald;
     if (confidence >= 60) return BrandColors.vividTangerine;
@@ -399,300 +491,354 @@ export default function AceEstimateBuilderScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.backgroundRoot }]}>
-      <View style={[styles.header, { backgroundColor: theme.surface, paddingTop: insets.top + Spacing.sm }]}>
+    <View style={[styles.container, { backgroundColor: ESTIMATE_COLORS.bgSlate50 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + Spacing.sm }]}>
         <Pressable onPress={() => navigation.goBack()} style={styles.headerButton}>
-          <Feather name="x" size={24} color={theme.text} />
+          <Feather name="arrow-left" size={24} color="#fff" />
         </Pressable>
         <View style={styles.headerCenter}>
-          <ThemedText style={styles.estimateNumber}>{estimateNumber}</ThemedText>
-          <ThemedText style={[styles.estimateLabel, { color: theme.textSecondary }]}>Create with Ace</ThemedText>
+          <ThemedText style={styles.headerTitle}>ESTIMATE</ThemedText>
+          <ThemedText style={styles.headerSubtitle}>AI Assisted</ThemedText>
         </View>
-        <Pressable
-          onPress={handleSubmit}
-          disabled={isSubmitting || lineItems.length === 0}
-          style={[styles.saveButton, (isSubmitting || lineItems.length === 0) && styles.saveButtonDisabled]}
-        >
-          <ThemedText style={styles.saveButtonText}>
-            {isSubmitting ? 'Saving...' : 'Save'}
-          </ThemedText>
-        </Pressable>
+        <View style={styles.headerAmount}>
+          <ThemedText style={styles.amountLabel}>Amount:</ThemedText>
+          <ThemedText style={styles.amountValue}>{formatCurrencyDollars(totalAmount)}</ThemedText>
+        </View>
       </View>
 
-      <KeyboardAvoidingView 
-        style={styles.content} 
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={0}
-      >
-        <ScrollView 
-          ref={scrollViewRef}
-          style={styles.chatArea}
-          contentContainerStyle={{ paddingBottom: Spacing.lg }}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView
+          ref={scrollRef}
+          style={styles.scrollView}
+          contentContainerStyle={{ paddingBottom: 200 }}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={[styles.propertySection, { backgroundColor: theme.surface }]}>
-            <ThemedText style={styles.sectionLabel}>Property</ThemedText>
+          <View style={styles.sectionCard}>
+            <ThemedText style={styles.sectionLabel}>Customer / Property</ThemedText>
             <Pressable
               onPress={() => setShowPropertyPicker(true)}
-              style={[styles.propertySelector, { borderColor: theme.border }]}
+              style={styles.selectField}
             >
-              <Feather name="map-pin" size={18} color={theme.textSecondary} />
-              <ThemedText style={selectedProperty ? styles.propertyText : [styles.propertyPlaceholder, { color: theme.textSecondary }]}>
-                {selectedProperty || 'Select a property...'}
+              <Feather name="map-pin" size={18} color={ESTIMATE_COLORS.textSlate500} />
+              <ThemedText style={selectedProperty ? styles.selectText : styles.selectPlaceholder}>
+                {selectedProperty || 'Select customer/property...'}
               </ThemedText>
-              <Feather name="chevron-down" size={18} color={theme.textSecondary} />
+              <Feather name="chevron-down" size={18} color={ESTIMATE_COLORS.textSlate500} />
             </Pressable>
+
+            <View style={styles.rowFields}>
+              <View style={styles.halfField}>
+                <ThemedText style={styles.fieldLabel}>Estimate #</ThemedText>
+                <View style={styles.readOnlyField}>
+                  <ThemedText style={styles.readOnlyText}>{estimateNumber}</ThemedText>
+                </View>
+              </View>
+              <View style={styles.halfField}>
+                <ThemedText style={styles.fieldLabel}>Estimate Date</ThemedText>
+                <View style={styles.readOnlyField}>
+                  <ThemedText style={styles.readOnlyText}>{formatDate(estimateDate)}</ThemedText>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.rowFields}>
+              <View style={styles.halfField}>
+                <ThemedText style={styles.fieldLabel}>Expiration Date</ThemedText>
+                <View style={styles.readOnlyField}>
+                  <ThemedText style={styles.readOnlyText}>{formatDate(expirationDate)}</ThemedText>
+                </View>
+              </View>
+              <View style={styles.halfField}>
+                <ThemedText style={styles.fieldLabel}>Status</ThemedText>
+                <View style={[styles.statusBadge, { backgroundColor: STATUS_BADGES.draft.bg, borderColor: STATUS_BADGES.draft.border }]}>
+                  <ThemedText style={[styles.statusText, { color: STATUS_BADGES.draft.text }]}>Draft</ThemedText>
+                </View>
+              </View>
+            </View>
           </View>
 
-          {messages.map((msg) => (
-            <View key={msg.id} style={[
-              styles.messageContainer,
-              msg.type === 'user' && styles.userMessageContainer,
-            ]}>
-              {msg.type === 'ace' ? (
-                <View style={styles.aceMessageRow}>
-                  <Image
-                    source={require('../../../assets/images/ask-ace-button.png')}
-                    style={styles.aceAvatar}
-                    resizeMode="contain"
-                  />
-                  <View style={[styles.aceBubble, { backgroundColor: '#E8F4FD' }]}>
-                    <ThemedText style={styles.aceText}>{msg.text}</ThemedText>
-                    {msg.products && msg.products.length > 0 ? (
-                      <View style={styles.productResults}>
-                        {msg.products.map((product) => (
-                          <Pressable
-                            key={product.sku}
-                            onPress={() => toggleProductSelection(msg.id, product.sku)}
-                            style={[
-                              styles.productCard,
-                              { backgroundColor: theme.surface, borderColor: product.selected ? BrandColors.azureBlue : theme.border },
-                            ]}
-                          >
-                            <View style={styles.productCheckbox}>
-                              <View style={[
-                                styles.checkbox,
-                                product.selected && { backgroundColor: BrandColors.azureBlue, borderColor: BrandColors.azureBlue },
-                                { borderColor: theme.border },
-                              ]}>
-                                {product.selected ? (
-                                  <Feather name="check" size={14} color="#fff" />
-                                ) : null}
-                              </View>
-                            </View>
-                            <View style={styles.productInfo}>
-                              <ThemedText style={styles.productName} numberOfLines={2}>{product.name}</ThemedText>
-                              <ThemedText style={[styles.productMeta, { color: theme.textSecondary }]}>
-                                {product.manufacturer} • {product.category}
-                              </ThemedText>
-                              <View style={styles.productReason}>
-                                <Feather name="zap" size={12} color={BrandColors.tropicalTeal} />
-                                <ThemedText style={[styles.productReasonText, { color: theme.textSecondary }]}>
-                                  {product.reason}
-                                </ThemedText>
-                              </View>
-                            </View>
-                            <View style={styles.productPriceContainer}>
-                              <ThemedText style={styles.productPrice}>${product.price.toFixed(2)}</ThemedText>
-                              <View style={[styles.confidenceBadge, { backgroundColor: getConfidenceColor(product.confidence) }]}>
-                                <ThemedText style={styles.confidenceText}>{product.confidence}%</ThemedText>
-                              </View>
-                            </View>
-                          </Pressable>
-                        ))}
-                        <Pressable
-                          onPress={() => addProductsFromMessage(msg.id)}
-                          style={styles.addSelectedButton}
-                        >
-                          <Feather name="plus" size={18} color="#fff" />
-                          <ThemedText style={styles.addSelectedText}>Add Selected to Estimate</ThemedText>
-                        </Pressable>
-                      </View>
-                    ) : null}
-                  </View>
-                </View>
-              ) : (
-                <View style={[styles.userBubble, { backgroundColor: BrandColors.azureBlue }]}>
-                  <ThemedText style={styles.userText}>{msg.text}</ThemedText>
-                </View>
-              )}
+          <View style={styles.sectionCardOrange}>
+            <View style={styles.sectionHeader}>
+              <Feather name="clipboard" size={18} color={ESTIMATE_COLORS.accent} />
+              <ThemedText style={[styles.sectionLabel, { color: ESTIMATE_COLORS.accent, marginBottom: 0 }]}>Work Order Tracking</ThemedText>
             </View>
-          ))}
-
-          {isThinking ? (
-            <View style={styles.messageContainer}>
-              <View style={styles.aceMessageRow}>
-                <Image
-                  source={require('../../../assets/images/ask-ace-button.png')}
-                  style={styles.aceAvatar}
-                  resizeMode="contain"
+            <View style={styles.woRow}>
+              <View style={styles.woCheckbox}>
+                <Switch
+                  value={woReceived}
+                  onValueChange={setWoReceived}
+                  trackColor={{ false: ESTIMATE_COLORS.borderLight, true: ESTIMATE_COLORS.statusGreen }}
                 />
-                <Animated.View style={[styles.thinkingBubble, { backgroundColor: '#E8F4FD', opacity: thinkingAnim }]}>
-                  <ThemedText style={styles.thinkingText}>{currentThinkingMsg}</ThemedText>
-                  <View style={styles.thinkingDots}>
-                    <Animated.View style={[styles.thinkingDot, { transform: [{ translateY: dot1Anim }] }]} />
-                    <Animated.View style={[styles.thinkingDot, { transform: [{ translateY: dot2Anim }] }]} />
-                    <Animated.View style={[styles.thinkingDot, { transform: [{ translateY: dot3Anim }] }]} />
-                  </View>
-                </Animated.View>
+                <ThemedText style={styles.woLabel}>WO Received</ThemedText>
+              </View>
+              <View style={styles.woNumberField}>
+                <ThemedText style={styles.fieldLabel}>WO Number:</ThemedText>
+                <TextInput
+                  style={styles.woInput}
+                  placeholder="Enter WO#"
+                  placeholderTextColor={ESTIMATE_COLORS.textSlate400}
+                  value={woNumber}
+                  onChangeText={setWoNumber}
+                />
               </View>
             </View>
-          ) : null}
+          </View>
 
-          {lineItems.length > 0 ? (
-            <View style={styles.qbEstimateSection}>
-              <View style={styles.qbSectionHeader}>
+          <View style={styles.sectionCard}>
+            <View style={styles.lineItemsHeader}>
+              <View style={styles.lineItemsTitleRow}>
                 <Feather name="list" size={18} color={ESTIMATE_COLORS.textDark} />
-                <ThemedText style={styles.qbSectionLabel}>Line Items</ThemedText>
+                <ThemedText style={[styles.sectionLabel, { marginBottom: 0 }]}>Line Items</ThemedText>
               </View>
+              {lineItems.length > 0 ? (
+                <Pressable onPress={clearAllItems} style={styles.clearButton}>
+                  <ThemedText style={styles.clearButtonText}>Clear All</ThemedText>
+                </Pressable>
+              ) : null}
+            </View>
 
-              {lineItems.map((item) => (
-                <View key={item.id} style={styles.qbLineItemCard}>
-                  <View style={styles.qbLineItemHeader}>
-                    <View style={styles.qbLineItemNumber}>
-                      <ThemedText style={styles.qbLineItemNumberText}>{item.lineNumber}</ThemedText>
-                    </View>
-                    <ThemedText style={styles.qbLineItemName} numberOfLines={2}>{item.product.name}</ThemedText>
-                    <Pressable onPress={() => removeLineItem(item.id)} style={styles.qbDeleteButton}>
-                      <Feather name="trash-2" size={16} color={ESTIMATE_COLORS.statusRed} />
-                    </Pressable>
+            <Pressable onPress={() => setShowProductCatalog(true)} style={styles.addItemButton}>
+              <Feather name="plus" size={18} color="#fff" />
+              <ThemedText style={styles.addItemText}>Add Item</ThemedText>
+            </Pressable>
+
+            {lineItems.map((item, index) => (
+              <View key={item.id} style={styles.lineItemCard}>
+                <View style={styles.lineItemHeader}>
+                  <View style={styles.lineItemNumber}>
+                    <ThemedText style={styles.lineItemNumberText}>{item.lineNumber}</ThemedText>
                   </View>
-
-                  <View style={styles.qbLineItemFields}>
-                    <View style={styles.qbLineItemField}>
-                      <ThemedText style={styles.qbFieldLabel}>Qty</ThemedText>
-                      <TextInput
-                        style={styles.qbFieldInput}
-                        value={item.quantity.toString()}
-                        onChangeText={(v) => updateLineItem(item.id, { quantity: parseInt(v) || 1 })}
-                        keyboardType="number-pad"
-                      />
-                    </View>
-                    <View style={styles.qbLineItemField}>
-                      <ThemedText style={styles.qbFieldLabel}>Rate</ThemedText>
-                      <TextInput
-                        style={styles.qbFieldInput}
-                        value={item.rate.toFixed(2)}
-                        onChangeText={(v) => updateLineItem(item.id, { rate: parseFloat(v) || 0 })}
-                        keyboardType="decimal-pad"
-                      />
-                    </View>
-                    <View style={styles.qbLineItemField}>
-                      <ThemedText style={styles.qbFieldLabel}>Amount</ThemedText>
-                      <View style={styles.qbAmountField}>
-                        <ThemedText style={styles.qbAmountText}>{formatCurrencyDollars(item.quantity * item.rate)}</ThemedText>
-                      </View>
-                    </View>
-                  </View>
-
-                  <View style={styles.qbDescRow}>
-                    <TextInput
-                      style={styles.qbDescInput}
-                      placeholder="Add description..."
-                      placeholderTextColor={ESTIMATE_COLORS.textSlate400}
-                      value={item.description}
-                      onChangeText={(v) => updateLineItem(item.id, { description: v })}
-                    />
-                  </View>
-                </View>
-              ))}
-
-              <View style={styles.qbTotalsPanel}>
-                <View style={styles.qbTotalRow}>
-                  <ThemedText style={styles.qbTotalLabel}>Subtotal:</ThemedText>
-                  <ThemedText style={styles.qbTotalValue}>{formatCurrencyDollars(subtotal)}</ThemedText>
-                </View>
-                <View style={styles.qbTotalRow}>
-                  <ThemedText style={styles.qbTotalLabel}>Tax ({taxRate}%):</ThemedText>
-                  <ThemedText style={styles.qbTotalValue}>{formatCurrencyDollars(salesTaxAmount)}</ThemedText>
-                </View>
-                <View style={styles.qbGrandTotalRow}>
-                  <ThemedText style={styles.qbGrandTotalLabel}>TOTAL:</ThemedText>
-                  <ThemedText style={styles.qbGrandTotalValue}>{formatCurrencyDollars(totalAmount)}</ThemedText>
-                </View>
-
-                <View style={styles.qbActionButtons}>
-                  <Pressable
-                    onPress={handleSendToOffice}
-                    disabled={isSubmitting}
-                    style={styles.qbSendButton}
-                  >
-                    {isSubmitting ? (
-                      <ActivityIndicator size="small" color="#fff" />
-                    ) : (
-                      <>
-                        <Feather name="send" size={18} color="#fff" />
-                        <ThemedText style={styles.qbSendButtonText}>Send to Office</ThemedText>
-                      </>
-                    )}
+                  <ThemedText style={styles.lineItemName} numberOfLines={2}>{item.product.name}</ThemedText>
+                  <Pressable onPress={() => removeLineItem(item.id)} style={styles.deleteButton}>
+                    <Feather name="trash-2" size={16} color={ESTIMATE_COLORS.statusRed} />
                   </Pressable>
                 </View>
+
+                <View style={styles.lineItemFields}>
+                  <View style={styles.lineItemField}>
+                    <ThemedText style={styles.lineItemFieldLabel}>Qty</ThemedText>
+                    <TextInput
+                      style={styles.lineItemInput}
+                      value={item.quantity.toString()}
+                      onChangeText={(v) => updateLineItem(item.id, { quantity: parseInt(v) || 1 })}
+                      keyboardType="number-pad"
+                    />
+                  </View>
+                  <View style={styles.lineItemField}>
+                    <ThemedText style={styles.lineItemFieldLabel}>Rate</ThemedText>
+                    <TextInput
+                      style={styles.lineItemInput}
+                      value={item.rate.toFixed(2)}
+                      onChangeText={(v) => updateLineItem(item.id, { rate: parseFloat(v) || 0 })}
+                      keyboardType="decimal-pad"
+                    />
+                  </View>
+                  <View style={styles.lineItemField}>
+                    <ThemedText style={styles.lineItemFieldLabel}>Amount</ThemedText>
+                    <View style={styles.lineItemAmountField}>
+                      <ThemedText style={styles.lineItemAmount}>{formatCurrencyDollars(item.quantity * item.rate)}</ThemedText>
+                    </View>
+                  </View>
+                </View>
+
+                <View style={styles.lineItemDescRow}>
+                  <TextInput
+                    style={styles.lineItemDescInput}
+                    placeholder="Add description..."
+                    placeholderTextColor={ESTIMATE_COLORS.textSlate400}
+                    value={item.description}
+                    onChangeText={(v) => updateLineItem(item.id, { description: v })}
+                  />
+                  <View style={styles.taxableRow}>
+                    <Switch
+                      value={item.taxable}
+                      onValueChange={(v) => updateLineItem(item.id, { taxable: v })}
+                      trackColor={{ false: ESTIMATE_COLORS.borderLight, true: ESTIMATE_COLORS.secondary }}
+                      style={styles.taxSwitch}
+                    />
+                    <ThemedText style={styles.taxLabel}>Tax</ThemedText>
+                  </View>
+                </View>
               </View>
+            ))}
+
+            {lineItems.length === 0 ? (
+              <View style={styles.emptyItems}>
+                <Feather name="package" size={32} color={ESTIMATE_COLORS.textSlate400} />
+                <ThemedText style={styles.emptyText}>No items added yet</ThemedText>
+                <ThemedText style={styles.emptySubtext}>Tap "Add Item" or ask Ace to find products</ThemedText>
+              </View>
+            ) : null}
+          </View>
+
+          <View style={styles.sectionCard}>
+            <ThemedText style={styles.sectionLabel}>Notes</ThemedText>
+
+            <View style={styles.noteField}>
+              <ThemedText style={styles.noteLabel}>Customer Note (visible on estimate)</ThemedText>
+              <TextInput
+                style={styles.noteInput}
+                placeholder="Add a note for the customer..."
+                placeholderTextColor={ESTIMATE_COLORS.textSlate400}
+                value={customerNote}
+                onChangeText={setCustomerNote}
+                multiline
+                numberOfLines={3}
+              />
             </View>
-          ) : null}
+
+            <View style={styles.noteField}>
+              <ThemedText style={styles.noteLabel}>Memo (internal)</ThemedText>
+              <TextInput
+                style={styles.noteInput}
+                placeholder="Internal memo..."
+                placeholderTextColor={ESTIMATE_COLORS.textSlate400}
+                value={memoOnStatement}
+                onChangeText={setMemoOnStatement}
+                multiline
+                numberOfLines={2}
+              />
+            </View>
+
+            <View style={styles.noteField}>
+              <ThemedText style={styles.noteLabel}>Tech Notes (internal)</ThemedText>
+              <TextInput
+                style={styles.noteInput}
+                placeholder="Technical notes for the team..."
+                placeholderTextColor={ESTIMATE_COLORS.textSlate400}
+                value={techNotes}
+                onChangeText={setTechNotes}
+                multiline
+                numberOfLines={2}
+              />
+            </View>
+          </View>
+
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <Feather name="camera" size={18} color={ESTIMATE_COLORS.textDark} />
+              <ThemedText style={[styles.sectionLabel, { marginBottom: 0 }]}>Supporting Photos (optional)</ThemedText>
+            </View>
+            <ThemedText style={styles.photoHint}>Max 10 MB per photo</ThemedText>
+
+            <View style={styles.photoButtons}>
+              <Pressable onPress={takePhoto} style={styles.photoButton}>
+                <Feather name="camera" size={18} color={ESTIMATE_COLORS.secondary} />
+                <ThemedText style={styles.photoButtonText}>Take Photo</ThemedText>
+              </Pressable>
+              <Pressable onPress={pickPhoto} style={styles.photoButton}>
+                <Feather name="image" size={18} color={ESTIMATE_COLORS.secondary} />
+                <ThemedText style={styles.photoButtonText}>Upload</ThemedText>
+              </Pressable>
+            </View>
+
+            {photos.length > 0 ? (
+              <View style={styles.photoGrid}>
+                {photos.map(photo => (
+                  <View key={photo.id} style={styles.photoItem}>
+                    <Image source={{ uri: photo.uri }} style={styles.photoThumb} />
+                    <Pressable onPress={() => removePhoto(photo.id)} style={styles.photoRemove}>
+                      <Feather name="x" size={12} color="#fff" />
+                    </Pressable>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+          </View>
         </ScrollView>
 
-        <View style={[styles.inputContainer, { backgroundColor: theme.surface, paddingBottom: insets.bottom + Spacing.sm }]}>
-          {showWebWarning ? (
-            <View style={styles.webWarningBanner}>
-              <Feather name="info" size={14} color="#fff" />
-              <ThemedText style={styles.webWarningText}>
-                Voice requires Expo Go. Type instead.
-              </ThemedText>
-            </View>
-          ) : null}
-          <View style={styles.inputRow}>
-            <Pressable
-              onPress={isRecording ? stopRecording : startRecording}
-              style={[styles.micButton, isRecording && { backgroundColor: BrandColors.danger }]}
-            >
-              <Feather name={isRecording ? 'stop-circle' : 'mic'} size={22} color="#fff" />
-            </Pressable>
-            <TextInput
-              style={[styles.textInput, { color: theme.text, backgroundColor: theme.backgroundRoot, borderColor: theme.border }]}
-              placeholder="Tell Ace what you need..."
-              placeholderTextColor={theme.textSecondary}
-              value={userInput}
-              onChangeText={setUserInput}
-              multiline
-              maxLength={500}
-              editable={!isThinking}
+        <Animated.View style={[styles.aceFloatingButton, { transform: [{ scale: pulseAnim }] }]}>
+          <Pressable onPress={() => setShowAceModal(true)} style={styles.aceButtonInner}>
+            <Image
+              source={require('../../../assets/images/ask-ace-button.png')}
+              style={styles.aceButtonImage}
+              resizeMode="contain"
             />
+          </Pressable>
+        </Animated.View>
+
+        <View style={[styles.floatingTotals, { paddingBottom: insets.bottom + Spacing.md }]}>
+          <View style={styles.totalsContent}>
+            <View style={styles.totalRow}>
+              <ThemedText style={styles.totalLabel}>Subtotal:</ThemedText>
+              <ThemedText style={styles.totalValue}>{formatCurrencyDollars(subtotal)}</ThemedText>
+            </View>
+
             <Pressable
-              onPress={() => searchProductsWithAI(userInput)}
-              style={styles.sendButton}
-              disabled={isThinking}
+              onPress={() => {
+                setTempDiscountType(discountType);
+                setTempDiscountValue(discountValue.toString());
+                setShowDiscountModal(true);
+              }}
+              style={styles.discountRow}
             >
-              {isThinking ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Feather name="send" size={20} color="#fff" />
-              )}
+              <View style={styles.discountLabel}>
+                <ThemedText style={styles.totalLabel}>Discount:</ThemedText>
+                <View style={styles.discountBadge}>
+                  <ThemedText style={styles.discountBadgeText}>
+                    {discountType === 'percent' ? '%' : '$'}
+                  </ThemedText>
+                </View>
+                {discountValue > 0 ? (
+                  <ThemedText style={styles.discountValueText}>
+                    ({discountType === 'percent' ? `${discountValue}%` : `$${discountValue}`})
+                  </ThemedText>
+                ) : null}
+              </View>
+              <ThemedText style={[styles.totalValue, { color: ESTIMATE_COLORS.statusRed }]}>
+                -{formatCurrencyDollars(discountAmount)}
+              </ThemedText>
             </Pressable>
+
+            <View style={styles.totalRow}>
+              <ThemedText style={styles.totalLabel}>Tax ({salesTaxRate}%):</ThemedText>
+              <ThemedText style={styles.totalValue}>{formatCurrencyDollars(salesTaxAmount)}</ThemedText>
+            </View>
+
+            <View style={styles.grandTotalRow}>
+              <ThemedText style={styles.grandTotalLabel}>TOTAL:</ThemedText>
+              <ThemedText style={styles.grandTotalValue}>{formatCurrencyDollars(totalAmount)}</ThemedText>
+            </View>
+
+            <View style={styles.actionButtons}>
+              <Pressable
+                onPress={() => handleSubmit(false)}
+                disabled={isSubmitting}
+                style={styles.saveDraftButton}
+              >
+                <ThemedText style={styles.saveDraftText}>
+                  {isSubmitting ? 'Saving...' : 'Save Draft'}
+                </ThemedText>
+              </Pressable>
+              <Pressable
+                onPress={() => handleSubmit(true)}
+                disabled={isSubmitting}
+                style={styles.saveAndSendButton}
+              >
+                <ThemedText style={styles.saveAndSendText}>
+                  {isSubmitting ? 'Sending...' : 'Save & Send'}
+                </ThemedText>
+              </Pressable>
+            </View>
           </View>
         </View>
       </KeyboardAvoidingView>
 
-      <Modal
-        visible={showPropertyPicker}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setShowPropertyPicker(false)}
-      >
+      <Modal visible={showPropertyPicker} animationType="slide" transparent onRequestClose={() => setShowPropertyPicker(false)}>
         <Pressable style={styles.modalOverlay} onPress={() => setShowPropertyPicker(false)}>
-          <View style={[styles.propertyModal, { backgroundColor: theme.surface }]}>
+          <View style={styles.propertyModal}>
             <View style={styles.propertyModalHeader}>
-              <ThemedText style={styles.propertyModalTitle}>Select Property</ThemedText>
+              <ThemedText style={styles.modalTitle}>Select Property</ThemedText>
               <Pressable onPress={() => setShowPropertyPicker(false)}>
-                <Feather name="x" size={24} color={theme.text} />
+                <Feather name="x" size={24} color={ESTIMATE_COLORS.textDark} />
               </Pressable>
             </View>
-            <View style={[styles.searchContainer, { borderColor: theme.border }]}>
-              <Feather name="search" size={18} color={theme.textSecondary} />
+            <View style={styles.searchContainer}>
+              <Feather name="search" size={18} color={ESTIMATE_COLORS.textSlate500} />
               <TextInput
-                style={[styles.searchInput, { color: theme.text }]}
+                style={styles.searchInput}
                 placeholder="Search properties..."
-                placeholderTextColor={theme.textSecondary}
+                placeholderTextColor={ESTIMATE_COLORS.textSlate400}
                 value={propertySearch}
                 onChangeText={setPropertySearch}
               />
@@ -708,19 +854,232 @@ export default function AceEstimateBuilderScreen() {
                     setShowPropertyPicker(false);
                     setPropertySearch('');
                   }}
-                  style={[styles.propertyOption, { borderBottomColor: theme.border }]}
+                  style={styles.propertyOption}
                 >
-                  <ThemedText style={styles.propertyOptionName}>{item.name}</ThemedText>
-                  {item.address ? (
-                    <ThemedText style={[styles.propertyOptionAddress, { color: theme.textSecondary }]}>
-                      {item.address}
-                    </ThemedText>
-                  ) : null}
+                  <ThemedText style={styles.propertyName}>{item.name}</ThemedText>
+                  {item.address ? <ThemedText style={styles.propertyAddress}>{item.address}</ThemedText> : null}
                 </Pressable>
               )}
             />
           </View>
         </Pressable>
+      </Modal>
+
+      <Modal visible={showProductCatalog} animationType="slide" onRequestClose={() => setShowProductCatalog(false)}>
+        <View style={[styles.catalogModal, { paddingTop: insets.top }]}>
+          <View style={styles.catalogHeader}>
+            <Pressable onPress={() => setShowProductCatalog(false)}>
+              <Feather name="x" size={24} color={ESTIMATE_COLORS.textDark} />
+            </Pressable>
+            <ThemedText style={styles.catalogTitle}>Add Product</ThemedText>
+            <View style={{ width: 24 }} />
+          </View>
+          <ProductCatalog
+            role="repair_tech"
+            selectionMode={true}
+            onSelectProduct={handleAddProduct}
+          />
+        </View>
+      </Modal>
+
+      <Modal visible={showDiscountModal} animationType="fade" transparent onRequestClose={() => setShowDiscountModal(false)}>
+        <Pressable style={styles.modalOverlay} onPress={() => setShowDiscountModal(false)}>
+          <View style={styles.discountModal}>
+            <ThemedText style={styles.modalTitle}>Set Discount</ThemedText>
+            <View style={styles.discountTypeRow}>
+              <Pressable
+                onPress={() => setTempDiscountType('percent')}
+                style={[styles.discountTypeBtn, tempDiscountType === 'percent' && styles.discountTypeBtnActive]}
+              >
+                <ThemedText style={[styles.discountTypeBtnText, tempDiscountType === 'percent' && { color: '#fff' }]}>%</ThemedText>
+              </Pressable>
+              <Pressable
+                onPress={() => setTempDiscountType('fixed')}
+                style={[styles.discountTypeBtn, tempDiscountType === 'fixed' && styles.discountTypeBtnActive]}
+              >
+                <ThemedText style={[styles.discountTypeBtnText, tempDiscountType === 'fixed' && { color: '#fff' }]}>$</ThemedText>
+              </Pressable>
+            </View>
+            <TextInput
+              style={styles.discountInput}
+              placeholder={tempDiscountType === 'percent' ? 'Enter percentage' : 'Enter amount'}
+              placeholderTextColor={ESTIMATE_COLORS.textSlate400}
+              value={tempDiscountValue}
+              onChangeText={setTempDiscountValue}
+              keyboardType="decimal-pad"
+            />
+            <View style={styles.discountActions}>
+              <Pressable onPress={() => setShowDiscountModal(false)} style={styles.discountCancelBtn}>
+                <ThemedText style={styles.discountCancelText}>Cancel</ThemedText>
+              </Pressable>
+              <Pressable onPress={applyDiscount} style={styles.discountApplyBtn}>
+                <ThemedText style={styles.discountApplyText}>Apply</ThemedText>
+              </Pressable>
+            </View>
+          </View>
+        </Pressable>
+      </Modal>
+
+      <Modal visible={showAceModal} animationType="slide" onRequestClose={() => setShowAceModal(false)}>
+        <View style={[styles.aceModal, { paddingTop: insets.top }]}>
+          <View style={styles.aceModalHeader}>
+            <View style={styles.aceModalTitleRow}>
+              <Image
+                source={require('../../../assets/images/ask-ace-button.png')}
+                style={styles.aceModalAvatar}
+                resizeMode="contain"
+              />
+              <View>
+                <ThemedText style={styles.aceModalTitle}>Ask Ace</ThemedText>
+                <ThemedText style={styles.aceModalSubtitle}>AI Product Assistant</ThemedText>
+              </View>
+            </View>
+            <Pressable onPress={() => setShowAceModal(false)} style={styles.aceModalCloseBtn}>
+              <Feather name="x" size={24} color={ESTIMATE_COLORS.textDark} />
+            </Pressable>
+          </View>
+
+          <ScrollView
+            ref={chatScrollRef}
+            style={styles.chatArea}
+            contentContainerStyle={{ paddingBottom: Spacing.lg }}
+            keyboardShouldPersistTaps="handled"
+          >
+            {messages.map((msg) => (
+              <View key={msg.id} style={[
+                styles.messageContainer,
+                msg.type === 'user' && styles.userMessageContainer,
+              ]}>
+                {msg.type === 'ace' ? (
+                  <View style={styles.aceMessageRow}>
+                    <Image
+                      source={require('../../../assets/images/ask-ace-button.png')}
+                      style={styles.aceAvatar}
+                      resizeMode="contain"
+                    />
+                    <View style={styles.aceBubble}>
+                      <ThemedText style={styles.aceText}>{msg.text}</ThemedText>
+                      {msg.products && msg.products.length > 0 ? (
+                        <View style={styles.productResults}>
+                          {msg.products.map((product) => (
+                            <Pressable
+                              key={product.sku}
+                              onPress={() => toggleProductSelection(msg.id, product.sku)}
+                              style={[
+                                styles.productCard,
+                                { borderColor: product.selected ? BrandColors.azureBlue : ESTIMATE_COLORS.borderLight },
+                              ]}
+                            >
+                              <View style={styles.productCheckbox}>
+                                <View style={[
+                                  styles.checkbox,
+                                  product.selected && { backgroundColor: BrandColors.azureBlue, borderColor: BrandColors.azureBlue },
+                                ]}>
+                                  {product.selected ? (
+                                    <Feather name="check" size={14} color="#fff" />
+                                  ) : null}
+                                </View>
+                              </View>
+                              <View style={styles.productInfo}>
+                                <ThemedText style={styles.productName} numberOfLines={2}>{product.name}</ThemedText>
+                                <ThemedText style={styles.productMeta}>
+                                  {product.manufacturer} • {product.category}
+                                </ThemedText>
+                                <View style={styles.productReason}>
+                                  <Feather name="zap" size={12} color={BrandColors.tropicalTeal} />
+                                  <ThemedText style={styles.productReasonText}>
+                                    {product.reason}
+                                  </ThemedText>
+                                </View>
+                              </View>
+                              <View style={styles.productPriceContainer}>
+                                <ThemedText style={styles.productPrice}>${product.price.toFixed(2)}</ThemedText>
+                                <View style={[styles.confidenceBadge, { backgroundColor: getConfidenceColor(product.confidence) }]}>
+                                  <ThemedText style={styles.confidenceText}>{product.confidence}%</ThemedText>
+                                </View>
+                              </View>
+                            </Pressable>
+                          ))}
+                          <Pressable
+                            onPress={() => addProductsFromMessage(msg.id)}
+                            style={styles.addSelectedButton}
+                          >
+                            <Feather name="plus" size={18} color="#fff" />
+                            <ThemedText style={styles.addSelectedText}>Add Selected to Estimate</ThemedText>
+                          </Pressable>
+                        </View>
+                      ) : null}
+                    </View>
+                  </View>
+                ) : (
+                  <View style={styles.userBubble}>
+                    <ThemedText style={styles.userText}>{msg.text}</ThemedText>
+                  </View>
+                )}
+              </View>
+            ))}
+
+            {isThinking ? (
+              <View style={styles.messageContainer}>
+                <View style={styles.aceMessageRow}>
+                  <Image
+                    source={require('../../../assets/images/ask-ace-button.png')}
+                    style={styles.aceAvatar}
+                    resizeMode="contain"
+                  />
+                  <Animated.View style={[styles.thinkingBubble, { opacity: thinkingAnim }]}>
+                    <ThemedText style={styles.thinkingText}>{currentThinkingMsg}</ThemedText>
+                    <View style={styles.thinkingDots}>
+                      <Animated.View style={[styles.thinkingDot, { transform: [{ translateY: dot1Anim }] }]} />
+                      <Animated.View style={[styles.thinkingDot, { transform: [{ translateY: dot2Anim }] }]} />
+                      <Animated.View style={[styles.thinkingDot, { transform: [{ translateY: dot3Anim }] }]} />
+                    </View>
+                  </Animated.View>
+                </View>
+              </View>
+            ) : null}
+          </ScrollView>
+
+          <View style={[styles.inputContainer, { paddingBottom: insets.bottom + Spacing.sm }]}>
+            {showWebWarning ? (
+              <View style={styles.webWarningBanner}>
+                <Feather name="info" size={14} color="#fff" />
+                <ThemedText style={styles.webWarningText}>
+                  Voice requires Expo Go. Type instead.
+                </ThemedText>
+              </View>
+            ) : null}
+            <View style={styles.inputRow}>
+              <Pressable
+                onPress={isRecording ? stopRecording : startRecording}
+                style={[styles.micButton, isRecording && { backgroundColor: BrandColors.danger }]}
+              >
+                <Feather name={isRecording ? 'stop-circle' : 'mic'} size={22} color="#fff" />
+              </Pressable>
+              <TextInput
+                style={styles.textInput}
+                placeholder="Tell Ace what you need..."
+                placeholderTextColor={ESTIMATE_COLORS.textSlate400}
+                value={userInput}
+                onChangeText={setUserInput}
+                multiline
+                maxLength={500}
+                editable={!isThinking}
+              />
+              <Pressable
+                onPress={() => searchProductsWithAI(userInput)}
+                style={styles.sendButton}
+                disabled={isThinking}
+              >
+                {isThinking ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Feather name="send" size={20} color="#fff" />
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
       </Modal>
     </View>
   );
@@ -731,72 +1090,690 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
+    backgroundColor: ESTIMATE_COLORS.primary,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: Spacing.lg,
     paddingBottom: Spacing.md,
-    ...Shadows.card,
   },
   headerButton: {
     padding: Spacing.sm,
+    marginRight: Spacing.sm,
   },
   headerCenter: {
-    alignItems: 'center',
+    flex: 1,
   },
-  estimateNumber: {
+  headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-  },
-  estimateLabel: {
-    fontSize: 12,
-  },
-  saveButton: {
-    backgroundColor: BrandColors.azureBlue,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.md,
-  },
-  saveButtonDisabled: {
-    opacity: 0.5,
-  },
-  saveButtonText: {
     color: '#fff',
-    fontWeight: '600',
   },
-  content: {
+  headerSubtitle: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.7)',
+  },
+  headerAmount: {
+    alignItems: 'flex-end',
+  },
+  amountLabel: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.7)',
+  },
+  amountValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  scrollView: {
     flex: 1,
-  },
-  chatArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.md,
-  },
-  propertySection: {
     padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-    marginTop: Spacing.md,
+  },
+  sectionCard: {
+    backgroundColor: ESTIMATE_COLORS.bgSlate50,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: ESTIMATE_COLORS.borderLight,
+    padding: Spacing.md,
     marginBottom: Spacing.md,
+  },
+  sectionCardOrange: {
+    backgroundColor: 'rgba(249, 115, 22, 0.1)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(249, 115, 22, 0.2)',
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
   },
   sectionLabel: {
     fontSize: 14,
     fontWeight: '600',
+    color: ESTIMATE_COLORS.textDark,
     marginBottom: Spacing.sm,
   },
-  propertySelector: {
+  selectField: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: ESTIMATE_COLORS.bgWhite,
     borderWidth: 1,
-    borderRadius: BorderRadius.md,
+    borderColor: ESTIMATE_COLORS.borderLight,
+    borderRadius: 6,
     padding: Spacing.md,
     gap: Spacing.sm,
   },
-  propertyText: {
+  selectText: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 14,
+    color: ESTIMATE_COLORS.textDark,
   },
-  propertyPlaceholder: {
+  selectPlaceholder: {
     flex: 1,
+    fontSize: 14,
+    color: ESTIMATE_COLORS.textSlate400,
+  },
+  rowFields: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    marginTop: Spacing.sm,
+  },
+  halfField: {
+    flex: 1,
+  },
+  fieldLabel: {
+    fontSize: 12,
+    color: ESTIMATE_COLORS.textSlate500,
+    marginBottom: 4,
+  },
+  readOnlyField: {
+    backgroundColor: ESTIMATE_COLORS.bgSlate100,
+    borderRadius: 6,
+    padding: Spacing.sm,
+    borderWidth: 1,
+    borderColor: ESTIMATE_COLORS.borderLight,
+  },
+  readOnlyText: {
+    fontSize: 14,
+    color: ESTIMATE_COLORS.textDark,
+  },
+  statusBadge: {
+    borderRadius: 6,
+    padding: Spacing.sm,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  woRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  woCheckbox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  woLabel: {
+    fontSize: 14,
+    color: ESTIMATE_COLORS.textDark,
+  },
+  woNumberField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  woInput: {
+    backgroundColor: ESTIMATE_COLORS.bgWhite,
+    borderWidth: 1,
+    borderColor: ESTIMATE_COLORS.borderLight,
+    borderRadius: 6,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 6,
+    width: 100,
+    fontSize: 14,
+    color: ESTIMATE_COLORS.textDark,
+  },
+  lineItemsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+  },
+  lineItemsTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  clearButton: {
+    backgroundColor: ESTIMATE_COLORS.bgWhite,
+    borderWidth: 1,
+    borderColor: ESTIMATE_COLORS.borderLight,
+    borderRadius: 6,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 6,
+  },
+  clearButtonText: {
+    fontSize: 12,
+    color: ESTIMATE_COLORS.textSlate500,
+  },
+  addItemButton: {
+    backgroundColor: ESTIMATE_COLORS.secondary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    paddingVertical: 10,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: 6,
+    marginBottom: Spacing.md,
+  },
+  addItemText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  lineItemCard: {
+    backgroundColor: ESTIMATE_COLORS.bgWhite,
+    borderWidth: 1,
+    borderColor: ESTIMATE_COLORS.borderLight,
+    borderRadius: 8,
+    padding: Spacing.md,
+    marginBottom: Spacing.sm,
+  },
+  lineItemHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  lineItemNumber: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: ESTIMATE_COLORS.secondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  lineItemNumberText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  lineItemName: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '500',
+    color: ESTIMATE_COLORS.textDark,
+  },
+  deleteButton: {
+    padding: Spacing.xs,
+  },
+  lineItemFields: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  lineItemField: {
+    flex: 1,
+  },
+  lineItemFieldLabel: {
+    fontSize: 11,
+    color: ESTIMATE_COLORS.textSlate500,
+    marginBottom: 4,
+  },
+  lineItemInput: {
+    backgroundColor: ESTIMATE_COLORS.bgSlate100,
+    borderWidth: 1,
+    borderColor: ESTIMATE_COLORS.borderLight,
+    borderRadius: 6,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 6,
+    fontSize: 14,
+    color: ESTIMATE_COLORS.textDark,
+    textAlign: 'center',
+  },
+  lineItemAmountField: {
+    backgroundColor: ESTIMATE_COLORS.bgSlate100,
+    borderRadius: 6,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 8,
+    alignItems: 'center',
+  },
+  lineItemAmount: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: ESTIMATE_COLORS.secondary,
+  },
+  lineItemDescRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  lineItemDescInput: {
+    flex: 1,
+    backgroundColor: ESTIMATE_COLORS.bgSlate100,
+    borderWidth: 1,
+    borderColor: ESTIMATE_COLORS.borderLight,
+    borderRadius: 6,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 6,
+    fontSize: 13,
+    color: ESTIMATE_COLORS.textDark,
+  },
+  taxableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  taxSwitch: {
+    transform: [{ scale: 0.8 }],
+  },
+  taxLabel: {
+    fontSize: 12,
+    color: ESTIMATE_COLORS.textSlate500,
+  },
+  emptyItems: {
+    alignItems: 'center',
+    padding: Spacing.xl,
+  },
+  emptyText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: ESTIMATE_COLORS.textSlate500,
+    marginTop: Spacing.sm,
+  },
+  emptySubtext: {
+    fontSize: 12,
+    color: ESTIMATE_COLORS.textSlate400,
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  noteField: {
+    marginBottom: Spacing.md,
+  },
+  noteLabel: {
+    fontSize: 12,
+    color: ESTIMATE_COLORS.textSlate500,
+    marginBottom: 4,
+  },
+  noteInput: {
+    backgroundColor: ESTIMATE_COLORS.bgWhite,
+    borderWidth: 1,
+    borderColor: ESTIMATE_COLORS.borderLight,
+    borderRadius: 6,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    fontSize: 14,
+    color: ESTIMATE_COLORS.textDark,
+    minHeight: 60,
+    textAlignVertical: 'top',
+  },
+  photoHint: {
+    fontSize: 11,
+    color: ESTIMATE_COLORS.textSlate400,
+    marginBottom: Spacing.sm,
+  },
+  photoButtons: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    marginBottom: Spacing.md,
+  },
+  photoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    backgroundColor: ESTIMATE_COLORS.bgWhite,
+    borderWidth: 1,
+    borderColor: ESTIMATE_COLORS.borderLight,
+    borderRadius: 6,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+  },
+  photoButtonText: {
+    fontSize: 13,
+    color: ESTIMATE_COLORS.secondary,
+  },
+  photoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+  },
+  photoItem: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  photoThumb: {
+    width: '100%',
+    height: '100%',
+  },
+  photoRemove: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: ESTIMATE_COLORS.statusRed,
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  aceFloatingButton: {
+    position: 'absolute',
+    right: Spacing.lg,
+    bottom: 220,
+    zIndex: 10,
+  },
+  aceButtonInner: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: ESTIMATE_COLORS.bgWhite,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  aceButtonImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+  },
+  floatingTotals: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: ESTIMATE_COLORS.bgWhite,
+    borderTopWidth: 1,
+    borderTopColor: ESTIMATE_COLORS.borderLight,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  totalsContent: {
+    padding: Spacing.md,
+  },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+  },
+  totalLabel: {
+    fontSize: 14,
+    color: ESTIMATE_COLORS.textSlate500,
+  },
+  totalValue: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: ESTIMATE_COLORS.textDark,
+  },
+  discountRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  discountLabel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  discountBadge: {
+    backgroundColor: ESTIMATE_COLORS.bgSlate100,
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  discountBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: ESTIMATE_COLORS.textSlate500,
+  },
+  discountValueText: {
+    fontSize: 12,
+    color: ESTIMATE_COLORS.textSlate500,
+  },
+  grandTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    borderTopWidth: 2,
+    borderTopColor: ESTIMATE_COLORS.borderMedium,
+    marginTop: Spacing.sm,
+    paddingTop: Spacing.sm,
+  },
+  grandTotalLabel: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: ESTIMATE_COLORS.textDark,
+  },
+  grandTotalValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: ESTIMATE_COLORS.secondary,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    marginTop: Spacing.md,
+  },
+  saveDraftButton: {
+    flex: 1,
+    backgroundColor: ESTIMATE_COLORS.bgWhite,
+    borderWidth: 1,
+    borderColor: ESTIMATE_COLORS.borderLight,
+    borderRadius: 6,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  saveDraftText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: ESTIMATE_COLORS.textSlate500,
+  },
+  saveAndSendButton: {
+    flex: 1,
+    backgroundColor: ESTIMATE_COLORS.primary,
+    borderRadius: 6,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  saveAndSendText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  propertyModal: {
+    backgroundColor: ESTIMATE_COLORS.bgWhite,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    maxHeight: '70%',
+    padding: Spacing.lg,
+  },
+  propertyModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: ESTIMATE_COLORS.textDark,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: ESTIMATE_COLORS.bgSlate100,
+    borderRadius: 8,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: ESTIMATE_COLORS.textDark,
+  },
+  propertyOption: {
+    paddingVertical: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: ESTIMATE_COLORS.borderLight,
+  },
+  propertyName: {
     fontSize: 15,
+    fontWeight: '500',
+    color: ESTIMATE_COLORS.textDark,
+  },
+  propertyAddress: {
+    fontSize: 13,
+    color: ESTIMATE_COLORS.textSlate500,
+    marginTop: 2,
+  },
+  catalogModal: {
+    flex: 1,
+    backgroundColor: ESTIMATE_COLORS.bgSlate50,
+  },
+  catalogHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: ESTIMATE_COLORS.bgWhite,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: ESTIMATE_COLORS.borderLight,
+  },
+  catalogTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: ESTIMATE_COLORS.textDark,
+  },
+  discountModal: {
+    backgroundColor: ESTIMATE_COLORS.bgWhite,
+    margin: Spacing.xl,
+    borderRadius: 12,
+    padding: Spacing.lg,
+  },
+  discountTypeRow: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    marginVertical: Spacing.md,
+  },
+  discountTypeBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: ESTIMATE_COLORS.borderLight,
+    alignItems: 'center',
+  },
+  discountTypeBtnActive: {
+    backgroundColor: ESTIMATE_COLORS.secondary,
+    borderColor: ESTIMATE_COLORS.secondary,
+  },
+  discountTypeBtnText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: ESTIMATE_COLORS.textDark,
+  },
+  discountInput: {
+    backgroundColor: ESTIMATE_COLORS.bgSlate100,
+    borderWidth: 1,
+    borderColor: ESTIMATE_COLORS.borderLight,
+    borderRadius: 8,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    fontSize: 16,
+    color: ESTIMATE_COLORS.textDark,
+    textAlign: 'center',
+  },
+  discountActions: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    marginTop: Spacing.lg,
+  },
+  discountCancelBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 6,
+    backgroundColor: ESTIMATE_COLORS.bgSlate100,
+    alignItems: 'center',
+  },
+  discountCancelText: {
+    fontSize: 14,
+    color: ESTIMATE_COLORS.textSlate500,
+  },
+  discountApplyBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 6,
+    backgroundColor: ESTIMATE_COLORS.secondary,
+    alignItems: 'center',
+  },
+  discountApplyText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  aceModal: {
+    flex: 1,
+    backgroundColor: ESTIMATE_COLORS.bgSlate50,
+  },
+  aceModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: ESTIMATE_COLORS.bgWhite,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: ESTIMATE_COLORS.borderLight,
+  },
+  aceModalTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  aceModalAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  aceModalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: ESTIMATE_COLORS.textDark,
+  },
+  aceModalSubtitle: {
+    fontSize: 12,
+    color: ESTIMATE_COLORS.textSlate500,
+  },
+  aceModalCloseBtn: {
+    padding: Spacing.sm,
+  },
+  chatArea: {
+    flex: 1,
+    paddingHorizontal: Spacing.md,
   },
   messageContainer: {
     marginVertical: Spacing.sm,
@@ -820,6 +1797,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.lg,
     borderTopLeftRadius: BorderRadius.sm,
     maxWidth: '85%',
+    backgroundColor: '#E8F4FD',
   },
   aceText: {
     fontSize: 15,
@@ -831,6 +1809,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.lg,
     borderTopRightRadius: BorderRadius.sm,
     maxWidth: '80%',
+    backgroundColor: BrandColors.azureBlue,
   },
   userText: {
     color: '#fff',
@@ -843,6 +1822,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.lg,
     borderTopLeftRadius: BorderRadius.sm,
     maxWidth: '85%',
+    backgroundColor: '#E8F4FD',
   },
   thinkingText: {
     fontSize: 14,
@@ -869,6 +1849,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     borderWidth: 2,
     gap: Spacing.sm,
+    backgroundColor: ESTIMATE_COLORS.bgWhite,
   },
   productCheckbox: {
     justifyContent: 'center',
@@ -878,6 +1859,7 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: BorderRadius.sm,
     borderWidth: 2,
+    borderColor: ESTIMATE_COLORS.borderLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -888,10 +1870,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 2,
+    color: ESTIMATE_COLORS.textDark,
   },
   productMeta: {
     fontSize: 12,
     marginBottom: 4,
+    color: ESTIMATE_COLORS.textSlate500,
   },
   productReason: {
     flexDirection: 'row',
@@ -901,6 +1885,7 @@ const styles = StyleSheet.create({
   productReasonText: {
     fontSize: 11,
     flex: 1,
+    color: ESTIMATE_COLORS.textSlate500,
   },
   productPriceContainer: {
     alignItems: 'flex-end',
@@ -936,270 +1921,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
   },
-  estimateSummary: {
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-    marginTop: Spacing.md,
-  },
-  summaryTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: Spacing.md,
-  },
-  lineItemRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: Spacing.sm,
-    borderBottomWidth: 1,
-    gap: Spacing.sm,
-  },
-  lineItemNumBadge: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: BrandColors.azureBlue,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  lineItemNumText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  lineItemDetails: {
-    flex: 1,
-  },
-  lineItemName: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  lineItemPrice: {
-    fontSize: 12,
-    marginTop: 2,
-  },
-  lineItemActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
-  qtyButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  qtyText: {
-    fontSize: 14,
-    fontWeight: '600',
-    minWidth: 24,
-    textAlign: 'center',
-  },
-  removeButton: {
-    padding: Spacing.xs,
-    marginLeft: Spacing.xs,
-  },
-  totalsContainer: {
-    marginTop: Spacing.md,
-    paddingTop: Spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: '#ddd',
-  },
-  totalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 4,
-  },
-  totalLabel: {
-    fontSize: 14,
-  },
-  totalValue: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  grandTotalRow: {
-    borderTopWidth: 2,
-    borderTopColor: '#ddd',
-    marginTop: Spacing.sm,
-    paddingTop: Spacing.sm,
-  },
-  grandTotalLabel: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  grandTotalValue: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: BrandColors.azureBlue,
-  },
-  qbEstimateSection: {
-    backgroundColor: ESTIMATE_COLORS.bgSlate100,
-    borderRadius: 12,
-    padding: Spacing.md,
-    marginHorizontal: Spacing.md,
-    marginBottom: Spacing.md,
-  },
-  qbSectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    marginBottom: Spacing.md,
-  },
-  qbSectionLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: ESTIMATE_COLORS.textDark,
-  },
-  qbLineItemCard: {
-    backgroundColor: ESTIMATE_COLORS.bgWhite,
-    borderWidth: 1,
-    borderColor: ESTIMATE_COLORS.borderLight,
-    borderRadius: 8,
-    padding: Spacing.md,
-    marginBottom: Spacing.sm,
-  },
-  qbLineItemHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    marginBottom: Spacing.sm,
-  },
-  qbLineItemNumber: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: ESTIMATE_COLORS.secondary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  qbLineItemNumberText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  qbLineItemName: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: '500',
-    color: ESTIMATE_COLORS.textDark,
-  },
-  qbDeleteButton: {
-    padding: Spacing.xs,
-  },
-  qbLineItemFields: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    marginBottom: Spacing.sm,
-  },
-  qbLineItemField: {
-    flex: 1,
-  },
-  qbFieldLabel: {
-    fontSize: 11,
-    color: ESTIMATE_COLORS.textSlate500,
-    marginBottom: 4,
-  },
-  qbFieldInput: {
-    backgroundColor: ESTIMATE_COLORS.bgSlate100,
-    borderWidth: 1,
-    borderColor: ESTIMATE_COLORS.borderLight,
-    borderRadius: 6,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 6,
-    fontSize: 14,
-    color: ESTIMATE_COLORS.textDark,
-    textAlign: 'center',
-  },
-  qbAmountField: {
-    backgroundColor: ESTIMATE_COLORS.bgSlate100,
-    borderRadius: 6,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 8,
-    alignItems: 'center',
-  },
-  qbAmountText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: ESTIMATE_COLORS.secondary,
-  },
-  qbDescRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  qbDescInput: {
-    flex: 1,
-    backgroundColor: ESTIMATE_COLORS.bgSlate100,
-    borderWidth: 1,
-    borderColor: ESTIMATE_COLORS.borderLight,
-    borderRadius: 6,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 6,
-    fontSize: 13,
-    color: ESTIMATE_COLORS.textDark,
-  },
-  qbTotalsPanel: {
-    backgroundColor: ESTIMATE_COLORS.bgWhite,
-    borderRadius: 8,
-    padding: Spacing.md,
-    marginTop: Spacing.sm,
-    borderWidth: 1,
-    borderColor: ESTIMATE_COLORS.borderLight,
-  },
-  qbTotalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 4,
-  },
-  qbTotalLabel: {
-    fontSize: 14,
-    color: ESTIMATE_COLORS.textSlate500,
-  },
-  qbTotalValue: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: ESTIMATE_COLORS.textDark,
-  },
-  qbGrandTotalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: Spacing.sm,
-    marginTop: Spacing.sm,
-    borderTopWidth: 2,
-    borderTopColor: ESTIMATE_COLORS.borderLight,
-  },
-  qbGrandTotalLabel: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: ESTIMATE_COLORS.textDark,
-  },
-  qbGrandTotalValue: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: ESTIMATE_COLORS.secondary,
-  },
-  qbActionButtons: {
-    marginTop: Spacing.md,
-  },
-  qbSendButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-    backgroundColor: ESTIMATE_COLORS.primary,
-    paddingVertical: 14,
-    borderRadius: 8,
-  },
-  qbSendButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
   inputContainer: {
     padding: Spacing.md,
-    ...Shadows.card,
+    backgroundColor: ESTIMATE_COLORS.bgWhite,
+    borderTopWidth: 1,
+    borderTopColor: ESTIMATE_COLORS.borderLight,
   },
   webWarningBanner: {
     flexDirection: 'row',
@@ -1231,10 +1957,13 @@ const styles = StyleSheet.create({
   textInput: {
     flex: 1,
     borderWidth: 1,
+    borderColor: ESTIMATE_COLORS.borderLight,
     borderRadius: BorderRadius.lg,
     padding: Spacing.md,
     fontSize: 15,
     maxHeight: 100,
+    backgroundColor: ESTIMATE_COLORS.bgSlate100,
+    color: ESTIMATE_COLORS.textDark,
   },
   sendButton: {
     width: 44,
@@ -1243,51 +1972,5 @@ const styles = StyleSheet.create({
     backgroundColor: BrandColors.azureBlue,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  propertyModal: {
-    maxHeight: '70%',
-    borderTopLeftRadius: BorderRadius.lg,
-    borderTopRightRadius: BorderRadius.lg,
-    padding: Spacing.lg,
-  },
-  propertyModalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: Spacing.md,
-  },
-  propertyModalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.md,
-    marginBottom: Spacing.md,
-    gap: Spacing.sm,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 15,
-  },
-  propertyOption: {
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  propertyOptionName: {
-    fontSize: 15,
-    fontWeight: '500',
-  },
-  propertyOptionAddress: {
-    fontSize: 13,
-    marginTop: 2,
   },
 });

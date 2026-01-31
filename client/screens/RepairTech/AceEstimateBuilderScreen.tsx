@@ -753,6 +753,7 @@ const styles = StyleSheet.create({
   aceText: {
     fontSize: 15,
     lineHeight: 22,
+    color: '#1E293B',
   },
   userBubble: {
     padding: Spacing.md,

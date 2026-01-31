@@ -1,0 +1,310 @@
+MOBILE APP PROMPT: Repair Tech Estimate Creation (React Native / Expo)
+PROJECT OVERVIEW
+Build a mobile app screen for repair technicians to create estimates in the field. This must exactly match the web app's QuickBooks-style design system and sync with the main Pool Brain API.
+
+DESIGN SYSTEM (Must Match Exactly)
+Color Palette:
+
+const COLORS = {
+  // Primary
+  primary: "#1e3a5f",        // Dark Navy (headers, buttons)
+  primaryHover: "#0f2d52",
+  
+  // Secondary  
+  secondary: "#0078D4",      // Blue (actions, links, amounts)
+  
+  // Accent
+  accent: "#F97316",         // Orange (highlights, edit actions)
+  accentLight: "#FEF3C7",    // Light orange background
+  
+  // Status Colors
+  statusGreen: "#22D69A",    // Success, completed, approved
+  statusOrange: "#D35400",   // Warning, needs attention
+  statusBlue: "#60A5FA",     // Info, scheduled
+  statusRed: "#EF4444",      // Error, rejected
+  statusGray: "#6B7280",     // Inactive, archived
+  
+  // Background
+  bgWhite: "#FFFFFF",
+  bgSlate50: "#F8FAFC",      // Light gray sections
+  bgSlate100: "#F1F5F9",     // Input backgrounds
+  
+  // Text
+  textDark: "#1E293B",       // Primary text
+  textSlate500: "#64748B",   // Secondary text, labels
+  textSlate400: "#94A3B8",   // Placeholder text
+};
+Status Badge Colors:
+
+const STATUS_BADGES = {
+  draft: { bg: "#F1F5F9", text: "#475569", border: "#CBD5E1" },
+  pending_approval: { bg: "#FEF3C7", text: "#D97706", border: "#FCD34D" },
+  approved: { bg: "rgba(34, 214, 154, 0.1)", text: "#22D69A", border: "rgba(34, 214, 154, 0.2)" },
+  rejected: { bg: "#FEE2E2", text: "#DC2626", border: "#FECACA" },
+  needs_scheduling: { bg: "#FEF3C7", text: "#D97706", border: "#FCD34D" },
+  scheduled: { bg: "#DBEAFE", text: "#0078D4", border: "#93C5FD" },
+  completed: { bg: "#DBEAFE", text: "#60A5FA", border: "#93C5FD" },
+  ready_to_invoice: { bg: "rgba(23, 190, 187, 0.1)", text: "#0D9488", border: "rgba(23, 190, 187, 0.2)" },
+  invoiced: { bg: "rgba(23, 190, 187, 0.1)", text: "#0D9488", border: "rgba(23, 190, 187, 0.2)" },
+};
+SCREEN: Create Estimate Form
+Layout Structure:
+
+┌─────────────────────────────────────┐
+│ HEADER                              │
+│ ← Back    ESTIMATE    Amount: $XXX  │
+│           (Edit/Create)             │
+├─────────────────────────────────────┤
+│ SCROLLABLE FORM                     │
+│                                     │
+│ ┌─ Customer/Property Section ─────┐ │
+│ │ Customer dropdown               │ │
+│ │ Estimate # | Estimate Date      │ │
+│ │ Expiration Date | Status        │ │
+│ └─────────────────────────────────┘ │
+│                                     │
+│ ┌─ Work Order Section (Orange) ───┐ │
+│ │ 📋 Work Order Tracking          │ │
+│ │ [ ] WO Received   WO Number: [] │ │
+│ └─────────────────────────────────┘ │
+│                                     │
+│ ┌─ Technician Assignment ─────────┐ │
+│ │ Repair Tech | Field Supervisor  │ │
+│ │ Office Member | Service Tech    │ │
+│ │ Reported Date | Repair Foreman  │ │
+│ └─────────────────────────────────┘ │
+│                                     │
+│ ┌─ Line Items Section ────────────┐ │
+│ │ 📋 Line Items       [Clear All] │ │
+│ │              [+ Add Item] Blue  │ │
+│ │ ┌───────────────────────────┐   │ │
+│ │ │ Item 1                 🗑️ │   │ │
+│ │ │ Product | Qty | Rate | Amt│   │ │
+│ │ │ Description      [ ]Tax  │   │ │
+│ │ └───────────────────────────┘   │ │
+│ └─────────────────────────────────┘ │
+│                                     │
+│ ┌─ Notes Section ─────────────────┐ │
+│ │ Customer Note (visible)         │ │
+│ │ [textarea]                      │ │
+│ │ Memo (internal)                 │ │
+│ │ [textarea]                      │ │
+│ │ Tech Notes (internal)           │ │
+│ │ [textarea]                      │ │
+│ └─────────────────────────────────┘ │
+│                                     │
+│ ┌─ Photos Section ────────────────┐ │
+│ │ 📷 Supporting Photos (optional) │ │
+│ │ [Upload] Max 10 MB per photo    │ │
+│ │ ┌────┐ ┌────┐ ┌────┐           │ │
+│ │ │ 📷 │ │ 📷 │ │ 📷 │  [X remove]│ │
+│ │ └────┘ └────┘ └────┘           │ │
+│ └─────────────────────────────────┘ │
+│                                     │
+├─────────────────────────────────────┤
+│ FLOATING TOTALS PANEL               │
+│ ┌─────────────────────────────────┐ │
+│ │ Subtotal:           $XXX.XX     │ │
+│ │ Discount: [%/$] [val] -$XX.XX   │ │
+│ │ Tax (X%):           $XX.XX      │ │
+│ │ ─────────────────────────────── │ │
+│ │ TOTAL:              $XXX.XX     │ │
+│ │                                 │ │
+│ │ [Save Draft] [Save & Send]      │ │
+│ └─────────────────────────────────┘ │
+└─────────────────────────────────────┘
+DATA MODEL (TypeScript)
+interface EstimateLineItem {
+  lineNumber: number;
+  serviceDate?: string;     // YYYY-MM-DD
+  productService: string;   // Product/Service name
+  description: string;      // Description
+  sku?: string;             // SKU code
+  quantity: number;         // Quantity (default: 1)
+  rate: number;             // Rate in dollars (will convert to cents)
+  amount: number;           // Calculated: quantity * rate * 100 (cents)
+  taxable: boolean;         // Is this item taxable?
+}
+interface EstimateFormData {
+  propertyId: string;       // Customer/Property ID
+  propertyName: string;     // Customer/Property name
+  customerName: string;
+  customerEmail: string;
+  address: string;
+  estimateNumber: string;   // Auto-generate: "EST-YYNNNN"
+  estimateDate: Date;
+  expirationDate?: Date;
+  title: string;            // Project title
+  description: string;      // Project description
+  status: "draft";          // Mobile always creates as draft
+  
+  // Work Type & WO
+  workType: "repairs" | "chemicals" | "other";
+  woReceived: boolean;
+  woNumber: string;
+  
+  // Technician assignments
+  repairTechId: string;
+  repairTechName: string;
+  reportedDate?: Date;
+  
+  // Line items
+  items: EstimateLineItem[];
+  
+  // Discount & Tax
+  discountType: "percent" | "fixed";
+  discountValue: number;
+  salesTaxRate: number;
+  
+  // Notes
+  customerNote: string;     // Visible to customer
+  memoOnStatement: string;  // Internal memo
+  techNotes: string;        // Internal tech notes
+  
+  // Photos (array of URLs/paths)
+  photos: string[];
+  
+  // Source tracking
+  sourceType: "repair_tech"; // Always set for mobile
+  createdByTechId: string;   // Current user's tech ID
+  createdByTechName: string; // Current user's name
+}
+API ENDPOINTS (Sync with Main App)
+Create Estimate:
+
+POST /api/sync/estimates
+Body: {
+  estimate: EstimateFormData,
+  valuesInCents: false  // Mobile sends dollars, API converts to cents
+}
+Response: { estimate: Estimate }
+Upload Photo:
+
+// Step 1: Get upload URL
+POST /api/uploads/request-url
+Body: { name: string, size: number, contentType: string }
+Response: { uploadURL: string, objectPath: string }
+// Step 2: Upload to signed URL
+PUT {uploadURL}
+Body: image binary
+Headers: { "Content-Type": "image/jpeg" }
+// Step 3: Confirm upload
+POST /api/uploads/confirm
+Body: { objectPath: string }
+Get Customers/Properties:
+
+GET /api/sync/customers
+Response: { customers: Customer[] }
+Get Technicians:
+
+GET /api/technicians
+Response: { technicians: Technician[] }
+COMPONENT STYLING PATTERNS
+Section Cards:
+
+// Gray background section (Customer Info, Tech Assignment)
+<View style={{
+  backgroundColor: '#F8FAFC',
+  borderRadius: 8,
+  borderWidth: 1,
+  borderColor: '#E2E8F0',
+  padding: 16,
+  marginBottom: 16
+}}>
+// Orange background section (Work Order Tracking)
+<View style={{
+  backgroundColor: 'rgba(255, 128, 0, 0.1)',
+  borderRadius: 8,
+  borderWidth: 1,
+  borderColor: 'rgba(255, 128, 0, 0.2)',
+  padding: 16,
+  marginBottom: 16
+}}>
+Input Fields:
+
+<TextInput style={{
+  height: 36,
+  backgroundColor: '#FFFFFF',
+  borderWidth: 1,
+  borderColor: '#E2E8F0',
+  borderRadius: 6,
+  paddingHorizontal: 12,
+  fontSize: 14,
+  color: '#1E293B'
+}} />
+Primary Button (Blue):
+
+<TouchableOpacity style={{
+  backgroundColor: '#0078D4',
+  paddingVertical: 10,
+  paddingHorizontal: 16,
+  borderRadius: 6,
+  flexDirection: 'row',
+  alignItems: 'center'
+}}>
+  <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>+ Add Item</Text>
+</TouchableOpacity>
+Outline Button:
+
+<TouchableOpacity style={{
+  backgroundColor: '#FFFFFF',
+  paddingVertical: 10,
+  paddingHorizontal: 16,
+  borderRadius: 6,
+  borderWidth: 1,
+  borderColor: '#E2E8F0'
+}}>
+  <Text style={{ color: '#475569' }}>Clear All</Text>
+</TouchableOpacity>
+Line Item Card:
+
+<View style={{
+  backgroundColor: '#FFFFFF',
+  borderWidth: 1,
+  borderColor: '#E2E8F0',
+  borderRadius: 8,
+  padding: 12,
+  marginBottom: 8
+}}>
+  {/* Row 1: Product + Delete */}
+  {/* Row 2: Qty | Rate | Amount */}
+  {/* Row 3: Description + Tax checkbox */}
+</View>
+CALCULATION LOGIC
+function calculateTotals(items: EstimateLineItem[], discountType: string, discountValue: number, salesTaxRate: number) {
+  // Subtotal (sum of all item amounts in cents)
+  const subtotal = items.reduce((sum, item) => sum + item.amount, 0);
+  
+  // Discount
+  const discountAmount = discountType === "percent"
+    ? subtotal * (discountValue / 100)
+    : discountValue * 100; // fixed amount to cents
+  
+  // Taxable subtotal (only taxable items, minus proportional discount)
+  const taxableItems = items.filter(item => item.taxable);
+  const taxableSubtotalRaw = taxableItems.reduce((sum, item) => sum + item.amount, 0);
+  const discountProportion = subtotal > 0 ? (taxableSubtotalRaw / subtotal) : 0;
+  const taxableSubtotal = Math.max(0, taxableSubtotalRaw - (discountProportion * discountAmount));
+  
+  // Tax
+  const salesTaxAmount = taxableSubtotal * (salesTaxRate / 100);
+  
+  // Total
+  const totalAmount = subtotal - discountAmount + salesTaxAmount;
+  
+  return { subtotal, discountAmount, taxableSubtotal, salesTaxAmount, totalAmount };
+}
+// Format currency (cents to dollars)
+function formatCurrency(cents: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(cents / 100);
+}
+ESTIMATE NUMBER GENERATION
+function generateEstimateNumber(): string {
+  const date = new Date();
+  const year = date.getFullYear().toString().slice(-2); // "26" for 2026
+  const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+  return `EST-${year}${random}`; // e.g., "EST-260342"
+}

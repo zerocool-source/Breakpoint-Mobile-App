@@ -75,7 +75,7 @@ export default function EstimatesScreen() {
       </Pressable>
 
       <Pressable
-        onPress={() => navigation.navigate('EstimateBuilder')}
+        onPress={() => navigation.navigate('UniversalEstimateBuilder', { mode: 'manual' })}
         style={[styles.manualCreateCard, { backgroundColor: theme.surface, borderColor: theme.border }]}
       >
         <View style={styles.manualIconContainer}>

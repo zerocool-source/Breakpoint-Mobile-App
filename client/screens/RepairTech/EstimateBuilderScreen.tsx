@@ -1011,9 +1011,14 @@ export default function EstimateBuilderScreen() {
                 </Pressable>
 
                 <Pressable
-                  onPress={() => searchProductsWithAI(aiDescription)}
-                  style={[styles.aiSearchButton, !aiDescription.trim() && { opacity: 0.5 }]}
-                  disabled={!aiDescription.trim()}
+                  onPress={() => {
+                    if (!aiDescription.trim()) {
+                      Alert.alert('Enter Description', 'Please type or speak a description of what you need.');
+                      return;
+                    }
+                    searchProductsWithAI(aiDescription);
+                  }}
+                  style={styles.aiSearchButton}
                 >
                   <Feather name="search" size={20} color="#fff" />
                   <ThemedText style={[styles.aiSearchButtonText, { color: '#fff' }]}>Search</ThemedText>

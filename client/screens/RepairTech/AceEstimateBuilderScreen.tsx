@@ -357,6 +357,29 @@ export default function AceEstimateBuilderScreen() {
     }, 1500);
   };
 
+  const handleSendToOffice = async () => {
+    if (!selectedProperty) {
+      Alert.alert('Select Property', 'Please select a property before sending.');
+      return;
+    }
+    if (lineItems.length === 0) {
+      Alert.alert('No Items', 'Add products to your estimate first.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    setTimeout(() => {
+      setIsSubmitting(false);
+      Alert.alert(
+        'Sent to Office!',
+        `Estimate ${estimateNumber} for ${selectedProperty} ($${total.toFixed(2)}) has been sent to the office for review.`,
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
+      );
+    }, 1500);
+  };
+
   const filteredProperties = mockProperties.filter(p =>
     p.name.toLowerCase().includes(propertySearch.toLowerCase()) ||
     p.address?.toLowerCase().includes(propertySearch.toLowerCase())
@@ -557,6 +580,20 @@ export default function AceEstimateBuilderScreen() {
                   <ThemedText style={styles.grandTotalValue}>${total.toFixed(2)}</ThemedText>
                 </View>
               </View>
+              <Pressable
+                onPress={handleSendToOffice}
+                disabled={isSubmitting}
+                style={styles.sendToOfficeButton}
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Feather name="send" size={18} color="#fff" />
+                    <ThemedText style={styles.sendToOfficeText}>Send to Office</ThemedText>
+                  </>
+                )}
+              </Pressable>
             </View>
           ) : null}
         </ScrollView>
@@ -961,6 +998,21 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: BrandColors.azureBlue,
+  },
+  sendToOfficeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    backgroundColor: '#1e3a5f',
+    paddingVertical: 14,
+    borderRadius: BorderRadius.md,
+    marginTop: Spacing.lg,
+  },
+  sendToOfficeText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   inputContainer: {
     padding: Spacing.md,

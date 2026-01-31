@@ -144,6 +144,7 @@ export default function AceEstimateBuilderScreen() {
   const [userInput, setUserInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const [showWebWarning, setShowWebWarning] = useState(false);
 
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
@@ -391,12 +392,15 @@ export default function AceEstimateBuilderScreen() {
     try {
       await audioRecorder.stop();
       setIsRecording(false);
+      setIsTranscribing(true);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
       const uri = audioRecorder.uri;
-      if (!uri) return;
+      if (!uri) {
+        setIsTranscribing(false);
+        return;
+      }
 
-      setIsThinking(true);
       const base64Audio = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' });
 
       const apiUrl = getLocalApiUrl();
@@ -406,17 +410,22 @@ export default function AceEstimateBuilderScreen() {
         body: JSON.stringify({ audio: base64Audio }),
       });
 
-      if (!transcribeResponse.ok) throw new Error('Transcription failed');
+      if (!transcribeResponse.ok) {
+        setIsTranscribing(false);
+        throw new Error('Transcription failed');
+      }
 
       const transcribeData = await transcribeResponse.json();
       const description = transcribeData.text;
+      setIsTranscribing(false);
 
       if (!description) {
-        setIsThinking(false);
         addAceMessage("I didn't catch that. Could you try speaking again or type what you need?");
         return;
       }
 
+      setUserInput(description);
+      
       await searchProductsWithAI(description);
     } catch (error) {
       console.error('Failed to process recording:', error);
@@ -1223,6 +1232,18 @@ export default function AceEstimateBuilderScreen() {
                 <ThemedText style={styles.webWarningText}>
                   Voice requires Expo Go. Type instead.
                 </ThemedText>
+              </View>
+            ) : null}
+            {isRecording ? (
+              <View style={styles.recordingIndicator}>
+                <Animated.View style={[styles.recordingDot, { transform: [{ scale: pulseAnim }] }]} />
+                <ThemedText style={styles.recordingText}>Listening... Tap mic to stop</ThemedText>
+              </View>
+            ) : null}
+            {isTranscribing ? (
+              <View style={styles.transcribingIndicator}>
+                <ActivityIndicator size="small" color={BrandColors.azureBlue} />
+                <ThemedText style={styles.transcribingText}>Transcribing your voice...</ThemedText>
               </View>
             ) : null}
             <View style={styles.inputRow}>
@@ -2264,6 +2285,44 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 12,
     flex: 1,
+  },
+  recordingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: BrandColors.danger + '15',
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.md,
+    marginBottom: Spacing.sm,
+    gap: Spacing.sm,
+  },
+  recordingDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: BrandColors.danger,
+  },
+  recordingText: {
+    color: BrandColors.danger,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  transcribingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: BrandColors.azureBlue + '15',
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.md,
+    marginBottom: Spacing.sm,
+    gap: Spacing.sm,
+  },
+  transcribingText: {
+    color: BrandColors.azureBlue,
+    fontSize: 13,
+    fontWeight: '600',
   },
   inputRow: {
     flexDirection: 'row',

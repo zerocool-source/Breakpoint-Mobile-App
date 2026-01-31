@@ -22,7 +22,7 @@ import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
-import { useAudioRecorder, AudioModule, RecordingPresets } from 'expo-audio';
+import { useAudioRecorder, AudioModule, RecordingPresets, setAudioModeAsync } from 'expo-audio';
 import { getLocalApiUrl, joinUrl } from '@/lib/query-client';
 
 import { ThemedText } from '@/components/ThemedText';
@@ -380,6 +380,12 @@ export default function AceEstimateBuilderScreen() {
         Alert.alert('Permission Required', 'Microphone permission is needed.');
         return;
       }
+      
+      await setAudioModeAsync({
+        allowsRecording: true,
+        playsInSilentMode: true,
+      });
+      
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       audioRecorder.record();
       setIsRecording(true);

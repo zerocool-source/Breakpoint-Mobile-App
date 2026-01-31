@@ -13,7 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { useAudioRecorder, AudioModule, RecordingPresets } from 'expo-audio';
+import { useAudioRecorder, AudioModule, RecordingPresets, setAudioModeAsync } from 'expo-audio';
 import * as FileSystem from 'expo-file-system';
 import { getLocalApiUrl, joinUrl } from '@/lib/query-client';
 
@@ -75,6 +75,12 @@ export function ProductCatalog({ role, onSelectProduct, selectionMode = false }:
         );
         return;
       }
+      
+      await setAudioModeAsync({
+        allowsRecording: true,
+        playsInSilentMode: true,
+      });
+      
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       audioRecorder.record();
       setIsRecording(true);

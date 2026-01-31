@@ -1,0 +1,540 @@
+import React, { useState, useMemo, useCallback } from 'react';
+import {
+  View,
+  StyleSheet,
+  FlatList,
+  Pressable,
+  TextInput,
+  Modal,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+
+import { ThemedText } from '@/components/ThemedText';
+import { useTheme } from '@/hooks/useTheme';
+import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
+import {
+  HERITAGE_PRODUCTS,
+  HERITAGE_CATEGORIES,
+  HeritageProduct,
+  HeritageCategory,
+  getProductsByCategory,
+  getSubcategories,
+} from '@/lib/heritageProducts';
+
+export type ProductCatalogRole = 'repair_tech' | 'service_tech' | 'supervisor';
+
+interface ProductCatalogProps {
+  role: ProductCatalogRole;
+  onSelectProduct?: (product: HeritageProduct, quantity: number) => void;
+  selectionMode?: boolean;
+}
+
+interface SelectedProduct extends HeritageProduct {
+  quantity: number;
+}
+
+export function ProductCatalog({ role, onSelectProduct, selectionMode = false }: ProductCatalogProps) {
+  const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
+  const [search, setSearch] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<HeritageCategory | null>(null);
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
+  const [quantityModalVisible, setQuantityModalVisible] = useState(false);
+  const [selectedForQuantity, setSelectedForQuantity] = useState<HeritageProduct | null>(null);
+  const [quantity, setQuantity] = useState('1');
+
+  const showPricing = role === 'repair_tech' || role === 'supervisor';
+
+  const subcategories = useMemo(() => {
+    if (!selectedCategory) return [];
+    return getSubcategories(selectedCategory);
+  }, [selectedCategory]);
+
+  const filteredProducts = useMemo(() => {
+    let products = selectedCategory
+      ? getProductsByCategory(selectedCategory)
+      : HERITAGE_PRODUCTS;
+
+    if (selectedSubcategory) {
+      products = products.filter(p => p.subcategory === selectedSubcategory);
+    }
+
+    if (search.trim()) {
+      const lower = search.toLowerCase();
+      products = products.filter(p =>
+        p.name.toLowerCase().includes(lower) ||
+        p.sku.toLowerCase().includes(lower) ||
+        p.heritageNumber.toLowerCase().includes(lower) ||
+        p.manufacturer.toLowerCase().includes(lower)
+      );
+    }
+
+    return products;
+  }, [selectedCategory, selectedSubcategory, search]);
+
+  const handleProductPress = useCallback((product: HeritageProduct) => {
+    if (selectionMode && onSelectProduct) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setSelectedForQuantity(product);
+      setQuantity('1');
+      setQuantityModalVisible(true);
+    }
+  }, [selectionMode, onSelectProduct]);
+
+  const confirmQuantity = useCallback(() => {
+    if (selectedForQuantity && onSelectProduct) {
+      const qty = parseInt(quantity) || 1;
+      onSelectProduct(selectedForQuantity, qty);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+    setQuantityModalVisible(false);
+    setSelectedForQuantity(null);
+    setQuantity('1');
+  }, [selectedForQuantity, quantity, onSelectProduct]);
+
+  const renderCategoryChip = ({ item }: { item: HeritageCategory }) => {
+    const isSelected = selectedCategory === item;
+    return (
+      <Pressable
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          if (isSelected) {
+            setSelectedCategory(null);
+            setSelectedSubcategory(null);
+          } else {
+            setSelectedCategory(item);
+            setSelectedSubcategory(null);
+          }
+        }}
+        style={[
+          styles.categoryChip,
+          { backgroundColor: isSelected ? BrandColors.azureBlue : theme.surface, borderColor: theme.border },
+        ]}
+      >
+        <ThemedText style={[styles.categoryChipText, isSelected && { color: '#fff' }]}>
+          {item}
+        </ThemedText>
+      </Pressable>
+    );
+  };
+
+  const renderSubcategoryChip = ({ item }: { item: string }) => {
+    const isSelected = selectedSubcategory === item;
+    return (
+      <Pressable
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          setSelectedSubcategory(isSelected ? null : item);
+        }}
+        style={[
+          styles.subcategoryChip,
+          { backgroundColor: isSelected ? BrandColors.tropicalTeal : theme.surface, borderColor: theme.border },
+        ]}
+      >
+        <ThemedText style={[styles.subcategoryChipText, isSelected && { color: '#fff' }]}>
+          {item}
+        </ThemedText>
+      </Pressable>
+    );
+  };
+
+  const renderProduct = ({ item }: { item: HeritageProduct }) => (
+    <Pressable
+      onPress={() => handleProductPress(item)}
+      style={[
+        styles.productCard,
+        { backgroundColor: theme.surface },
+        selectionMode && styles.productCardSelectable,
+      ]}
+    >
+      <View style={styles.productHeader}>
+        <View style={styles.productInfo}>
+          <ThemedText style={styles.productName}>{item.name}</ThemedText>
+          <ThemedText style={[styles.productSku, { color: theme.textSecondary }]}>
+            SKU: {item.sku} | Heritage: {item.heritageNumber}
+          </ThemedText>
+          <ThemedText style={[styles.productMeta, { color: theme.textSecondary }]}>
+            {item.manufacturer} • {item.subcategory}
+          </ThemedText>
+        </View>
+        {showPricing ? (
+          <View style={styles.priceContainer}>
+            <ThemedText style={styles.priceLabel}>Price</ThemedText>
+            <ThemedText style={styles.price}>${item.price.toFixed(2)}</ThemedText>
+            <ThemedText style={[styles.priceUnit, { color: theme.textSecondary }]}>
+              per {item.unit}
+            </ThemedText>
+          </View>
+        ) : null}
+      </View>
+      {selectionMode ? (
+        <View style={styles.addIndicator}>
+          <Feather name="plus-circle" size={24} color={BrandColors.azureBlue} />
+          <ThemedText style={[styles.addText, { color: BrandColors.azureBlue }]}>
+            Tap to add
+          </ThemedText>
+        </View>
+      ) : null}
+    </Pressable>
+  );
+
+  return (
+    <View style={[styles.container, { backgroundColor: theme.backgroundRoot }]}>
+      <View style={[styles.searchContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+        <Feather name="search" size={20} color={theme.textSecondary} />
+        <TextInput
+          style={[styles.searchInput, { color: theme.text }]}
+          placeholder="Search products, SKU, or manufacturer..."
+          placeholderTextColor={theme.textSecondary}
+          value={search}
+          onChangeText={setSearch}
+        />
+        {search.length > 0 ? (
+          <Pressable onPress={() => setSearch('')}>
+            <Feather name="x" size={20} color={theme.textSecondary} />
+          </Pressable>
+        ) : null}
+      </View>
+
+      <FlatList
+        data={HERITAGE_CATEGORIES as unknown as HeritageCategory[]}
+        renderItem={renderCategoryChip}
+        keyExtractor={(item) => item}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.categoryList}
+        contentContainerStyle={styles.categoryListContent}
+      />
+
+      {selectedCategory && subcategories.length > 0 ? (
+        <FlatList
+          data={subcategories}
+          renderItem={renderSubcategoryChip}
+          keyExtractor={(item) => item}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.subcategoryList}
+          contentContainerStyle={styles.categoryListContent}
+        />
+      ) : null}
+
+      <View style={styles.resultsHeader}>
+        <ThemedText style={[styles.resultsCount, { color: theme.textSecondary }]}>
+          {filteredProducts.length} products
+        </ThemedText>
+        {!showPricing ? (
+          <View style={styles.noPricingBadge}>
+            <Feather name="eye-off" size={12} color={theme.textSecondary} />
+            <ThemedText style={[styles.noPricingText, { color: theme.textSecondary }]}>
+              Pricing hidden
+            </ThemedText>
+          </View>
+        ) : null}
+      </View>
+
+      <FlatList
+        data={filteredProducts}
+        renderItem={renderProduct}
+        keyExtractor={(item) => item.sku}
+        contentContainerStyle={[
+          styles.productList,
+          { paddingBottom: insets.bottom + 20 },
+        ]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      />
+
+      <Modal
+        visible={quantityModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setQuantityModalVisible(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setQuantityModalVisible(false)}
+        >
+          <Pressable style={[styles.quantityModal, { backgroundColor: theme.surface }]}>
+            <ThemedText style={styles.quantityTitle}>Add Product</ThemedText>
+            {selectedForQuantity ? (
+              <>
+                <ThemedText style={styles.quantityProductName}>
+                  {selectedForQuantity.name}
+                </ThemedText>
+                {showPricing ? (
+                  <ThemedText style={[styles.quantityPrice, { color: BrandColors.azureBlue }]}>
+                    ${selectedForQuantity.price.toFixed(2)} per {selectedForQuantity.unit}
+                  </ThemedText>
+                ) : null}
+                <View style={styles.quantityInputContainer}>
+                  <ThemedText style={styles.quantityLabel}>Quantity:</ThemedText>
+                  <View style={styles.quantityControls}>
+                    <Pressable
+                      onPress={() => {
+                        const q = Math.max(1, parseInt(quantity) - 1);
+                        setQuantity(String(q));
+                      }}
+                      style={[styles.quantityButton, { backgroundColor: theme.backgroundRoot }]}
+                    >
+                      <Feather name="minus" size={20} color={theme.text} />
+                    </Pressable>
+                    <TextInput
+                      style={[styles.quantityInput, { color: theme.text, borderColor: theme.border }]}
+                      value={quantity}
+                      onChangeText={setQuantity}
+                      keyboardType="numeric"
+                    />
+                    <Pressable
+                      onPress={() => {
+                        const q = parseInt(quantity) + 1;
+                        setQuantity(String(q));
+                      }}
+                      style={[styles.quantityButton, { backgroundColor: theme.backgroundRoot }]}
+                    >
+                      <Feather name="plus" size={20} color={theme.text} />
+                    </Pressable>
+                  </View>
+                </View>
+                {showPricing ? (
+                  <ThemedText style={styles.quantityTotal}>
+                    Total: ${(selectedForQuantity.price * (parseInt(quantity) || 1)).toFixed(2)}
+                  </ThemedText>
+                ) : null}
+              </>
+            ) : null}
+            <View style={styles.quantityActions}>
+              <Pressable
+                onPress={() => setQuantityModalVisible(false)}
+                style={[styles.quantityActionButton, { backgroundColor: theme.backgroundRoot }]}
+              >
+                <ThemedText>Cancel</ThemedText>
+              </Pressable>
+              <Pressable
+                onPress={confirmQuantity}
+                style={[styles.quantityActionButton, styles.confirmButton]}
+              >
+                <ThemedText style={{ color: '#fff' }}>Add to Repair</ThemedText>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    margin: Spacing.md,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    gap: Spacing.sm,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+  },
+  categoryList: {
+    maxHeight: 44,
+    marginBottom: Spacing.sm,
+  },
+  categoryListContent: {
+    paddingHorizontal: Spacing.md,
+    gap: Spacing.sm,
+  },
+  categoryChip: {
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+  },
+  categoryChipText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  subcategoryList: {
+    maxHeight: 36,
+    marginBottom: Spacing.sm,
+  },
+  subcategoryChip: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+  },
+  subcategoryChipText: {
+    fontSize: 13,
+  },
+  resultsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+  },
+  resultsCount: {
+    fontSize: 13,
+  },
+  noPricingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  noPricingText: {
+    fontSize: 12,
+  },
+  productList: {
+    padding: Spacing.md,
+    gap: Spacing.md,
+  },
+  productCard: {
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.md,
+    marginBottom: Spacing.md,
+    ...Shadows.card,
+  },
+  productCardSelectable: {
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  productHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  productInfo: {
+    flex: 1,
+    marginRight: Spacing.md,
+  },
+  productName: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  productSku: {
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  productMeta: {
+    fontSize: 13,
+  },
+  priceContainer: {
+    alignItems: 'flex-end',
+  },
+  priceLabel: {
+    fontSize: 11,
+    color: '#888',
+  },
+  price: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: BrandColors.azureBlue,
+  },
+  priceUnit: {
+    fontSize: 11,
+  },
+  addIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: Spacing.md,
+    paddingTop: Spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    gap: Spacing.sm,
+  },
+  addText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  quantityModal: {
+    width: '85%',
+    maxWidth: 400,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.xl,
+    ...Shadows.card,
+  },
+  quantityTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: Spacing.md,
+    textAlign: 'center',
+  },
+  quantityProductName: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginBottom: Spacing.xs,
+    textAlign: 'center',
+  },
+  quantityPrice: {
+    fontSize: 15,
+    textAlign: 'center',
+    marginBottom: Spacing.lg,
+  },
+  quantityInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.lg,
+    gap: Spacing.md,
+  },
+  quantityLabel: {
+    fontSize: 15,
+  },
+  quantityControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  quantityButton: {
+    width: 40,
+    height: 40,
+    borderRadius: BorderRadius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quantityInput: {
+    width: 60,
+    height: 40,
+    borderWidth: 1,
+    borderRadius: BorderRadius.sm,
+    textAlign: 'center',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  quantityTotal: {
+    fontSize: 18,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: Spacing.lg,
+    color: BrandColors.azureBlue,
+  },
+  quantityActions: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+  },
+  quantityActionButton: {
+    flex: 1,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    alignItems: 'center',
+  },
+  confirmButton: {
+    backgroundColor: BrandColors.azureBlue,
+  },
+});
+
+export default ProductCatalog;

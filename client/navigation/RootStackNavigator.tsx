@@ -11,6 +11,7 @@ import CreateEstimateModal from '@/screens/Modals/CreateEstimateModal';
 import EstimateBuilderScreen from '@/screens/RepairTech/EstimateBuilderScreen';
 import AceEstimateBuilderScreen from '@/screens/RepairTech/AceEstimateBuilderScreen';
 import UniversalEstimateBuilderScreen from '@/screens/RepairTech/UniversalEstimateBuilderScreen';
+import QuoteDescriptionScreen from '@/screens/RepairTech/QuoteDescriptionScreen';
 import { useScreenOptions } from '@/hooks/useScreenOptions';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors } from '@/constants/theme';
@@ -21,8 +22,9 @@ export type RootStackParamList = {
   Chat: undefined;
   CreateEstimate: undefined;
   EstimateBuilder: undefined;
-  AceEstimateBuilder: undefined;
+  AceEstimateBuilder: { updatedDescription?: string } | undefined;
   UniversalEstimateBuilder: { mode?: 'manual' | 'ace' };
+  QuoteDescription: { lineItems: any[]; currentDescription: string; propertyName: string };
   EstimateDetail: { estimateId: string };
 };
 
@@ -104,6 +106,14 @@ export default function RootStackNavigator() {
         options={{
           headerShown: false,
           presentation: 'fullScreenModal',
+        }}
+      />
+      <Stack.Screen
+        name="QuoteDescription"
+        component={QuoteDescriptionScreen}
+        options={{
+          headerShown: false,
+          presentation: 'card',
         }}
       />
     </Stack.Navigator>

@@ -16,7 +16,7 @@ import {
   Easing,
   KeyboardAvoidingView,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -82,8 +82,15 @@ const isDonePhrase = (text: string): boolean => {
   return DONE_PHRASES.some(phrase => lowerText === phrase || lowerText.includes(phrase));
 };
 
+type AceRouteParams = {
+  AceEstimateBuilder: {
+    updatedDescription?: string;
+  };
+};
+
 export default function AceEstimateBuilderScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
+  const route = useRoute<RouteProp<AceRouteParams, 'AceEstimateBuilder'>>();
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
@@ -153,6 +160,12 @@ export default function AceEstimateBuilderScreen() {
     "Almost got it...",
   ];
   const [currentThinkingMsg, setCurrentThinkingMsg] = useState(thinkingMessages[0]);
+
+  useEffect(() => {
+    if (route.params?.updatedDescription !== undefined) {
+      setEstimateDescription(route.params.updatedDescription);
+    }
+  }, [route.params?.updatedDescription]);
 
   useEffect(() => {
     const pulse = Animated.loop(
@@ -788,33 +801,72 @@ export default function AceEstimateBuilderScreen() {
                 <ThemedText style={[styles.sectionLabel, { marginBottom: 0 }]}>Quote Description</ThemedText>
               </View>
               <Pressable
-                onPress={generateDescriptionWithAce}
-                disabled={isGeneratingDescription}
-                style={styles.askAceSmallButton}
+                onPress={() => {
+                  navigation.navigate('QuoteDescription', {
+                    lineItems: lineItems.map(item => ({
+                      id: item.id,
+                      lineNumber: item.lineNumber,
+                      product: {
+                        sku: item.product.sku,
+                        name: item.product.name,
+                        category: item.product.category,
+                        manufacturer: item.product.manufacturer,
+                        price: item.product.price,
+                        unit: item.product.unit,
+                      },
+                      description: item.description,
+                      quantity: item.quantity,
+                      rate: item.rate,
+                      taxable: item.taxable,
+                    })),
+                    currentDescription: estimateDescription,
+                    propertyName: selectedProperty,
+                  });
+                }}
+                style={styles.editDescButton}
               >
-                {isGeneratingDescription ? (
-                  <ActivityIndicator size="small" color={ESTIMATE_COLORS.secondary} />
-                ) : (
-                  <>
-                    <Image
-                      source={require('../../../assets/images/ask-ace-button.png')}
-                      style={styles.askAceSmallImg}
-                      resizeMode="contain"
-                    />
-                    <ThemedText style={styles.askAceSmallText}>Ask Ace</ThemedText>
-                  </>
-                )}
+                <Feather name="edit-2" size={14} color={ESTIMATE_COLORS.secondary} />
+                <ThemedText style={styles.editDescText}>Edit</ThemedText>
               </Pressable>
             </View>
-            <TextInput
-              style={styles.descriptionInput}
-              placeholder="Describe the repairs and work to be performed..."
-              placeholderTextColor={ESTIMATE_COLORS.textSlate400}
-              value={estimateDescription}
-              onChangeText={setEstimateDescription}
-              multiline
-              numberOfLines={4}
-            />
+            <Pressable
+              onPress={() => {
+                navigation.navigate('QuoteDescription', {
+                  lineItems: lineItems.map(item => ({
+                    id: item.id,
+                    lineNumber: item.lineNumber,
+                    product: {
+                      sku: item.product.sku,
+                      name: item.product.name,
+                      category: item.product.category,
+                      manufacturer: item.product.manufacturer,
+                      price: item.product.price,
+                      unit: item.product.unit,
+                    },
+                    description: item.description,
+                    quantity: item.quantity,
+                    rate: item.rate,
+                    taxable: item.taxable,
+                  })),
+                  currentDescription: estimateDescription,
+                  propertyName: selectedProperty,
+                });
+              }}
+              style={styles.descriptionPreview}
+            >
+              {estimateDescription ? (
+                <ThemedText style={styles.descriptionPreviewText} numberOfLines={4}>
+                  {estimateDescription}
+                </ThemedText>
+              ) : (
+                <View style={styles.descriptionEmpty}>
+                  <Feather name="mic" size={20} color={ESTIMATE_COLORS.textSlate400} />
+                  <ThemedText style={styles.descriptionEmptyText}>
+                    Tap to add description with voice or text
+                  </ThemedText>
+                </View>
+              )}
+            </Pressable>
           </View>
 
           <View style={styles.sectionCard}>
@@ -1611,6 +1663,46 @@ const styles = StyleSheet.create({
     color: ESTIMATE_COLORS.textDark,
     minHeight: 100,
     textAlignVertical: 'top',
+  },
+  editDescButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#E8F4FD',
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: ESTIMATE_COLORS.secondary,
+  },
+  editDescText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: ESTIMATE_COLORS.secondary,
+  },
+  descriptionPreview: {
+    backgroundColor: ESTIMATE_COLORS.bgSlate50,
+    borderWidth: 1,
+    borderColor: ESTIMATE_COLORS.borderLight,
+    borderRadius: 8,
+    padding: Spacing.md,
+    minHeight: 80,
+  },
+  descriptionPreviewText: {
+    fontSize: 14,
+    color: ESTIMATE_COLORS.textDark,
+    lineHeight: 20,
+  },
+  descriptionEmpty: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.md,
+  },
+  descriptionEmptyText: {
+    fontSize: 13,
+    color: ESTIMATE_COLORS.textSlate400,
+    textAlign: 'center',
   },
   noteField: {
     marginBottom: Spacing.md,

@@ -197,6 +197,11 @@ export const HERITAGE_PRODUCTS: HeritageProduct[] = [
   { sku: 'HEAT-TB-008', heritageNumber: 'R0589405', name: 'Tube Bundle Jandy JXI', category: 'Heaters', subcategory: 'Tube Bundles', price: 1737.21, unit: 'EA', manufacturer: 'Jandy', description: 'Replacement tube bundle for Jandy JXI heaters' },
   { sku: 'HEAT-TB-009', heritageNumber: '017977F', name: 'Tube Bundle Only 407A New Style After 12/2009', category: 'Heaters', subcategory: 'Tube Bundles', price: 2047.88, unit: 'EA', manufacturer: 'Raypak', description: 'Replacement tube bundle for Raypak 407A heaters manufactured after December 2009' },
 
+  // HEATERS - Refractory Kits (3 products)
+  { sku: 'HEAT-RK-001', heritageNumber: '010088F', name: 'Refractory Fire Block Kit 406A Raypak', category: 'Heaters', subcategory: 'Refractory Kits', price: 604.87, unit: 'EA', manufacturer: 'Raypak', description: 'Refractory fire block kit for Raypak 406A heaters - insulates combustion chamber' },
+  { sku: 'HEAT-RK-002', heritageNumber: '010079F', name: 'Refractory Fire Block Kit 407A Raypak', category: 'Heaters', subcategory: 'Refractory Kits', price: 965.98, unit: 'EA', manufacturer: 'Raypak', description: 'Refractory fire block kit for Raypak 407A heaters - insulates combustion chamber' },
+  { sku: 'HEAT-RK-003', heritageNumber: 'R0590500', name: 'Refractory Kit Jandy JXI', category: 'Heaters', subcategory: 'Refractory Kits', price: 166.83, unit: 'EA', manufacturer: 'Jandy', description: 'Refractory kit for Jandy JXI heaters - insulates combustion chamber' },
+
   // AUTOMATION - Controllers (40 products)
   { sku: 'AUTO-CT-001', heritageNumber: 'HAY-AQL-PS4', name: 'Hayward OmniLogic Pool Control', category: 'Automation', subcategory: 'Controllers', price: 2499.00, unit: 'EA', manufacturer: 'Hayward' },
   { sku: 'AUTO-CT-002', heritageNumber: 'HAY-AQL-PS8', name: 'Hayward OmniLogic w/8 Relays', category: 'Automation', subcategory: 'Controllers', price: 2999.00, unit: 'EA', manufacturer: 'Hayward' },

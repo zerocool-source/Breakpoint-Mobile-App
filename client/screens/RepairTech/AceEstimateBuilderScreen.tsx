@@ -383,8 +383,9 @@ export default function AceEstimateBuilderScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       audioRecorder.record();
       setIsRecording(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to start recording:', error);
+      addAceMessage("I couldn't start recording. Please make sure you've granted microphone permissions and try again.");
     }
   };
 
@@ -1656,21 +1657,21 @@ const styles = StyleSheet.create({
   askAceSmallButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
     backgroundColor: '#E8F4FD',
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 10,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: ESTIMATE_COLORS.secondary,
   },
   askAceSmallImg: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
   },
   askAceSmallText: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
     color: ESTIMATE_COLORS.secondary,
   },

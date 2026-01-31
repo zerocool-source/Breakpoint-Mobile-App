@@ -67,7 +67,20 @@ interface AceMessage {
   text: string;
   timestamp: Date;
   products?: AIProductMatch[];
+  showDoneButton?: boolean;
 }
+
+const DONE_PHRASES = [
+  'done', 'no', 'nope', 'that\'s it', 'thats it', 'that is it', 'i\'m done', 'im done',
+  'all set', 'all good', 'no thanks', 'nothing else', 'that\'s all', 'thats all',
+  'finish', 'finished', 'complete', 'go to estimate', 'lets go', 'let\'s go',
+  'no more', 'that will do', 'we\'re done', 'were done', 'good to go'
+];
+
+const isDonePhrase = (text: string): boolean => {
+  const lowerText = text.toLowerCase().trim();
+  return DONE_PHRASES.some(phrase => lowerText === phrase || lowerText.includes(phrase));
+};
 
 export default function AceEstimateBuilderScreen() {
   const navigation = useNavigation();
@@ -209,16 +222,25 @@ export default function AceEstimateBuilderScreen() {
     setTimeout(() => chatScrollRef.current?.scrollToEnd({ animated: true }), 100);
   };
 
-  const addAceMessage = (text: string, products?: AIProductMatch[]) => {
+  const addAceMessage = (text: string, products?: AIProductMatch[], showDoneButton?: boolean) => {
     const newMsg: AceMessage = {
       id: `msg-${Date.now()}`,
       type: 'ace',
       text,
       timestamp: new Date(),
       products,
+      showDoneButton,
     };
     setMessages(prev => [...prev, newMsg]);
     setTimeout(() => chatScrollRef.current?.scrollToEnd({ animated: true }), 100);
+  };
+
+  const handleFinishEstimate = () => {
+    setShowAceModal(false);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setTimeout(() => {
+      scrollRef.current?.scrollToEnd({ animated: true });
+    }, 300);
   };
 
   const searchProductsWithAI = async (description: string) => {
@@ -229,6 +251,27 @@ export default function AceEstimateBuilderScreen() {
 
     addUserMessage(description);
     setUserInput('');
+
+    // Check if user is indicating they're done
+    if (isDonePhrase(description)) {
+      const itemCount = lineItems.length;
+      if (itemCount > 0) {
+        addAceMessage(
+          `Great! You have ${itemCount} item${itemCount > 1 ? 's' : ''} in your estimate. Ready to review and finalize?`,
+          undefined,
+          true // Show done button
+        );
+      } else {
+        addAceMessage(
+          "Looks like you haven't added any items yet. Would you like to add some products first, or continue to the estimate form?",
+          undefined,
+          true
+        );
+      }
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      return;
+    }
+
     setIsThinking(true);
 
     try {
@@ -1031,6 +1074,15 @@ export default function AceEstimateBuilderScreen() {
                     />
                     <View style={styles.aceBubble}>
                       <ThemedText style={styles.aceText}>{msg.text}</ThemedText>
+                      {msg.showDoneButton ? (
+                        <Pressable
+                          onPress={handleFinishEstimate}
+                          style={styles.doneEstimateButton}
+                        >
+                          <Feather name="check-circle" size={18} color="#fff" />
+                          <ThemedText style={styles.doneEstimateText}>Done - Go to Estimate</ThemedText>
+                        </Pressable>
+                      ) : null}
                       {msg.products && msg.products.length > 0 ? (
                         <View style={styles.productResults}>
                           {msg.products.map((product) => (
@@ -2082,6 +2134,21 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
   },
   addSelectedText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  doneEstimateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#22D69A',
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    gap: Spacing.sm,
+    marginTop: Spacing.md,
+  },
+  doneEstimateText: {
     color: '#fff',
     fontSize: 15,
     fontWeight: '600',

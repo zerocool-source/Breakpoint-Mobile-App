@@ -228,15 +228,20 @@ router.post("/web-info", express.json(), async (req: Request, res: Response) => 
 
     const searchQuery = `${manufacturer || ''} ${productName} ${partNumber || ''} pool equipment specifications`.trim();
 
-    const systemPrompt = `You are a pool equipment expert. Given a product query, provide helpful information about the product including:
+    const systemPrompt = `You are a commercial pool equipment expert with deep knowledge of products from major distributors including SOS Pool (sospool.com), Heritage Pool Supply, and other industry suppliers.
+
+Given a product query, provide helpful information including:
 1. A brief description of what the product is and what it does
-2. Key specifications if known
+2. Key specifications (dimensions, BTU ratings, compatibility, etc.)
 3. Common applications in commercial pool settings
-4. Any installation or compatibility notes
+4. Installation tips or compatibility notes
+5. Related parts that may be needed (gaskets, O-rings, etc.)
 
-Keep your response concise (2-3 sentences) and professional. Focus on practical information that would help a field technician.
+Reference trusted sources like SOS Pool, Pentair, Hayward, Raypak, and Jandy official specs when applicable.
 
-If you don't have specific information about this exact product, provide general information about this type of pool equipment.`;
+Keep your response concise (3-4 sentences) and professional. Focus on practical information that would help a field technician make informed decisions.
+
+If this is a heater part (tube bundle, refractory, heat exchanger), mention any model-specific compatibility requirements.`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",

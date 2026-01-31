@@ -27,16 +27,17 @@ import { ThemedText } from '@/components/ThemedText';
 import { useTheme } from '@/hooks/useTheme';
 import { HeritageProduct } from '@/lib/heritageProducts';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
+import { ESTIMATE_COLORS, formatCurrencyDollars, calculateTotals } from '@/constants/estimateDesign';
 import { mockProperties } from '@/lib/mockData';
 
 interface LineItem {
   id: string;
+  lineNumber: number;
   product: HeritageProduct;
   description: string;
   quantity: number;
   rate: number;
-  discount: number;
-  discountType: 'percent' | 'fixed';
+  taxable: boolean;
 }
 
 interface AIProductMatch {
@@ -235,8 +236,10 @@ export default function AceEstimateBuilderScreen() {
       return;
     }
 
-    const newItems: LineItem[] = selected.map(match => ({
+    const currentLength = lineItems.length;
+    const newItems: LineItem[] = selected.map((match, idx) => ({
       id: `item-${Date.now()}-${match.sku}`,
+      lineNumber: currentLength + idx + 1,
       product: {
         sku: match.sku,
         heritageNumber: '',
@@ -251,8 +254,7 @@ export default function AceEstimateBuilderScreen() {
       description: '',
       quantity: 1,
       rate: match.price,
-      discount: 0,
-      discountType: 'percent',
+      taxable: true,
     }));
 
     setLineItems(prev => [...prev, ...newItems]);
@@ -319,22 +321,27 @@ export default function AceEstimateBuilderScreen() {
   };
 
   const removeLineItem = (id: string) => {
-    setLineItems(prev => prev.filter(item => item.id !== id));
+    setLineItems(prev => 
+      prev.filter(item => item.id !== id).map((item, idx) => ({ ...item, lineNumber: idx + 1 }))
+    );
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
-  const updateLineItemQuantity = (id: string, quantity: number) => {
-    setLineItems(prev => prev.map(item =>
-      item.id === id ? { ...item, quantity: Math.max(1, quantity) } : item
-    ));
+  const updateLineItem = (id: string, updates: Partial<LineItem>) => {
+    setLineItems(prev => prev.map(item => item.id === id ? { ...item, ...updates } : item));
   };
 
-  const calculateItemAmount = (item: LineItem) => {
-    return item.quantity * item.rate;
-  };
+  const items = lineItems.map(item => ({
+    ...item,
+    amount: item.quantity * item.rate,
+  }));
 
-  const subtotal = lineItems.reduce((sum, item) => sum + calculateItemAmount(item), 0);
-  const taxAmount = subtotal * (taxRate / 100);
-  const total = subtotal + taxAmount;
+  const { subtotal, salesTaxAmount, totalAmount } = calculateTotals(
+    items.map(i => ({ ...i, productService: i.product.name, sku: i.product.sku })),
+    'percent',
+    0,
+    taxRate
+  );
 
   const handleSubmit = async () => {
     if (!selectedProperty) {
@@ -374,7 +381,7 @@ export default function AceEstimateBuilderScreen() {
       setIsSubmitting(false);
       Alert.alert(
         'Sent to Office!',
-        `Estimate ${estimateNumber} for ${selectedProperty} ($${total.toFixed(2)}) has been sent to the office for review.`,
+        `Estimate ${estimateNumber} for ${selectedProperty} (${formatCurrencyDollars(totalAmount)}) has been sent to the office for review.`,
         [{ text: 'OK', onPress: () => navigation.goBack() }]
       );
     }, 1500);
@@ -533,67 +540,94 @@ export default function AceEstimateBuilderScreen() {
           ) : null}
 
           {lineItems.length > 0 ? (
-            <View style={[styles.estimateSummary, { backgroundColor: theme.surface }]}>
-              <ThemedText style={styles.summaryTitle}>Estimate Items ({lineItems.length})</ThemedText>
-              {lineItems.map((item, index) => (
-                <View key={item.id} style={[styles.lineItemRow, { borderBottomColor: theme.border }]}>
-                  <View style={styles.lineItemNumBadge}>
-                    <ThemedText style={styles.lineItemNumText}>{index + 1}</ThemedText>
+            <View style={styles.qbEstimateSection}>
+              <View style={styles.qbSectionHeader}>
+                <Feather name="list" size={18} color={ESTIMATE_COLORS.textDark} />
+                <ThemedText style={styles.qbSectionLabel}>Line Items</ThemedText>
+              </View>
+
+              {lineItems.map((item) => (
+                <View key={item.id} style={styles.qbLineItemCard}>
+                  <View style={styles.qbLineItemHeader}>
+                    <View style={styles.qbLineItemNumber}>
+                      <ThemedText style={styles.qbLineItemNumberText}>{item.lineNumber}</ThemedText>
+                    </View>
+                    <ThemedText style={styles.qbLineItemName} numberOfLines={2}>{item.product.name}</ThemedText>
+                    <Pressable onPress={() => removeLineItem(item.id)} style={styles.qbDeleteButton}>
+                      <Feather name="trash-2" size={16} color={ESTIMATE_COLORS.statusRed} />
+                    </Pressable>
                   </View>
-                  <View style={styles.lineItemDetails}>
-                    <ThemedText style={styles.lineItemName} numberOfLines={1}>{item.product.name}</ThemedText>
-                    <ThemedText style={[styles.lineItemPrice, { color: theme.textSecondary }]}>
-                      ${item.rate.toFixed(2)} × {item.quantity} = ${calculateItemAmount(item).toFixed(2)}
-                    </ThemedText>
+
+                  <View style={styles.qbLineItemFields}>
+                    <View style={styles.qbLineItemField}>
+                      <ThemedText style={styles.qbFieldLabel}>Qty</ThemedText>
+                      <TextInput
+                        style={styles.qbFieldInput}
+                        value={item.quantity.toString()}
+                        onChangeText={(v) => updateLineItem(item.id, { quantity: parseInt(v) || 1 })}
+                        keyboardType="number-pad"
+                      />
+                    </View>
+                    <View style={styles.qbLineItemField}>
+                      <ThemedText style={styles.qbFieldLabel}>Rate</ThemedText>
+                      <TextInput
+                        style={styles.qbFieldInput}
+                        value={item.rate.toFixed(2)}
+                        onChangeText={(v) => updateLineItem(item.id, { rate: parseFloat(v) || 0 })}
+                        keyboardType="decimal-pad"
+                      />
+                    </View>
+                    <View style={styles.qbLineItemField}>
+                      <ThemedText style={styles.qbFieldLabel}>Amount</ThemedText>
+                      <View style={styles.qbAmountField}>
+                        <ThemedText style={styles.qbAmountText}>{formatCurrencyDollars(item.quantity * item.rate)}</ThemedText>
+                      </View>
+                    </View>
                   </View>
-                  <View style={styles.lineItemActions}>
-                    <Pressable
-                      onPress={() => updateLineItemQuantity(item.id, item.quantity - 1)}
-                      style={styles.qtyButton}
-                    >
-                      <Feather name="minus" size={16} color={theme.text} />
-                    </Pressable>
-                    <ThemedText style={styles.qtyText}>{item.quantity}</ThemedText>
-                    <Pressable
-                      onPress={() => updateLineItemQuantity(item.id, item.quantity + 1)}
-                      style={styles.qtyButton}
-                    >
-                      <Feather name="plus" size={16} color={theme.text} />
-                    </Pressable>
-                    <Pressable onPress={() => removeLineItem(item.id)} style={styles.removeButton}>
-                      <Feather name="trash-2" size={16} color={BrandColors.danger} />
-                    </Pressable>
+
+                  <View style={styles.qbDescRow}>
+                    <TextInput
+                      style={styles.qbDescInput}
+                      placeholder="Add description..."
+                      placeholderTextColor={ESTIMATE_COLORS.textSlate400}
+                      value={item.description}
+                      onChangeText={(v) => updateLineItem(item.id, { description: v })}
+                    />
                   </View>
                 </View>
               ))}
-              <View style={styles.totalsContainer}>
-                <View style={styles.totalRow}>
-                  <ThemedText style={[styles.totalLabel, { color: theme.textSecondary }]}>Subtotal</ThemedText>
-                  <ThemedText style={styles.totalValue}>${subtotal.toFixed(2)}</ThemedText>
+
+              <View style={styles.qbTotalsPanel}>
+                <View style={styles.qbTotalRow}>
+                  <ThemedText style={styles.qbTotalLabel}>Subtotal:</ThemedText>
+                  <ThemedText style={styles.qbTotalValue}>{formatCurrencyDollars(subtotal)}</ThemedText>
                 </View>
-                <View style={styles.totalRow}>
-                  <ThemedText style={[styles.totalLabel, { color: theme.textSecondary }]}>Tax ({taxRate}%)</ThemedText>
-                  <ThemedText style={styles.totalValue}>${taxAmount.toFixed(2)}</ThemedText>
+                <View style={styles.qbTotalRow}>
+                  <ThemedText style={styles.qbTotalLabel}>Tax ({taxRate}%):</ThemedText>
+                  <ThemedText style={styles.qbTotalValue}>{formatCurrencyDollars(salesTaxAmount)}</ThemedText>
                 </View>
-                <View style={[styles.totalRow, styles.grandTotalRow]}>
-                  <ThemedText style={styles.grandTotalLabel}>Total</ThemedText>
-                  <ThemedText style={styles.grandTotalValue}>${total.toFixed(2)}</ThemedText>
+                <View style={styles.qbGrandTotalRow}>
+                  <ThemedText style={styles.qbGrandTotalLabel}>TOTAL:</ThemedText>
+                  <ThemedText style={styles.qbGrandTotalValue}>{formatCurrencyDollars(totalAmount)}</ThemedText>
+                </View>
+
+                <View style={styles.qbActionButtons}>
+                  <Pressable
+                    onPress={handleSendToOffice}
+                    disabled={isSubmitting}
+                    style={styles.qbSendButton}
+                  >
+                    {isSubmitting ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <>
+                        <Feather name="send" size={18} color="#fff" />
+                        <ThemedText style={styles.qbSendButtonText}>Send to Office</ThemedText>
+                      </>
+                    )}
+                  </Pressable>
                 </View>
               </View>
-              <Pressable
-                onPress={handleSendToOffice}
-                disabled={isSubmitting}
-                style={styles.sendToOfficeButton}
-              >
-                {isSubmitting ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <>
-                    <Feather name="send" size={18} color="#fff" />
-                    <ThemedText style={styles.sendToOfficeText}>Send to Office</ThemedText>
-                  </>
-                )}
-              </Pressable>
             </View>
           ) : null}
         </ScrollView>
@@ -999,17 +1033,166 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: BrandColors.azureBlue,
   },
-  sendToOfficeButton: {
+  qbEstimateSection: {
+    backgroundColor: ESTIMATE_COLORS.bgSlate100,
+    borderRadius: 12,
+    padding: Spacing.md,
+    marginHorizontal: Spacing.md,
+    marginBottom: Spacing.md,
+  },
+  qbSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  qbSectionLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: ESTIMATE_COLORS.textDark,
+  },
+  qbLineItemCard: {
+    backgroundColor: ESTIMATE_COLORS.bgWhite,
+    borderWidth: 1,
+    borderColor: ESTIMATE_COLORS.borderLight,
+    borderRadius: 8,
+    padding: Spacing.md,
+    marginBottom: Spacing.sm,
+  },
+  qbLineItemHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  qbLineItemNumber: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: ESTIMATE_COLORS.secondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  qbLineItemNumberText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  qbLineItemName: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '500',
+    color: ESTIMATE_COLORS.textDark,
+  },
+  qbDeleteButton: {
+    padding: Spacing.xs,
+  },
+  qbLineItemFields: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  qbLineItemField: {
+    flex: 1,
+  },
+  qbFieldLabel: {
+    fontSize: 11,
+    color: ESTIMATE_COLORS.textSlate500,
+    marginBottom: 4,
+  },
+  qbFieldInput: {
+    backgroundColor: ESTIMATE_COLORS.bgSlate100,
+    borderWidth: 1,
+    borderColor: ESTIMATE_COLORS.borderLight,
+    borderRadius: 6,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 6,
+    fontSize: 14,
+    color: ESTIMATE_COLORS.textDark,
+    textAlign: 'center',
+  },
+  qbAmountField: {
+    backgroundColor: ESTIMATE_COLORS.bgSlate100,
+    borderRadius: 6,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 8,
+    alignItems: 'center',
+  },
+  qbAmountText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: ESTIMATE_COLORS.secondary,
+  },
+  qbDescRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  qbDescInput: {
+    flex: 1,
+    backgroundColor: ESTIMATE_COLORS.bgSlate100,
+    borderWidth: 1,
+    borderColor: ESTIMATE_COLORS.borderLight,
+    borderRadius: 6,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 6,
+    fontSize: 13,
+    color: ESTIMATE_COLORS.textDark,
+  },
+  qbTotalsPanel: {
+    backgroundColor: ESTIMATE_COLORS.bgWhite,
+    borderRadius: 8,
+    padding: Spacing.md,
+    marginTop: Spacing.sm,
+    borderWidth: 1,
+    borderColor: ESTIMATE_COLORS.borderLight,
+  },
+  qbTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+  },
+  qbTotalLabel: {
+    fontSize: 14,
+    color: ESTIMATE_COLORS.textSlate500,
+  },
+  qbTotalValue: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: ESTIMATE_COLORS.textDark,
+  },
+  qbGrandTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: Spacing.sm,
+    marginTop: Spacing.sm,
+    borderTopWidth: 2,
+    borderTopColor: ESTIMATE_COLORS.borderLight,
+  },
+  qbGrandTotalLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: ESTIMATE_COLORS.textDark,
+  },
+  qbGrandTotalValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: ESTIMATE_COLORS.secondary,
+  },
+  qbActionButtons: {
+    marginTop: Spacing.md,
+  },
+  qbSendButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.sm,
-    backgroundColor: '#1e3a5f',
+    backgroundColor: ESTIMATE_COLORS.primary,
     paddingVertical: 14,
-    borderRadius: BorderRadius.md,
-    marginTop: Spacing.lg,
+    borderRadius: 8,
   },
-  sendToOfficeText: {
+  qbSendButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',

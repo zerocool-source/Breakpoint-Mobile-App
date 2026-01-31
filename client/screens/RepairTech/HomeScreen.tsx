@@ -400,20 +400,41 @@ export default function HomeScreen() {
         icon="zap-off"
         onDismiss={() => setShowNotification(false)}
       />
-      <DraggableFlatList
-        style={{ flex: 1 }}
-        data={jobs}
-        keyExtractor={(item) => item.id}
-        renderItem={renderJob}
-        onDragEnd={handleDragEnd}
-        ListHeaderComponent={renderHeader}
-        contentContainerStyle={{
-          paddingBottom: tabBarHeight + Spacing.fabSize + Spacing['2xl'],
-          flexGrow: 1,
-        }}
-        scrollIndicatorInsets={{ bottom: insets.bottom }}
-        showsVerticalScrollIndicator={true}
-      />
+      {jobs.length > 0 ? (
+        <DraggableFlatList
+          style={{ flex: 1 }}
+          data={jobs}
+          keyExtractor={(item) => item.id}
+          renderItem={renderJob}
+          onDragEnd={handleDragEnd}
+          ListHeaderComponent={renderHeader}
+          contentContainerStyle={{
+            paddingBottom: tabBarHeight + Spacing.fabSize + Spacing['2xl'],
+            flexGrow: 1,
+          }}
+          scrollIndicatorInsets={{ bottom: insets.bottom }}
+          showsVerticalScrollIndicator={true}
+        />
+      ) : (
+        <Animated.ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{
+            paddingBottom: tabBarHeight + Spacing.fabSize + Spacing['2xl'],
+            flexGrow: 1,
+          }}
+          scrollIndicatorInsets={{ bottom: insets.bottom }}
+          showsVerticalScrollIndicator={true}
+        >
+          {renderHeader()}
+          <View style={styles.emptyJobsContainer}>
+            <Feather name="check-circle" size={48} color={BrandColors.emerald} />
+            <ThemedText style={styles.emptyJobsTitle}>All Caught Up!</ThemedText>
+            <ThemedText style={[styles.emptyJobsText, { color: theme.textSecondary }]}>
+              No jobs scheduled for today
+            </ThemedText>
+          </View>
+        </Animated.ScrollView>
+      )}
       <ChatFAB
         onPress={() => navigation.navigate('Chat')}
         bottom={tabBarHeight}
@@ -764,5 +785,23 @@ const styles = StyleSheet.create({
   swipeHintText: {
     fontSize: 11,
     fontWeight: '500',
+  },
+  emptyJobsContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.screenPadding,
+    paddingVertical: Spacing['2xl'],
+  },
+  emptyJobsTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginTop: Spacing.md,
+  },
+  emptyJobsText: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: Spacing.xs,
   },
 });

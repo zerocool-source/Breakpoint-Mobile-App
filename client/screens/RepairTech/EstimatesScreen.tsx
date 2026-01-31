@@ -2,7 +2,6 @@ import React, { useState, useCallback } from 'react';
 import { View, StyleSheet, FlatList, RefreshControl, Pressable, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useHeaderHeight } from '@react-navigation/elements';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInUp } from 'react-native-reanimated';
@@ -22,7 +21,6 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 export default function EstimatesScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { theme } = useTheme();
-  const headerHeight = useHeaderHeight();
   const tabBarHeight = useBottomTabBarHeight();
   const insets = useSafeAreaInsets();
 
@@ -105,7 +103,7 @@ export default function EstimatesScreen() {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={[
           {
-            paddingTop: headerHeight + Spacing.lg,
+            paddingTop: insets.top + Spacing.lg,
             paddingBottom: tabBarHeight + Spacing.xl,
             paddingHorizontal: Spacing.screenPadding,
           },

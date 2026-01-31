@@ -186,6 +186,17 @@ export const HERITAGE_PRODUCTS: HeritageProduct[] = [
   { sku: 'HEAT-EL-004', heritageNumber: 'RAY-E3T', name: 'Raypak E3T 27kW Electric Heater', category: 'Heaters', subcategory: 'Electric', price: 1799.00, unit: 'EA', manufacturer: 'Raypak' },
   { sku: 'HEAT-EL-005', heritageNumber: 'RAY-E3T-36', name: 'Raypak E3T 36kW Electric Heater', category: 'Heaters', subcategory: 'Electric', price: 2199.00, unit: 'EA', manufacturer: 'Raypak' },
 
+  // HEATERS - Tube Bundles (9 products)
+  { sku: 'HEAT-TB-001', heritageNumber: '014653F', name: 'Round Tube Bundle Raypak X-Therm', category: 'Heaters', subcategory: 'Tube Bundles', price: 28254.44, unit: 'EA', manufacturer: 'Raypak', description: 'Replacement tube bundle for Raypak X-Therm commercial heaters' },
+  { sku: 'HEAT-TB-002', heritageNumber: '010055F', name: 'Tube Bundle 207A Raypak', category: 'Heaters', subcategory: 'Tube Bundles', price: 1542.44, unit: 'EA', manufacturer: 'Raypak', description: 'Replacement tube bundle for Raypak 207A heaters' },
+  { sku: 'HEAT-TB-003', heritageNumber: '010061F', name: 'Tube Bundle 337A Raypak', category: 'Heaters', subcategory: 'Tube Bundles', price: 1439.20, unit: 'EA', manufacturer: 'Raypak', description: 'Replacement tube bundle for Raypak 337A heaters' },
+  { sku: 'HEAT-TB-004', heritageNumber: 'RAY006735F', name: 'Tube Bundle 405A Raypak', category: 'Heaters', subcategory: 'Tube Bundles', price: 1805.91, unit: 'EA', manufacturer: 'Raypak', description: 'Replacement tube bundle for Raypak 405A heaters' },
+  { sku: 'HEAT-TB-005', heritageNumber: '010058F', name: 'Tube Bundle 407A Old Style Raypak Before 12/2009', category: 'Heaters', subcategory: 'Tube Bundles', price: 1813.42, unit: 'EA', manufacturer: 'Raypak', description: 'Replacement tube bundle for Raypak 407A heaters manufactured before December 2009' },
+  { sku: 'HEAT-TB-006', heritageNumber: 'JNDR0589500', name: 'Tube Bundle Gasket & Seal Kit Jandy', category: 'Heaters', subcategory: 'Tube Bundles', price: 120.04, unit: 'EA', manufacturer: 'Jandy', description: 'Gasket and seal kit for Jandy tube bundle installation' },
+  { sku: 'HEAT-TB-007', heritageNumber: '800014B', name: 'Tube Bundle Gasket Kit Raypak', category: 'Heaters', subcategory: 'Tube Bundles', price: 40.19, unit: 'EA', manufacturer: 'Raypak', description: 'Gasket kit for Raypak tube bundle installation' },
+  { sku: 'HEAT-TB-008', heritageNumber: 'R0589405', name: 'Tube Bundle Jandy JXI', category: 'Heaters', subcategory: 'Tube Bundles', price: 1737.21, unit: 'EA', manufacturer: 'Jandy', description: 'Replacement tube bundle for Jandy JXI heaters' },
+  { sku: 'HEAT-TB-009', heritageNumber: '017977F', name: 'Tube Bundle Only 407A New Style After 12/2009', category: 'Heaters', subcategory: 'Tube Bundles', price: 2047.88, unit: 'EA', manufacturer: 'Raypak', description: 'Replacement tube bundle for Raypak 407A heaters manufactured after December 2009' },
+
   // AUTOMATION - Controllers (40 products)
   { sku: 'AUTO-CT-001', heritageNumber: 'HAY-AQL-PS4', name: 'Hayward OmniLogic Pool Control', category: 'Automation', subcategory: 'Controllers', price: 2499.00, unit: 'EA', manufacturer: 'Hayward' },
   { sku: 'AUTO-CT-002', heritageNumber: 'HAY-AQL-PS8', name: 'Hayward OmniLogic w/8 Relays', category: 'Automation', subcategory: 'Controllers', price: 2999.00, unit: 'EA', manufacturer: 'Hayward' },

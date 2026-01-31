@@ -1440,12 +1440,12 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   askAceButton: {
-    borderRadius: BorderRadius.md,
+    borderRadius: BorderRadius.lg,
     overflow: 'hidden',
   },
   askAceImage: {
-    width: 120,
-    height: 36,
+    width: 200,
+    height: 60,
   },
   aiFinderOverlay: {
     flex: 1,

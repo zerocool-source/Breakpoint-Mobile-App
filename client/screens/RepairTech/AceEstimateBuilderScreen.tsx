@@ -227,7 +227,7 @@ export default function AceEstimateBuilderScreen() {
 
   const addUserMessage = (text: string) => {
     const newMsg: AceMessage = {
-      id: `msg-${Date.now()}`,
+      id: `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       type: 'user',
       text,
       timestamp: new Date(),
@@ -238,7 +238,7 @@ export default function AceEstimateBuilderScreen() {
 
   const addAceMessage = (text: string, products?: AIProductMatch[], showDoneButton?: boolean) => {
     const newMsg: AceMessage = {
-      id: `msg-${Date.now()}`,
+      id: `ace-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       type: 'ace',
       text,
       timestamp: new Date(),

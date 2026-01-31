@@ -48,6 +48,14 @@ Breakpoint Commercial Pool Systems is a mobile-first field service management ap
     - **Vehicle Inspections**: Digital forms with visual damage marking.
     - **Assignment Management**: Creation and overview of technician assignments.
     - **Performance Coaching**: Documentation system for supportive actions.
+    - **Heritage Products Catalog**: 600+ pool products with role-based pricing visibility.
+        - **Product Data**: `client/lib/heritageProducts.ts` - Categories include Pumps, Filters, Heaters, Automation, Valves, Chemicals, Cleaners, Lighting, Covers, Safety, Plumbing, Motors, Parts, Tools, Labor.
+        - **Shared Component**: `client/components/ProductCatalog.tsx` - Reusable component with search, category/subcategory filtering.
+        - **Role-Based Visibility**:
+            - Repair Tech: Full pricing visible, can create repair estimates
+            - Service Tech: NO pricing visible, items auto-track to commission when added
+            - Supervisor: Full pricing visible, can create work orders with technician assignment
+        - **Navigation**: Products tab available on all roles with package icon.
 
 ## External Dependencies
 - **Database**: PostgreSQL

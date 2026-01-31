@@ -15,6 +15,7 @@ interface LogInteractionBody {
 }
 
 interface LogFeedbackBody {
+  userId?: string;
   interactionId: string;
   productSku: string;
   productName: string;
@@ -24,6 +25,7 @@ interface LogFeedbackBody {
 }
 
 interface LogEstimateCompletionBody {
+  userId?: string;
   sessionId: string;
   selectedProducts: Array<{ sku: string; quantity: number }>;
   propertyType?: string;
@@ -56,16 +58,17 @@ router.post("/log-feedback", express.json(), async (req: Request, res: Response)
     
     await db.execute(sql`
       INSERT INTO ai_product_feedback 
-        (interaction_id, product_sku, product_name, feedback_type, quantity_selected, confidence_score)
+        (user_id, interaction_id, product_sku, product_name, feedback_type, quantity_selected, confidence_score)
       VALUES 
-        (${body.interactionId}, ${body.productSku}, ${body.productName}, 
+        (${body.userId || null}, ${body.interactionId}, ${body.productSku}, ${body.productName}, 
          ${body.feedbackType}::feedback_type, ${body.quantitySelected || null}, ${body.confidenceScore || null})
     `);
 
     if (body.feedbackType === 'selected') {
       await db.execute(sql`
-        INSERT INTO ai_query_mappings (query_term, mapped_product_sku, success_count, total_count)
+        INSERT INTO ai_query_mappings (user_id, query_term, mapped_product_sku, success_count, total_count)
         VALUES (
+          ${body.userId || null},
           (SELECT user_query FROM ai_learning_interactions WHERE id = ${body.interactionId}),
           ${body.productSku}, 1, 1
         )
@@ -98,9 +101,9 @@ router.post("/log-estimate-completion", express.json(), async (req: Request, res
         
         await db.execute(sql`
           INSERT INTO ai_product_patterns 
-            (primary_product_sku, related_product_sku, co_occurrence_count, property_type, avg_quantity_ratio)
+            (user_id, primary_product_sku, related_product_sku, co_occurrence_count, property_type, avg_quantity_ratio)
           VALUES 
-            (${primary.sku}, ${related.sku}, 1, ${body.propertyType || null}, 
+            (${body.userId || null}, ${primary.sku}, ${related.sku}, 1, ${body.propertyType || null}, 
              ${related.quantity / (primary.quantity || 1)})
           ON CONFLICT DO NOTHING
         `);
@@ -111,6 +114,7 @@ router.post("/log-estimate-completion", express.json(), async (req: Request, res
               last_updated = NOW()
           WHERE primary_product_sku = ${primary.sku} 
             AND related_product_sku = ${related.sku}
+            AND (user_id = ${body.userId} OR user_id IS NULL)
         `);
       }
     }
@@ -125,27 +129,20 @@ router.post("/log-estimate-completion", express.json(), async (req: Request, res
 router.get("/learned-patterns/:productSku", async (req: Request, res: Response) => {
   try {
     const { productSku } = req.params;
-    const { propertyType } = req.query;
+    const { propertyType, userId } = req.query;
     
-    let result;
-    if (propertyType) {
-      result = await db.execute(sql`
-        SELECT related_product_sku, co_occurrence_count, avg_quantity_ratio
-        FROM ai_product_patterns
-        WHERE primary_product_sku = ${productSku}
-          AND (property_type = ${propertyType} OR property_type IS NULL)
-        ORDER BY co_occurrence_count DESC
-        LIMIT 5
-      `);
-    } else {
-      result = await db.execute(sql`
-        SELECT related_product_sku, co_occurrence_count, avg_quantity_ratio
-        FROM ai_product_patterns
-        WHERE primary_product_sku = ${productSku}
-        ORDER BY co_occurrence_count DESC
-        LIMIT 5
-      `);
-    }
+    // Get user-specific patterns first, then fall back to global patterns
+    const result = await db.execute(sql`
+      SELECT related_product_sku, co_occurrence_count, avg_quantity_ratio
+      FROM ai_product_patterns
+      WHERE primary_product_sku = ${productSku}
+        AND (user_id = ${userId as string || null} OR user_id IS NULL)
+        ${propertyType ? sql`AND (property_type = ${propertyType as string} OR property_type IS NULL)` : sql``}
+      ORDER BY 
+        CASE WHEN user_id = ${userId as string || null} THEN 0 ELSE 1 END,
+        co_occurrence_count DESC
+      LIMIT 5
+    `);
     
     res.json({ patterns: result.rows });
   } catch (error) {
@@ -157,13 +154,19 @@ router.get("/learned-patterns/:productSku", async (req: Request, res: Response) 
 router.get("/query-mappings/:query", async (req: Request, res: Response) => {
   try {
     const { query } = req.params;
+    const { userId } = req.query;
     
+    // Prioritize user-specific mappings, then fall back to global
     const result = await db.execute(sql`
       SELECT mapped_product_sku, success_count, total_count,
-             (success_count::float / total_count::float) as success_rate
+             (success_count::float / total_count::float) as success_rate,
+             user_id
       FROM ai_query_mappings
       WHERE query_term ILIKE ${'%' + query + '%'}
-      ORDER BY success_rate DESC, success_count DESC
+        AND (user_id = ${userId as string || null} OR user_id IS NULL)
+      ORDER BY 
+        CASE WHEN user_id = ${userId as string || null} THEN 0 ELSE 1 END,
+        success_rate DESC, success_count DESC
       LIMIT 10
     `);
     

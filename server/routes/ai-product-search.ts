@@ -12,14 +12,18 @@ const openai = new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
-async function getLearnedMappings(query: string): Promise<string[]> {
+async function getLearnedMappings(query: string, userId?: string): Promise<string[]> {
   try {
+    // Prioritize user-specific mappings, then fall back to global
     const result = await db.execute(sql`
       SELECT mapped_product_sku, success_count, total_count
       FROM ai_query_mappings
       WHERE query_term ILIKE ${'%' + query + '%'}
         AND (success_count::float / NULLIF(total_count::float, 0)) > 0.5
-      ORDER BY success_count DESC
+        AND (user_id = ${userId || null} OR user_id IS NULL)
+      ORDER BY 
+        CASE WHEN user_id = ${userId || null} THEN 0 ELSE 1 END,
+        success_count DESC
       LIMIT 5
     `);
     return result.rows.map((r: any) => r.mapped_product_sku);
@@ -29,15 +33,17 @@ async function getLearnedMappings(query: string): Promise<string[]> {
   }
 }
 
-async function getRelatedProducts(productSkus: string[], propertyType?: string): Promise<Array<{ sku: string; count: number }>> {
+async function getRelatedProducts(productSkus: string[], userId?: string, propertyType?: string): Promise<Array<{ sku: string; count: number }>> {
   try {
     if (productSkus.length === 0) return [];
     
     const skuList = productSkus.map(s => `'${s}'`).join(',');
+    // Prioritize user-specific patterns
     const result = await db.execute(sql`
       SELECT related_product_sku as sku, SUM(co_occurrence_count) as count
       FROM ai_product_patterns
       WHERE primary_product_sku IN (${sql.raw(skuList)})
+        AND (user_id = ${userId || null} OR user_id IS NULL)
       GROUP BY related_product_sku
       ORDER BY count DESC
       LIMIT 3
@@ -63,7 +69,7 @@ interface ProductMatch {
 
 router.post("/", express.json(), async (req: Request, res: Response) => {
   try {
-    const { description, query, generateDescription } = req.body;
+    const { description, query, generateDescription, userId } = req.body;
     const searchText = description || query;
 
     if (generateDescription && searchText) {
@@ -97,10 +103,10 @@ router.post("/", express.json(), async (req: Request, res: Response) => {
       unit: p.unit,
     }));
 
-    // Get learned mappings from past successful selections
-    const learnedMappings = await getLearnedMappings(searchText);
+    // Get user-specific learned mappings, with fallback to global mappings
+    const learnedMappings = await getLearnedMappings(searchText, userId);
     const learnedContext = learnedMappings.length > 0
-      ? `\n\nPREVIOUSLY SUCCESSFUL PRODUCTS for similar queries (prioritize these): ${learnedMappings.join(', ')}`
+      ? `\n\nPREVIOUSLY SUCCESSFUL PRODUCTS for similar queries${userId ? ' by this user' : ''} (prioritize these): ${learnedMappings.join(', ')}`
       : '';
 
     const systemPrompt = `You are a commercial pool equipment expert assistant. Your job is to match customer descriptions of needed parts or equipment to products in our catalog.
@@ -170,9 +176,9 @@ ${JSON.stringify(productList, null, 2)}`
       }
     }
 
-    // Get frequently paired products based on learned patterns
+    // Get frequently paired products based on learned patterns (user-specific first)
     const matchedSkus = matches.map(m => m.sku);
-    const relatedProducts = await getRelatedProducts(matchedSkus);
+    const relatedProducts = await getRelatedProducts(matchedSkus, userId);
     const suggestions: ProductMatch[] = [];
     
     for (const related of relatedProducts) {

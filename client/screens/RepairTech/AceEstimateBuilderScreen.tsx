@@ -27,11 +27,17 @@ import { getLocalApiUrl, joinUrl } from '@/lib/query-client';
 
 import { ThemedText } from '@/components/ThemedText';
 import { useTheme } from '@/hooks/useTheme';
+import { useAuth } from '@/context/AuthContext';
 import { ProductCatalog } from '@/components/ProductCatalog';
 import { HeritageProduct } from '@/lib/heritageProducts';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
 import { ESTIMATE_COLORS, STATUS_BADGES, generateEstimateNumber, calculateTotals, formatCurrencyDollars } from '@/constants/estimateDesign';
 import { mockProperties } from '@/lib/mockData';
+
+const getFirstName = (fullName: string): string => {
+  if (!fullName) return '';
+  return fullName.split(' ')[0];
+};
 
 interface LineItem {
   id: string;
@@ -92,9 +98,14 @@ export default function AceEstimateBuilderScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<RouteProp<AceRouteParams, 'AceEstimateBuilder'>>();
   const { theme } = useTheme();
+  const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
   const chatScrollRef = useRef<ScrollView>(null);
+  
+  // User info for personalized experience
+  const userId = user?.id || null;
+  const userFirstName = user?.name ? getFirstName(user.name) : '';
   
   // AI Learning session tracking
   const sessionIdRef = useRef(`session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
@@ -137,14 +148,21 @@ export default function AceEstimateBuilderScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [showAceModal, setShowAceModal] = useState(false);
-  const [messages, setMessages] = useState<AceMessage[]>([
-    {
+  const [messages, setMessages] = useState<AceMessage[]>([]);
+  
+  // Initialize with personalized greeting
+  useEffect(() => {
+    const greeting = userFirstName 
+      ? `Hey ${userFirstName}! I'm Ace, your AI assistant. I've been learning from your past estimates to give you better suggestions. Tell me what products or repairs you need, and I'll help you find them!`
+      : "Hey there! I'm Ace, your AI assistant. Tell me what products or repairs you need for this estimate, and I'll help you find them in our catalog. Just type or speak!";
+    
+    setMessages([{
       id: '1',
       type: 'ace',
-      text: "Hey there! I'm Ace, your AI assistant. Tell me what products or repairs you need for this estimate, and I'll help you find them in our catalog. Just type or speak!",
+      text: greeting,
       timestamp: new Date(),
-    },
-  ]);
+    }]);
+  }, [userFirstName]);
   const [userInput, setUserInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -253,7 +271,7 @@ export default function AceEstimateBuilderScreen() {
     setTimeout(() => chatScrollRef.current?.scrollToEnd({ animated: true }), 100);
   };
 
-  // AI Learning helper functions
+  // AI Learning helper functions - includes userId for per-user personalization
   const logAIInteraction = async (userQuery: string, suggestedProducts: AIProductMatch[]) => {
     try {
       const apiUrl = getLocalApiUrl();
@@ -261,6 +279,7 @@ export default function AceEstimateBuilderScreen() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          userId,
           userQuery,
           suggestedProducts: suggestedProducts.map(p => ({ 
             sku: p.sku, 
@@ -294,6 +313,7 @@ export default function AceEstimateBuilderScreen() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          userId,
           interactionId: lastInteractionIdRef.current,
           productSku,
           productName,
@@ -315,6 +335,7 @@ export default function AceEstimateBuilderScreen() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          userId,
           sessionId: sessionIdRef.current,
           selectedProducts: lineItems.map(item => ({ 
             sku: item.product.sku, 
@@ -373,7 +394,7 @@ export default function AceEstimateBuilderScreen() {
       const response = await fetch(joinUrl(apiUrl, '/api/ai-product-search'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description }),
+        body: JSON.stringify({ description, userId }),
       });
 
       if (!response.ok) throw new Error('AI search failed');
@@ -384,12 +405,14 @@ export default function AceEstimateBuilderScreen() {
       if (data.matches && data.matches.length > 0) {
         const matches = data.matches.map((m: any) => ({ ...m, selected: true }));
         
-        // Log AI interaction for learning
+        // Log AI interaction for learning (now includes userId for per-user learning)
         logAIInteraction(description, matches);
         
         let messageText = `I found ${matches.length} product${matches.length > 1 ? 's' : ''} that match what you're looking for!`;
         if (data.learnedFromHistory) {
-          messageText += ' (Improved by learning from past estimates)';
+          messageText += userFirstName 
+            ? ` (Based on your past estimates, ${userFirstName})`
+            : ' (Improved by learning from past estimates)';
         }
         messageText += ' Tap to select and add them to your estimate:';
         

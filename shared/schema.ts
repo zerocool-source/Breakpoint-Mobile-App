@@ -350,6 +350,7 @@ export const aiProductFeedback = pgTable("ai_product_feedback", {
   id: varchar("id", { length: 36 })
     .primaryKey()
     .default(sql`gen_random_uuid()`),
+  userId: varchar("user_id", { length: 36 }).references(() => users.id),
   interactionId: varchar("interaction_id", { length: 36 }).references(() => aiLearningInteractions.id),
   productSku: text("product_sku").notNull(),
   productName: text("product_name").notNull(),
@@ -364,6 +365,7 @@ export const aiProductPatterns = pgTable("ai_product_patterns", {
   id: varchar("id", { length: 36 })
     .primaryKey()
     .default(sql`gen_random_uuid()`),
+  userId: varchar("user_id", { length: 36 }).references(() => users.id),
   primaryProductSku: text("primary_product_sku").notNull(),
   relatedProductSku: text("related_product_sku").notNull(),
   coOccurrenceCount: integer("co_occurrence_count").notNull().default(1),
@@ -377,6 +379,7 @@ export const aiQueryMappings = pgTable("ai_query_mappings", {
   id: varchar("id", { length: 36 })
     .primaryKey()
     .default(sql`gen_random_uuid()`),
+  userId: varchar("user_id", { length: 36 }).references(() => users.id),
   queryTerm: text("query_term").notNull(),
   mappedProductSku: text("mapped_product_sku").notNull(),
   successCount: integer("success_count").notNull().default(1), // Times this mapping led to selection

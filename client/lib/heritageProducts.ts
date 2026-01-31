@@ -8,6 +8,7 @@ export interface HeritageProduct {
   unit: string;
   manufacturer: string;
   description?: string;
+  imageUrl?: string;
 }
 
 export const HERITAGE_CATEGORIES = [

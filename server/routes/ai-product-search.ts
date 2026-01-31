@@ -65,6 +65,9 @@ interface ProductMatch {
   unit: string;
   confidence: number;
   reason: string;
+  imageUrl?: string;
+  description?: string;
+  webInfo?: string;
 }
 
 router.post("/", express.json(), async (req: Request, res: Response) => {
@@ -172,6 +175,8 @@ ${JSON.stringify(productList, null, 2)}`
           unit: product.unit,
           confidence: match.confidence,
           reason: match.reason,
+          imageUrl: product.imageUrl,
+          description: product.description,
         });
       }
     }
@@ -195,6 +200,8 @@ ${JSON.stringify(productList, null, 2)}`
             unit: product.unit,
             confidence: Math.min(90, 50 + related.count * 5),
             reason: `Frequently used together (${related.count} times)`,
+            imageUrl: product.imageUrl,
+            description: product.description,
           });
         }
       }
@@ -208,6 +215,48 @@ ${JSON.stringify(productList, null, 2)}`
   } catch (error) {
     console.error("AI product search error:", error);
     res.status(500).json({ error: "Failed to search products" });
+  }
+});
+
+router.post("/web-info", express.json(), async (req: Request, res: Response) => {
+  try {
+    const { productName, manufacturer, partNumber } = req.body;
+
+    if (!productName) {
+      return res.status(400).json({ error: "Product name is required" });
+    }
+
+    const searchQuery = `${manufacturer || ''} ${productName} ${partNumber || ''} pool equipment specifications`.trim();
+
+    const systemPrompt = `You are a pool equipment expert. Given a product query, provide helpful information about the product including:
+1. A brief description of what the product is and what it does
+2. Key specifications if known
+3. Common applications in commercial pool settings
+4. Any installation or compatibility notes
+
+Keep your response concise (2-3 sentences) and professional. Focus on practical information that would help a field technician.
+
+If you don't have specific information about this exact product, provide general information about this type of pool equipment.`;
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: `Product: ${searchQuery}` },
+      ],
+      temperature: 0.5,
+      max_tokens: 300,
+    });
+
+    const webInfo = response.choices[0]?.message?.content?.trim() || "";
+
+    res.json({ 
+      webInfo,
+      searchQuery,
+    });
+  } catch (error) {
+    console.error("Web info search error:", error);
+    res.status(500).json({ error: "Failed to fetch web info" });
   }
 });
 

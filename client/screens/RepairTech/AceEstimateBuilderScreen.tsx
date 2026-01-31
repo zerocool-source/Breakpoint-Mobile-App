@@ -65,6 +65,10 @@ interface AIProductMatch {
   confidence: number;
   reason: string;
   selected: boolean;
+  imageUrl?: string;
+  description?: string;
+  webInfo?: string;
+  loadingInfo?: boolean;
 }
 
 interface AceMessage {
@@ -488,6 +492,64 @@ export default function AceEstimateBuilderScreen() {
     setLineItems(prev => [...prev, ...newItems]);
     addAceMessage(`Added ${selected.length} item${selected.length > 1 ? 's' : ''} to your estimate. Need anything else?`);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
+
+  const fetchProductWebInfo = async (msgId: string, product: AIProductMatch) => {
+    setMessages(prev => prev.map(msg => {
+      if (msg.id === msgId && msg.products) {
+        return {
+          ...msg,
+          products: msg.products.map(p =>
+            p.sku === product.sku ? { ...p, loadingInfo: true } : p
+          ),
+        };
+      }
+      return msg;
+    }));
+
+    try {
+      const apiUrl = getLocalApiUrl();
+      const response = await fetch(joinUrl(apiUrl, '/api/ai-product-search/web-info'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productName: product.name,
+          manufacturer: product.manufacturer,
+          partNumber: product.sku,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to fetch info');
+
+      const data = await response.json();
+
+      setMessages(prev => prev.map(msg => {
+        if (msg.id === msgId && msg.products) {
+          return {
+            ...msg,
+            products: msg.products.map(p =>
+              p.sku === product.sku ? { ...p, webInfo: data.webInfo, loadingInfo: false } : p
+            ),
+          };
+        }
+        return msg;
+      }));
+
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch (error) {
+      console.error('Failed to fetch web info:', error);
+      setMessages(prev => prev.map(msg => {
+        if (msg.id === msgId && msg.products) {
+          return {
+            ...msg,
+            products: msg.products.map(p =>
+              p.sku === product.sku ? { ...p, loadingInfo: false, webInfo: 'Unable to fetch additional info.' } : p
+            ),
+          };
+        }
+        return msg;
+      }));
+    }
   };
 
   const startRecording = async () => {
@@ -1276,43 +1338,66 @@ export default function AceEstimateBuilderScreen() {
                       {msg.products && msg.products.length > 0 ? (
                         <View style={styles.productResults}>
                           {msg.products.map((product) => (
-                            <Pressable
-                              key={product.sku}
-                              onPress={() => toggleProductSelection(msg.id, product.sku)}
-                              style={[
-                                styles.productCard,
-                                { borderColor: product.selected ? BrandColors.azureBlue : ESTIMATE_COLORS.borderLight },
-                              ]}
-                            >
-                              <View style={styles.productCheckbox}>
-                                <View style={[
-                                  styles.checkbox,
-                                  product.selected && { backgroundColor: BrandColors.azureBlue, borderColor: BrandColors.azureBlue },
-                                ]}>
-                                  {product.selected ? (
-                                    <Feather name="check" size={14} color="#fff" />
-                                  ) : null}
+                            <View key={product.sku} style={styles.productCardWrapper}>
+                              <Pressable
+                                onPress={() => toggleProductSelection(msg.id, product.sku)}
+                                style={[
+                                  styles.productCard,
+                                  { borderColor: product.selected ? BrandColors.azureBlue : ESTIMATE_COLORS.borderLight },
+                                ]}
+                              >
+                                <View style={styles.productCheckbox}>
+                                  <View style={[
+                                    styles.checkbox,
+                                    product.selected && { backgroundColor: BrandColors.azureBlue, borderColor: BrandColors.azureBlue },
+                                  ]}>
+                                    {product.selected ? (
+                                      <Feather name="check" size={14} color="#fff" />
+                                    ) : null}
+                                  </View>
                                 </View>
-                              </View>
-                              <View style={styles.productInfo}>
-                                <ThemedText style={styles.productName} numberOfLines={2}>{product.name}</ThemedText>
-                                <ThemedText style={styles.productMeta}>
-                                  {product.manufacturer} • {product.category}
-                                </ThemedText>
-                                <View style={styles.productReason}>
-                                  <Feather name="zap" size={12} color={BrandColors.tropicalTeal} />
-                                  <ThemedText style={styles.productReasonText}>
-                                    {product.reason}
+                                <View style={styles.productInfo}>
+                                  <ThemedText style={styles.productName} numberOfLines={2}>{product.name}</ThemedText>
+                                  <ThemedText style={styles.productMeta}>
+                                    {product.manufacturer} • {product.category}
                                   </ThemedText>
+                                  <View style={styles.productReason}>
+                                    <Feather name="zap" size={12} color={BrandColors.tropicalTeal} />
+                                    <ThemedText style={styles.productReasonText}>
+                                      {product.reason}
+                                    </ThemedText>
+                                  </View>
                                 </View>
-                              </View>
-                              <View style={styles.productPriceContainer}>
-                                <ThemedText style={styles.productPrice}>${product.price.toFixed(2)}</ThemedText>
-                                <View style={[styles.confidenceBadge, { backgroundColor: getConfidenceColor(product.confidence) }]}>
-                                  <ThemedText style={styles.confidenceText}>{product.confidence}%</ThemedText>
+                                <View style={styles.productPriceContainer}>
+                                  <ThemedText style={styles.productPrice}>${product.price.toFixed(2)}</ThemedText>
+                                  <View style={[styles.confidenceBadge, { backgroundColor: getConfidenceColor(product.confidence) }]}>
+                                    <ThemedText style={styles.confidenceText}>{product.confidence}%</ThemedText>
+                                  </View>
                                 </View>
-                              </View>
-                            </Pressable>
+                              </Pressable>
+                              <Pressable
+                                onPress={() => fetchProductWebInfo(msg.id, product)}
+                                style={styles.moreInfoButton}
+                                disabled={product.loadingInfo}
+                              >
+                                {product.loadingInfo ? (
+                                  <ActivityIndicator size="small" color={BrandColors.azureBlue} />
+                                ) : (
+                                  <>
+                                    <Feather name="globe" size={14} color={BrandColors.azureBlue} />
+                                    <ThemedText style={styles.moreInfoText}>
+                                      {product.webInfo ? 'Info Loaded' : 'Ask Ace for More Info'}
+                                    </ThemedText>
+                                  </>
+                                )}
+                              </Pressable>
+                              {product.webInfo ? (
+                                <View style={styles.webInfoBox}>
+                                  <Feather name="info" size={14} color={BrandColors.tropicalTeal} style={{ marginRight: 6 }} />
+                                  <ThemedText style={styles.webInfoText}>{product.webInfo}</ThemedText>
+                                </View>
+                              ) : null}
+                            </View>
                           ))}
                           <Pressable
                             onPress={() => addProductsFromMessage(msg.id)}
@@ -2364,6 +2449,41 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 10,
     fontWeight: '600',
+  },
+  productCardWrapper: {
+    marginBottom: Spacing.xs,
+  },
+  moreInfoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: Spacing.md,
+    backgroundColor: 'rgba(0, 120, 212, 0.08)',
+    borderRadius: BorderRadius.sm,
+    marginTop: 4,
+    gap: 6,
+  },
+  moreInfoText: {
+    fontSize: 12,
+    color: BrandColors.azureBlue,
+    fontWeight: '500',
+  },
+  webInfoBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(23, 190, 187, 0.08)',
+    borderRadius: BorderRadius.sm,
+    padding: Spacing.sm,
+    marginTop: 6,
+    borderLeftWidth: 3,
+    borderLeftColor: BrandColors.tropicalTeal,
+  },
+  webInfoText: {
+    flex: 1,
+    fontSize: 12,
+    color: ESTIMATE_COLORS.textSlate500,
+    lineHeight: 18,
   },
   addSelectedButton: {
     flexDirection: 'row',

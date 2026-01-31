@@ -9,6 +9,7 @@ import ReportIssueModal from '@/screens/Modals/ReportIssueModal';
 import ChatModal from '@/screens/Modals/ChatModal';
 import CreateEstimateModal from '@/screens/Modals/CreateEstimateModal';
 import EstimateBuilderScreen from '@/screens/RepairTech/EstimateBuilderScreen';
+import AceEstimateBuilderScreen from '@/screens/RepairTech/AceEstimateBuilderScreen';
 import { useScreenOptions } from '@/hooks/useScreenOptions';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors } from '@/constants/theme';
@@ -19,6 +20,7 @@ export type RootStackParamList = {
   Chat: undefined;
   CreateEstimate: undefined;
   EstimateBuilder: undefined;
+  AceEstimateBuilder: undefined;
   EstimateDetail: { estimateId: string };
 };
 
@@ -81,6 +83,14 @@ export default function RootStackNavigator() {
       <Stack.Screen
         name="EstimateBuilder"
         component={EstimateBuilderScreen}
+        options={{
+          headerShown: false,
+          presentation: 'fullScreenModal',
+        }}
+      />
+      <Stack.Screen
+        name="AceEstimateBuilder"
+        component={AceEstimateBuilderScreen}
         options={{
           headerShown: false,
           presentation: 'fullScreenModal',

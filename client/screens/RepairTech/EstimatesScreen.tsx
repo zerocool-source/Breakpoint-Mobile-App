@@ -61,7 +61,7 @@ export default function EstimatesScreen() {
         style={styles.aceCreateCard}
       >
         <Image
-          source={require('../../../assets/images/ask-ace-button.png')}
+          source={require('../../../assets/images/ace-ai-hero.png')}
           style={styles.aceCardImage}
           resizeMode="contain"
         />
@@ -142,9 +142,9 @@ const styles = StyleSheet.create({
     ...Shadows.card,
   },
   aceCardImage: {
-    width: 60,
-    height: 48,
-    borderRadius: BorderRadius.sm,
+    width: 80,
+    height: 80,
+    borderRadius: BorderRadius.md,
   },
   aceCardContent: {
     flex: 1,

@@ -933,7 +933,7 @@ export default function AceEstimateBuilderScreen() {
         <Animated.View style={[styles.aceFloatingButton, { transform: [{ scale: pulseAnim }] }]}>
           <Pressable onPress={() => setShowAceModal(true)} style={styles.aceButtonInner}>
             <Image
-              source={require('../../../assets/images/ask-ace-button.png')}
+              source={require('../../../assets/images/ace-ai-hero.png')}
               style={styles.aceButtonImage}
               resizeMode="contain"
             />
@@ -1108,7 +1108,7 @@ export default function AceEstimateBuilderScreen() {
           <View style={styles.aceModalHeader}>
             <View style={styles.aceModalTitleRow}>
               <Image
-                source={require('../../../assets/images/ask-ace-button.png')}
+                source={require('../../../assets/images/ace-ai-hero.png')}
                 style={styles.aceModalAvatar}
                 resizeMode="contain"
               />
@@ -1136,7 +1136,7 @@ export default function AceEstimateBuilderScreen() {
                 {msg.type === 'ace' ? (
                   <View style={styles.aceMessageRow}>
                     <Image
-                      source={require('../../../assets/images/ask-ace-button.png')}
+                      source={require('../../../assets/images/ace-ai-hero.png')}
                       style={styles.aceAvatar}
                       resizeMode="contain"
                     />
@@ -1215,7 +1215,7 @@ export default function AceEstimateBuilderScreen() {
               <View style={styles.messageContainer}>
                 <View style={styles.aceMessageRow}>
                   <Image
-                    source={require('../../../assets/images/ask-ace-button.png')}
+                    source={require('../../../assets/images/ace-ai-hero.png')}
                     style={styles.aceAvatar}
                     resizeMode="contain"
                   />
@@ -1672,9 +1672,9 @@ const styles = StyleSheet.create({
     borderColor: ESTIMATE_COLORS.secondary,
   },
   askAceSmallImg: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
   askAceSmallText: {
     fontSize: 14,
@@ -1810,9 +1810,9 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   aceButtonInner: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: ESTIMATE_COLORS.bgWhite,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1823,9 +1823,9 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   aceButtonImage: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
   },
   floatingTotals: {
     position: 'absolute',

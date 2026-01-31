@@ -572,7 +572,7 @@ export default function EstimateBuilderScreen() {
             <View style={styles.lineItemButtons}>
               <Pressable onPress={() => setShowAIFinder(true)} style={styles.askAceButton}>
                 <Image 
-                  source={require('../../../assets/images/ask-ace-button.png')} 
+                  source={require('../../../assets/images/ace-ai-hero.png')} 
                   style={styles.askAceImage}
                   resizeMode="contain"
                 />
@@ -972,7 +972,7 @@ export default function EstimateBuilderScreen() {
                 <View style={styles.thinkingBubble}>
                   <View style={styles.thinkingBubbleContent}>
                     <Image 
-                      source={require('../../../assets/images/ask-ace-button.png')} 
+                      source={require('../../../assets/images/ace-ai-hero.png')} 
                       style={styles.thinkingAvatar}
                       resizeMode="contain"
                     />
@@ -1552,8 +1552,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   askAceImage: {
-    width: 200,
-    height: 60,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
   },
   aiFinderOverlay: {
     flex: 1,

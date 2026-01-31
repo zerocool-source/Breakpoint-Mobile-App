@@ -95,6 +95,8 @@ export default function AceEstimateBuilderScreen() {
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [showProductCatalog, setShowProductCatalog] = useState(false);
 
+  const [estimateDescription, setEstimateDescription] = useState('');
+  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
   const [customerNote, setCustomerNote] = useState('');
   const [memoOnStatement, setMemoOnStatement] = useState('');
   const [techNotes, setTechNotes] = useState('');
@@ -435,6 +437,46 @@ export default function AceEstimateBuilderScreen() {
     setPhotos(prev => prev.filter(p => p.id !== id));
   };
 
+  const generateDescriptionWithAce = async () => {
+    if (lineItems.length === 0) {
+      Alert.alert('No Items', 'Add some items to the estimate first, then Ace can help write a description.');
+      return;
+    }
+
+    setIsGeneratingDescription(true);
+    try {
+      const itemsList = lineItems.map(item => `${item.quantity}x ${item.product.name}`).join(', ');
+      const prompt = `Write a professional, concise quote description for a commercial pool repair estimate that includes: ${itemsList}. Keep it to 2-3 sentences describing the work to be performed.`;
+
+      const apiUrl = getLocalApiUrl();
+      const response = await fetch(joinUrl(apiUrl, '/api/ai-product-search'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: prompt, generateDescription: true }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.description) {
+          setEstimateDescription(data.description);
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        } else {
+          const productNames = lineItems.map(item => item.product.name).join(', ');
+          setEstimateDescription(`Repair and replacement services including: ${productNames}. All work performed by certified technicians with industry-standard equipment and materials.`);
+        }
+      } else {
+        const productNames = lineItems.map(item => item.product.name).join(', ');
+        setEstimateDescription(`Repair and replacement services including: ${productNames}. All work performed by certified technicians with industry-standard equipment and materials.`);
+      }
+    } catch (error) {
+      console.error('Failed to generate description:', error);
+      const productNames = lineItems.map(item => item.product.name).join(', ');
+      setEstimateDescription(`Repair and replacement services including: ${productNames}. All work performed by certified technicians with industry-standard equipment and materials.`);
+    } finally {
+      setIsGeneratingDescription(false);
+    }
+  };
+
   const items = lineItems.map(item => ({
     ...item,
     amount: item.quantity * item.rate,
@@ -669,6 +711,67 @@ export default function AceEstimateBuilderScreen() {
                 <ThemedText style={styles.emptySubtext}>Tap "Add Item" or ask Ace to find products</ThemedText>
               </View>
             ) : null}
+
+            {lineItems.length > 0 ? (
+              <View style={styles.photoRow}>
+                <Pressable onPress={takePhoto} style={styles.photoIconButton}>
+                  <Feather name="camera" size={18} color={ESTIMATE_COLORS.secondary} />
+                </Pressable>
+                <Pressable onPress={pickPhoto} style={styles.photoIconButton}>
+                  <Feather name="image" size={18} color={ESTIMATE_COLORS.secondary} />
+                </Pressable>
+                {photos.length > 0 ? (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photoThumbnails}>
+                    {photos.map(photo => (
+                      <View key={photo.id} style={styles.photoThumbSmall}>
+                        <Image source={{ uri: photo.uri }} style={styles.photoThumbSmallImg} />
+                        <Pressable onPress={() => removePhoto(photo.id)} style={styles.photoRemoveSmall}>
+                          <Feather name="x" size={10} color="#fff" />
+                        </Pressable>
+                      </View>
+                    ))}
+                  </ScrollView>
+                ) : (
+                  <ThemedText style={styles.photoHintInline}>Add photos</ThemedText>
+                )}
+              </View>
+            ) : null}
+          </View>
+
+          <View style={styles.sectionCard}>
+            <View style={styles.descriptionHeader}>
+              <View style={styles.descriptionTitleRow}>
+                <Feather name="file-text" size={18} color={ESTIMATE_COLORS.textDark} />
+                <ThemedText style={[styles.sectionLabel, { marginBottom: 0 }]}>Quote Description</ThemedText>
+              </View>
+              <Pressable
+                onPress={generateDescriptionWithAce}
+                disabled={isGeneratingDescription}
+                style={styles.askAceSmallButton}
+              >
+                {isGeneratingDescription ? (
+                  <ActivityIndicator size="small" color={ESTIMATE_COLORS.secondary} />
+                ) : (
+                  <>
+                    <Image
+                      source={require('../../../assets/images/ask-ace-button.png')}
+                      style={styles.askAceSmallImg}
+                      resizeMode="contain"
+                    />
+                    <ThemedText style={styles.askAceSmallText}>Ask Ace</ThemedText>
+                  </>
+                )}
+              </Pressable>
+            </View>
+            <TextInput
+              style={styles.descriptionInput}
+              placeholder="Describe the repairs and work to be performed..."
+              placeholderTextColor={ESTIMATE_COLORS.textSlate400}
+              value={estimateDescription}
+              onChangeText={setEstimateDescription}
+              multiline
+              numberOfLines={4}
+            />
           </View>
 
           <View style={styles.sectionCard}>
@@ -714,38 +817,7 @@ export default function AceEstimateBuilderScreen() {
             </View>
           </View>
 
-          <View style={styles.sectionCard}>
-            <View style={styles.sectionHeader}>
-              <Feather name="camera" size={18} color={ESTIMATE_COLORS.textDark} />
-              <ThemedText style={[styles.sectionLabel, { marginBottom: 0 }]}>Supporting Photos (optional)</ThemedText>
-            </View>
-            <ThemedText style={styles.photoHint}>Max 10 MB per photo</ThemedText>
-
-            <View style={styles.photoButtons}>
-              <Pressable onPress={takePhoto} style={styles.photoButton}>
-                <Feather name="camera" size={18} color={ESTIMATE_COLORS.secondary} />
-                <ThemedText style={styles.photoButtonText}>Take Photo</ThemedText>
-              </Pressable>
-              <Pressable onPress={pickPhoto} style={styles.photoButton}>
-                <Feather name="image" size={18} color={ESTIMATE_COLORS.secondary} />
-                <ThemedText style={styles.photoButtonText}>Upload</ThemedText>
-              </Pressable>
-            </View>
-
-            {photos.length > 0 ? (
-              <View style={styles.photoGrid}>
-                {photos.map(photo => (
-                  <View key={photo.id} style={styles.photoItem}>
-                    <Image source={{ uri: photo.uri }} style={styles.photoThumb} />
-                    <Pressable onPress={() => removePhoto(photo.id)} style={styles.photoRemove}>
-                      <Feather name="x" size={12} color="#fff" />
-                    </Pressable>
-                  </View>
-                ))}
-              </View>
-            ) : null}
-          </View>
-        </ScrollView>
+          </ScrollView>
 
         <Animated.View style={[styles.aceFloatingButton, { transform: [{ scale: pulseAnim }] }]}>
           <Pressable onPress={() => setShowAceModal(true)} style={styles.aceButtonInner}>
@@ -1394,6 +1466,99 @@ const styles = StyleSheet.create({
     color: ESTIMATE_COLORS.textSlate400,
     marginTop: 4,
     textAlign: 'center',
+  },
+  photoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: Spacing.md,
+    paddingTop: Spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: ESTIMATE_COLORS.borderLight,
+    gap: Spacing.sm,
+  },
+  photoIconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: ESTIMATE_COLORS.bgWhite,
+    borderWidth: 1,
+    borderColor: ESTIMATE_COLORS.borderLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoThumbnails: {
+    flex: 1,
+  },
+  photoThumbSmall: {
+    width: 36,
+    height: 36,
+    borderRadius: 6,
+    marginRight: Spacing.xs,
+    position: 'relative',
+  },
+  photoThumbSmallImg: {
+    width: 36,
+    height: 36,
+    borderRadius: 6,
+  },
+  photoRemoveSmall: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: ESTIMATE_COLORS.statusRed,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoHintInline: {
+    fontSize: 12,
+    color: ESTIMATE_COLORS.textSlate400,
+    flex: 1,
+  },
+  descriptionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+  },
+  descriptionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  askAceSmallButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#E8F4FD',
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: ESTIMATE_COLORS.secondary,
+  },
+  askAceSmallImg: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+  },
+  askAceSmallText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: ESTIMATE_COLORS.secondary,
+  },
+  descriptionInput: {
+    backgroundColor: ESTIMATE_COLORS.bgWhite,
+    borderWidth: 1,
+    borderColor: ESTIMATE_COLORS.borderLight,
+    borderRadius: 8,
+    padding: Spacing.md,
+    fontSize: 14,
+    color: ESTIMATE_COLORS.textDark,
+    minHeight: 100,
+    textAlignVertical: 'top',
   },
   noteField: {
     marginBottom: Spacing.md,

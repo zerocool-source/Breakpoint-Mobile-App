@@ -24,9 +24,27 @@ interface ProductMatch {
 
 router.post("/", express.json(), async (req: Request, res: Response) => {
   try {
-    const { description } = req.body;
+    const { description, query, generateDescription } = req.body;
+    const searchText = description || query;
 
-    if (!description || typeof description !== "string") {
+    if (generateDescription && searchText) {
+      const descResponse = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { 
+            role: "system", 
+            content: "You are a professional commercial pool service technician. Write clear, professional quote descriptions for repair estimates. Keep descriptions concise (2-3 sentences) and focus on the work being performed." 
+          },
+          { role: "user", content: searchText },
+        ],
+        temperature: 0.7,
+        max_tokens: 200,
+      });
+      const generatedDescription = descResponse.choices[0]?.message?.content?.trim() || "";
+      return res.json({ description: generatedDescription });
+    }
+
+    if (!searchText || typeof searchText !== "string") {
       return res.status(400).json({ error: "Description is required" });
     }
 
@@ -70,7 +88,7 @@ Response format:
         { role: "system", content: systemPrompt },
         { 
           role: "user", 
-          content: `Customer description: "${description}"
+          content: `Customer description: "${searchText}"
 
 Product catalog (${productList.length} products):
 ${JSON.stringify(productList, null, 2)}` 

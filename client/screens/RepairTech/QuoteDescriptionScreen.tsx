@@ -335,17 +335,20 @@ export default function QuoteDescriptionScreen() {
           </Pressable>
         </View>
 
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Feather name="file-text" size={18} color={ESTIMATE_COLORS.textSlate500} />
-            <ThemedText style={styles.sectionTitle}>Quote Description</ThemedText>
+        <View style={styles.descriptionSection}>
+          <View style={styles.descriptionHeader}>
+            <Feather name="file-text" size={22} color={BrandColors.azureBlue} />
+            <ThemedText style={styles.descriptionTitle}>Quote Description</ThemedText>
           </View>
+          <ThemedText style={styles.descriptionHint}>
+            This is what the customer/HOA will read. Write in simple, non-technical language.
+          </ThemedText>
           <TextInput
             style={styles.descriptionInput}
             value={description}
             onChangeText={setDescription}
             multiline
-            placeholder="Describe the work to be performed, materials to be used, and any special notes for the customer..."
+            placeholder="Describe the work in simple terms that a property manager or HOA board member would understand. Explain what each part does and why it needs to be replaced..."
             placeholderTextColor={ESTIMATE_COLORS.textSlate400}
             textAlignVertical="top"
           />
@@ -572,16 +575,41 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
   },
+  descriptionSection: {
+    backgroundColor: ESTIMATE_COLORS.bgWhite,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+    marginBottom: Spacing.lg,
+    borderWidth: 2,
+    borderColor: BrandColors.azureBlue,
+  },
+  descriptionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.xs,
+  },
+  descriptionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: ESTIMATE_COLORS.textDark,
+  },
+  descriptionHint: {
+    fontSize: 13,
+    color: ESTIMATE_COLORS.textSlate500,
+    marginBottom: Spacing.md,
+    fontStyle: 'italic',
+  },
   descriptionInput: {
     backgroundColor: ESTIMATE_COLORS.bgSlate50,
-    borderWidth: 1,
-    borderColor: ESTIMATE_COLORS.borderLight,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.md,
-    fontSize: 14,
+    borderWidth: 2,
+    borderColor: BrandColors.azureBlue,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+    fontSize: 15,
     color: ESTIMATE_COLORS.textDark,
-    minHeight: 150,
-    lineHeight: 22,
+    minHeight: 280,
+    lineHeight: 24,
   },
   charCount: {
     fontSize: 11,

@@ -81,12 +81,30 @@ router.post("/", express.json(), async (req: Request, res: Response) => {
         messages: [
           { 
             role: "system", 
-            content: "You are a professional commercial pool service technician. Write clear, professional quote descriptions for repair estimates. Keep descriptions concise (2-3 sentences) and focus on the work being performed." 
+            content: `You are writing a quote description for a commercial pool repair estimate. Your audience is HOA board members and property managers who have NO technical pool knowledge.
+
+RULES:
+1. Start with a friendly greeting: "Dear Property Manager," or "To the Board,"
+2. Write in plain, simple language - avoid technical jargon
+3. For EACH item in the estimate, provide:
+   - What the part does in everyday terms
+   - Why it needs to be replaced (safety, efficiency, code compliance)
+   - What benefit they'll see after the repair
+4. Keep sentences short and easy to understand
+5. End with a reassuring statement about the work quality
+
+EXAMPLE for a "Tube Bundle":
+"The tube bundle is the part inside your pool heater that actually heats the water - think of it like the heating element in a water heater. When it fails, your pool can't maintain temperature. We'll install a new one so your guests can enjoy warm water again."
+
+EXAMPLE for a "Refractory Kit":
+"The refractory kit contains special heat-resistant blocks that protect the inside of your heater from the flame. Over time, these wear out and need replacing to keep the heater running safely and efficiently."
+
+Write 3-5 paragraphs that explain the complete scope of work in terms a non-technical person would understand.` 
           },
           { role: "user", content: searchText },
         ],
         temperature: 0.7,
-        max_tokens: 200,
+        max_tokens: 800,
       });
       const generatedDescription = descResponse.choices[0]?.message?.content?.trim() || "";
       return res.json({ description: generatedDescription });

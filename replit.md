@@ -114,9 +114,22 @@ The app uses two separate backends:
 
 **Note**: Replit Secrets/Configuration overrides `.env` files. Always set environment variables in the Replit Secrets pane.
 
+### EAS Build Configuration
+For production/preview EAS builds, environment variables are configured in:
+- **`app.config.js`**: Defines `extra.apiUrl` and `extra.techOpsUrl` using process.env with hardcoded fallbacks
+- **`eas.json`**: Sets `API_URL` and `TECHOPS_URL` env vars for each build profile (development, preview, production)
+
+The app uses `Constants.expoConfig?.extra?.apiUrl` from `expo-constants` to access these values in EAS builds.
+
+**Priority Order for API URLs**:
+1. `Constants.expoConfig?.extra?.apiUrl` (EAS builds)
+2. `process.env.EXPO_PUBLIC_API_URL` (Expo Go / dev)
+3. Hardcoded fallback: `https://breakpoint-api-v2.onrender.com`
+
 ### URL Helper Functions (client/lib/query-client.ts)
-- **`getApiUrl()`**: Returns the main API base URL (`EXPO_PUBLIC_API_URL`).
-- **`getTechOpsUrl()`**: Returns the Tech Ops API URL (`EXPO_PUBLIC_TECHOPS_URL`), falls back to main API if not set.
+- **`getApiUrl()`**: Returns the main API base URL using priority order above.
+- **`getTechOpsUrl()`**: Returns the Tech Ops API URL using same priority order.
+- **`getAuthApiUrl()`**: Returns auth API URL (uses Replit domain in Expo Go, fallback for EAS).
 - **`joinUrl(base, path)`**: Safely joins a base URL with a path, ensuring exactly one "/" between them.
 - **`techOpsRequest(route, data)`**: POSTs to Tech Ops API with `X-MOBILE-KEY` header.
 

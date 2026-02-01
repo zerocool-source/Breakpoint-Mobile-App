@@ -1,6 +1,10 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import { storage } from "./storage";
+
+const FALLBACK_API_URL = "https://breakpoint-api-v2.onrender.com";
+const FALLBACK_TECHOPS_URL = "https://breakpoint-app.onrender.com";
 
 /**
  * Paginated response type for API endpoints.
@@ -46,11 +50,10 @@ export function extractNextCursor(data: Page<unknown> | unknown[] | undefined | 
 }
 
 export function getApiUrl(): string {
-  const url = process.env.EXPO_PUBLIC_API_URL;
-
-  if (!url) {
-    throw new Error("EXPO_PUBLIC_API_URL is not set");
-  }
+  // Priority: expo-constants (EAS builds) > env var > hardcoded fallback
+  const configApiUrl = Constants.expoConfig?.extra?.apiUrl;
+  const envApiUrl = process.env.EXPO_PUBLIC_API_URL;
+  const url = configApiUrl || envApiUrl || FALLBACK_API_URL;
 
   // Ensure no trailing slash to keep URL joining predictable
   return url.trim().replace(/\/+$/, "");
@@ -61,6 +64,8 @@ export function getApiUrl(): string {
  * All platforms now use the Replit backend for auth since it has the test accounts.
  * Web browser: Uses local backend proxy at /api/proxy/auth/* to avoid CORS
  * Mobile (Expo Go/EAS): Uses Replit backend directly via /api/auth/*
+ * 
+ * EAS builds: Uses Constants.expoConfig.extra.apiUrl or hardcoded fallback
  */
 export function getAuthApiUrl(): string {
   const domain = process.env.EXPO_PUBLIC_DOMAIN;
@@ -74,12 +79,12 @@ export function getAuthApiUrl(): string {
     return 'http://localhost:5000';
   }
   
-  // Mobile apps - use Replit backend for auth (has test accounts)
+  // Mobile apps - use Replit backend for auth if in Expo Go (has test accounts)
   if (domain) {
     return `https://${domain}`;
   }
   
-  // Fallback to external API if no Replit domain available (EAS builds)
+  // EAS builds: Use Constants.expoConfig or hardcoded fallback (no Replit domain available)
   return getApiUrl();
 }
 
@@ -105,15 +110,13 @@ export function getLocalApiUrl(): string {
 
 /**
  * Returns the Tech Ops API URL for repair submissions.
- * Falls back to EXPO_PUBLIC_API_URL if EXPO_PUBLIC_TECHOPS_URL is not set.
+ * Priority: expo-constants (EAS builds) > env var > hardcoded fallback
  */
 export function getTechOpsUrl(): string {
-  const techOpsUrl = process.env.EXPO_PUBLIC_TECHOPS_URL;
-  if (techOpsUrl) {
-    return techOpsUrl.trim().replace(/\/+$/, "");
-  }
-  // Fallback to main API URL
-  return getApiUrl();
+  const configTechOpsUrl = Constants.expoConfig?.extra?.techOpsUrl;
+  const envTechOpsUrl = process.env.EXPO_PUBLIC_TECHOPS_URL;
+  const url = configTechOpsUrl || envTechOpsUrl || FALLBACK_TECHOPS_URL;
+  return url.trim().replace(/\/+$/, "");
 }
 
 /**
@@ -156,18 +159,27 @@ async function throwIfResNotOk(res: Response) {
  */
 export function logEnvironmentConfig(): void {
   if (__DEV__) {
-    const apiUrl = process.env.EXPO_PUBLIC_API_URL;
-    const techOpsUrl = process.env.EXPO_PUBLIC_TECHOPS_URL;
+    const configApiUrl = Constants.expoConfig?.extra?.apiUrl;
+    const configTechOpsUrl = Constants.expoConfig?.extra?.techOpsUrl;
+    const envApiUrl = process.env.EXPO_PUBLIC_API_URL;
+    const envTechOpsUrl = process.env.EXPO_PUBLIC_TECHOPS_URL;
     const mobileKey = process.env.EXPO_PUBLIC_MOBILE_API_KEY;
     const domain = process.env.EXPO_PUBLIC_DOMAIN;
     const authUrl = getAuthApiUrl();
+    const apiUrl = getApiUrl();
+    const techOpsUrl = getTechOpsUrl();
     console.log("═══════════════════════════════════════════════════════════");
     console.log("[ENV CONFIG] Platform:", Platform.OS);
-    console.log("[ENV CONFIG] Replit Domain:", domain || "NOT SET");
-    console.log("[ENV CONFIG] Auth API (actual):", authUrl);
-    console.log("[ENV CONFIG] Data API:", apiUrl || "NOT SET");
-    console.log("[ENV CONFIG] Tech Ops API:", techOpsUrl || "(using Data API)");
+    console.log("[ENV CONFIG] Replit Domain:", domain || "NOT SET (EAS build)");
+    console.log("[ENV CONFIG] Constants apiUrl:", configApiUrl || "NOT SET");
+    console.log("[ENV CONFIG] Constants techOpsUrl:", configTechOpsUrl || "NOT SET");
+    console.log("[ENV CONFIG] Env EXPO_PUBLIC_API_URL:", envApiUrl || "NOT SET");
+    console.log("[ENV CONFIG] Env EXPO_PUBLIC_TECHOPS_URL:", envTechOpsUrl || "NOT SET");
+    console.log("[ENV CONFIG] → Resolved Auth API:", authUrl);
+    console.log("[ENV CONFIG] → Resolved Data API:", apiUrl);
+    console.log("[ENV CONFIG] → Resolved Tech Ops API:", techOpsUrl);
     console.log("[ENV CONFIG] Mobile API Key:", mobileKey ? `${mobileKey.substring(0, 8)}...` : "NOT SET");
+    console.log("[ENV CONFIG] Fallback URLs available:", FALLBACK_API_URL, FALLBACK_TECHOPS_URL);
     console.log("═══════════════════════════════════════════════════════════");
   }
 }

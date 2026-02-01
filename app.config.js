@@ -1,0 +1,61 @@
+export default {
+  expo: {
+    name: "Breakpoint",
+    slug: "breakpoint-pool-systems",
+    version: "1.0.0",
+    orientation: "portrait",
+    icon: "./assets/images/icon.png",
+    scheme: "breakpoint",
+    userInterfaceStyle: "automatic",
+    newArchEnabled: true,
+    ios: {
+      supportsTablet: true,
+      bundleIdentifier: "com.breakpoint.poolsystems"
+    },
+    android: {
+      adaptiveIcon: {
+        backgroundColor: "#1a1a2e",
+        foregroundImage: "./assets/images/android-icon-foreground.png",
+        monochromeImage: "./assets/images/android-icon-monochrome.png"
+      },
+      edgeToEdgeEnabled: true,
+      predictiveBackGestureEnabled: false,
+      package: "com.breakpoint.poolsystems",
+      permissions: [
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    web: {
+      output: "single",
+      favicon: "./assets/images/favicon.png"
+    },
+    plugins: [
+      [
+        "expo-splash-screen",
+        {
+          image: "./assets/images/splash-icon.png",
+          imageWidth: 200,
+          resizeMode: "contain",
+          backgroundColor: "#1a1a2e",
+          dark: {
+            backgroundColor: "#16213e"
+          }
+        }
+      ],
+      "expo-web-browser",
+      "expo-image-picker",
+      "expo-secure-store",
+      "@react-native-community/datetimepicker"
+    ],
+    experiments: {
+      reactCompiler: true
+    },
+    extra: {
+      apiUrl: process.env.API_URL || "https://breakpoint-api-v2.onrender.com",
+      techOpsUrl: process.env.TECHOPS_URL || "https://breakpoint-app.onrender.com",
+      eas: {
+        projectId: "318a0742-43fd-43c3-acd2-6474a2137f01"
+      }
+    }
+  }
+};

@@ -1526,7 +1526,7 @@ export default function AceEstimateBuilderScreen() {
                 onPress={isRecording ? stopRecording : startRecording}
                 style={[styles.micButton, isRecording && { backgroundColor: BrandColors.danger }]}
               >
-                <Feather name={isRecording ? 'stop-circle' : 'mic'} size={22} color="#fff" />
+                <Feather name={isRecording ? 'stop-circle' : 'mic'} size={48} color="#fff" />
               </Pressable>
               <TextInput
                 style={styles.textInput}
@@ -2640,9 +2640,9 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   micButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     backgroundColor: BrandColors.tropicalTeal,
     alignItems: 'center',
     justifyContent: 'center',

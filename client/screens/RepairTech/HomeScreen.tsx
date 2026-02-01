@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { View, StyleSheet, Pressable, Platform } from 'react-native';
+import { View, StyleSheet, Pressable, Platform, Image, ImageSourcePropType } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -48,13 +48,14 @@ function ProgressCard({ value, label, color }: ProgressCardProps) {
 }
 
 interface QuickActionProps {
-  icon: string;
+  icon?: string;
+  customImage?: ImageSourcePropType;
   label: string;
   color: string;
   onPress: () => void;
 }
 
-function QuickAction({ icon, label, color, onPress }: QuickActionProps) {
+function QuickAction({ icon, customImage, label, color, onPress }: QuickActionProps) {
   const { theme } = useTheme();
   
   return (
@@ -63,7 +64,11 @@ function QuickAction({ icon, label, color, onPress }: QuickActionProps) {
       onPress={onPress}
     >
       <View style={[styles.quickActionIcon, { backgroundColor: color + '15' }]}>
-        <Feather name={icon as any} size={22} color={color} />
+        {customImage ? (
+          <Image source={customImage} style={styles.quickActionCustomImage} />
+        ) : (
+          <Feather name={icon as any} size={22} color={color} />
+        )}
       </View>
       <ThemedText style={styles.quickActionLabel}>{label}</ThemedText>
     </Pressable>
@@ -335,7 +340,7 @@ export default function HomeScreen() {
               onPress={() => handleQuickAction('parts')}
             />
             <QuickAction
-              icon="flag"
+              customImage={require('@/assets/images/report-issues-icon.png')}
               label="Report Issue"
               color={BrandColors.danger}
               onPress={() => handleQuickAction('issue')}
@@ -648,6 +653,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.sm,
+  },
+  quickActionCustomImage: {
+    width: 44,
+    height: 44,
+    borderRadius: BorderRadius.sm,
   },
   quickActionLabel: {
     fontSize: 12,

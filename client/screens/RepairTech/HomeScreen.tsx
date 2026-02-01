@@ -322,7 +322,7 @@ export default function HomeScreen() {
           <ThemedText style={styles.quickActionsTitle}>QUICK ACTIONS</ThemedText>
           <View style={styles.quickActionsGrid}>
             <QuickAction
-              icon="alert-triangle"
+              customImage={require('@/assets/images/emergency-icon.png')}
               label="Emergency"
               color={BrandColors.danger}
               onPress={() => handleQuickAction('emergency')}

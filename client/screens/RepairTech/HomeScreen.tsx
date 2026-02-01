@@ -334,7 +334,7 @@ export default function HomeScreen() {
               onPress={() => navigation.navigate('AceEstimateBuilder')}
             />
             <QuickAction
-              icon="package"
+              customImage={require('@/assets/images/order-parts-icon.png')}
               label="Order Parts"
               color={BrandColors.vividTangerine}
               onPress={() => handleQuickAction('parts')}

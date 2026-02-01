@@ -31,7 +31,7 @@ export default function RepairTechProductsScreen() {
           </View>
         </View>
         <Pressable 
-          onPress={() => navigation.navigate('EstimateBuilder')}
+          onPress={() => navigation.navigate('AceEstimateBuilder')}
           style={styles.createButton}
         >
           <Feather name="plus" size={18} color="#fff" />
@@ -45,7 +45,7 @@ export default function RepairTechProductsScreen() {
       />
 
       <Pressable
-        onPress={() => navigation.navigate('EstimateBuilder')}
+        onPress={() => navigation.navigate('AceEstimateBuilder')}
         style={styles.floatingButton}
       >
         <Feather name="file-plus" size={24} color="#fff" />

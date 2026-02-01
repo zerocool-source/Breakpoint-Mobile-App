@@ -8,7 +8,6 @@ import RepairTechTabNavigator from '@/navigation/RepairTechTabNavigator';
 import ReportIssueModal from '@/screens/Modals/ReportIssueModal';
 import ChatModal from '@/screens/Modals/ChatModal';
 import CreateEstimateModal from '@/screens/Modals/CreateEstimateModal';
-import EstimateBuilderScreen from '@/screens/RepairTech/EstimateBuilderScreen';
 import AceEstimateBuilderScreen from '@/screens/RepairTech/AceEstimateBuilderScreen';
 import UniversalEstimateBuilderScreen from '@/screens/RepairTech/UniversalEstimateBuilderScreen';
 import QuoteDescriptionScreen from '@/screens/RepairTech/QuoteDescriptionScreen';
@@ -21,7 +20,6 @@ export type RootStackParamList = {
   ReportIssue: undefined;
   Chat: undefined;
   CreateEstimate: undefined;
-  EstimateBuilder: undefined;
   AceEstimateBuilder: { updatedDescription?: string } | undefined;
   UniversalEstimateBuilder: { mode?: 'manual' | 'ace' };
   QuoteDescription: { lineItems: any[]; currentDescription: string; propertyName: string };
@@ -83,14 +81,6 @@ export default function RootStackNavigator() {
             </HeaderButton>
           ),
         })}
-      />
-      <Stack.Screen
-        name="EstimateBuilder"
-        component={EstimateBuilderScreen}
-        options={{
-          headerShown: false,
-          presentation: 'fullScreenModal',
-        }}
       />
       <Stack.Screen
         name="AceEstimateBuilder"

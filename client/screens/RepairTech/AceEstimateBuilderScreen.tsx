@@ -128,6 +128,7 @@ export default function AceEstimateBuilderScreen() {
   const [propertySearch, setPropertySearch] = useState('');
   const [showPropertyPicker, setShowPropertyPicker] = useState(false);
 
+  const [woRequired, setWoRequired] = useState(false);
   const [woReceived, setWoReceived] = useState(false);
   const [woNumber, setWoNumber] = useState('');
 
@@ -752,7 +753,7 @@ export default function AceEstimateBuilderScreen() {
     setShowDiscountModal(false);
   };
 
-  const handleSubmit = async (sendToCustomer: boolean) => {
+  const handleSubmit = async (sendToOffice: boolean) => {
     if (!selectedProperty) {
       Alert.alert('Property Required', 'Please select a property for this estimate.');
       return;
@@ -763,16 +764,76 @@ export default function AceEstimateBuilderScreen() {
     }
 
     setIsSubmitting(true);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      const selectedProp = mockProperties.find(p => p.name === selectedProperty);
+      
+      const estimateData = {
+        estimateNumber,
+        propertyId: selectedProp?.id || '',
+        propertyName: selectedProperty,
+        estimateDate: estimateDate.toISOString(),
+        expirationDate: expirationDate.toISOString(),
+        description: estimateDescription,
+        lineItems: lineItems.map(item => ({
+          sku: item.product.sku,
+          name: item.product.name,
+          description: item.description,
+          quantity: item.quantity,
+          rate: item.rate,
+          amount: item.quantity * item.rate,
+          taxable: item.taxable,
+          manufacturer: item.product.manufacturer,
+          category: item.product.category,
+        })),
+        subtotal,
+        discountType,
+        discountValue,
+        discountAmount,
+        taxRate: salesTaxRate,
+        taxAmount: salesTaxAmount,
+        total: totalAmount,
+        woRequired,
+        woReceived,
+        woNumber,
+        sendToOffice,
+      };
+
+      const apiUrl = getLocalApiUrl();
+      const response = await fetch(joinUrl(apiUrl, '/api/estimates'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(estimateData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save estimate');
+      }
+
+      const result = await response.json();
+      
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert(
-        sendToCustomer ? 'Estimate Sent!' : 'Estimate Saved!',
-        `Estimate ${estimateNumber} has been ${sendToCustomer ? 'sent to the customer' : 'saved as draft'}.`,
+        sendToOffice ? 'Estimate Sent!' : 'Estimate Saved!',
+        sendToOffice 
+          ? `Estimate ${estimateNumber} has been sent to the office for approval.`
+          : `Estimate ${estimateNumber} has been saved as a draft. You can edit it later.`,
         [{ text: 'OK', onPress: () => navigation.goBack() }]
       );
-    }, 1500);
+    } catch (error) {
+      console.error('Error saving estimate:', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        'Error',
+        'Failed to save estimate. Please try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const filteredProperties = mockProperties.filter(p =>

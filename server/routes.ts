@@ -3,7 +3,7 @@ import { createServer, type Server } from "node:http";
 import authRoutes, { authMiddleware, AuthenticatedRequest } from "./auth";
 import { db } from "./db";
 import { users, properties, jobs, assignments, estimates, routeStops, propertyChannels, techOps } from "@shared/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import transcribeRouter from "./routes/transcribe";
 import aiProductSearchRouter from "./routes/ai-product-search";
 import aiLearningRouter from "./routes/ai-learning";
@@ -425,9 +425,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ${Math.round((total || 0) * 100)},
           ${status},
           ${user.id},
-          ${user.name || user.username},
+          ${user.name || 'Technician'},
           ${user.id},
-          ${user.name || user.username},
+          ${user.name || 'Technician'},
           ${woRequired || false},
           ${woReceived || false},
           ${woNumber || null},

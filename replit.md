@@ -1,5 +1,20 @@
 # Breakpoint Commercial Pool Systems
 
+## Version
+**Current Version: v1.2.0** (February 2026)
+
+### Changelog
+| Version | Date | Features Added |
+|---------|------|----------------|
+| v1.2.0 | Feb 2026 | Ace AI Estimate Builder with voice input, personalized self-learning, web-enhanced product search, HOA-friendly quote descriptions |
+| v1.1.0 | Feb 2026 | Local authentication system, dual-backend architecture, firstName/lastName user fields |
+| v1.0.0 | Jan 2026 | Core app: Role-based access (Service Tech, Repair Tech, Supervisor), Heritage Products Catalog (600+ items), Property management, Assignment tracking, Chat system, Offline mode, Battery saver |
+
+### Versioning Rules
+- **Major (x.0.0)**: New role capabilities, major UI overhaul, breaking API changes
+- **Minor (1.x.0)**: New features (AI tools, new screens, integrations)
+- **Patch (1.0.x)**: Bug fixes, performance improvements, minor UI tweaks
+
 ## Overview
 Breakpoint Commercial Pool Systems is a mobile-first field service management application designed for commercial pool maintenance technicians. It aims to streamline daily operations, emergency responses, and team management for commercial pool services. The project's vision is to enhance efficiency, safety, and communication within field service teams, providing a comprehensive tool for service, repair, and supervisory roles. It is currently in a production beta phase with robust authentication and role-based access.
 

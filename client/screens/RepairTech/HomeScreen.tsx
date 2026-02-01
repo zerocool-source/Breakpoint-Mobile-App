@@ -323,10 +323,10 @@ export default function HomeScreen() {
               onPress={() => handleQuickAction('emergency')}
             />
             <QuickAction
-              icon="plus"
-              label="New Estimate"
+              icon="cpu"
+              label="Create Estimate with ACE"
               color={BrandColors.azureBlue}
-              onPress={() => handleQuickAction('estimate')}
+              onPress={() => navigation.navigate('AceEstimateBuilder')}
             />
             <QuickAction
               icon="package"

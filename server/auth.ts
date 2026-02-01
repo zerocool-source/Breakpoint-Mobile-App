@@ -46,10 +46,11 @@ export async function authMiddleware(req: AuthenticatedRequest, res: Response, n
       return res.status(401).json({ error: "User not found or inactive" });
     }
 
+    const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ') || 'User';
     req.user = {
       id: user.id,
       email: user.email,
-      name: user.name,
+      name: fullName,
       role: user.role,
     };
 
@@ -68,6 +69,8 @@ router.post("/register", async (req: Request, res: Response) => {
     }
 
     const { email, password, name, role, phone } = result.data;
+    const [firstName, ...lastParts] = (name || '').split(' ');
+    const lastName = lastParts.join(' ');
 
     const existingUser = await db.query.users.findFirst({
       where: eq(users.email, email),
@@ -82,8 +85,9 @@ router.post("/register", async (req: Request, res: Response) => {
     const [newUser] = await db.insert(users).values({
       email,
       password: hashedPassword,
-      name,
-      role,
+      firstName: firstName || 'User',
+      lastName: lastName || '',
+      role: role || 'tech',
       phone,
     }).returning();
 
@@ -96,11 +100,12 @@ router.post("/register", async (req: Request, res: Response) => {
       expiresAt,
     });
 
+    const fullName = [newUser.firstName, newUser.lastName].filter(Boolean).join(' ') || 'User';
     res.status(201).json({
       user: {
         id: newUser.id,
         email: newUser.email,
-        name: newUser.name,
+        name: fullName,
         role: newUser.role,
         phone: newUser.phone,
       },
@@ -147,11 +152,12 @@ router.post("/login", async (req: Request, res: Response) => {
       expiresAt,
     });
 
+    const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ') || 'User';
     res.json({
       user: {
         id: user.id,
         email: user.email,
-        name: user.name,
+        name: fullName,
         role: user.role,
         phone: user.phone,
       },
@@ -187,10 +193,11 @@ router.get("/me", authMiddleware, async (req: AuthenticatedRequest, res: Respons
       return res.status(404).json({ error: "User not found" });
     }
 
+    const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ') || 'User';
     res.json({
       id: user.id,
       email: user.email,
-      name: user.name,
+      name: fullName,
       role: user.role,
       phone: user.phone,
     });

@@ -14,9 +14,22 @@ const TECHOPS_API_URL = process.env.TECHOPS_API_URL || "https://breakpoint-app.o
 const MOBILE_API_KEY = process.env.MOBILE_API_KEY;
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Proxy auth requests to Render API (for web testing - bypasses CORS)
+  // Proxy auth requests - try local first, then Render API
   app.post("/api/proxy/auth/login", async (req, res) => {
     try {
+      // First try local auth
+      const localRes = await fetch(`http://localhost:5000/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(req.body),
+      });
+      
+      if (localRes.ok) {
+        const data = await localRes.json();
+        return res.status(200).json(data);
+      }
+      
+      // If local fails, try Render API
       const response = await fetch(`${RENDER_API_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -33,6 +46,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/proxy/auth/me", async (req, res) => {
     try {
       const authHeader = req.headers.authorization;
+      
+      // First try local auth
+      const localRes = await fetch(`http://localhost:5000/api/auth/me`, {
+        headers: authHeader ? { Authorization: authHeader } : {},
+      });
+      
+      if (localRes.ok) {
+        const data = await localRes.json();
+        return res.status(200).json(data);
+      }
+      
+      // If local fails, try Render API
       const response = await fetch(`${RENDER_API_URL}/api/auth/me`, {
         headers: authHeader ? { Authorization: authHeader } : {},
       });
@@ -579,12 +604,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(users.id, req.user!.id))
         .returning({
           id: users.id,
-          name: users.name,
+          firstName: users.firstName,
+          lastName: users.lastName,
           email: users.email,
           role: users.role,
           county: users.county,
         });
-      res.json(updated);
+      const result = { ...updated, name: [updated.firstName, updated.lastName].filter(Boolean).join(' ') || 'User' };
+      res.json(result);
     } catch (error) {
       console.error("Error updating county:", error);
       res.status(500).json({ error: "Failed to update county" });
@@ -644,13 +671,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(users.id, technicianId))
         .returning({
           id: users.id,
-          name: users.name,
+          firstName: users.firstName,
+          lastName: users.lastName,
           email: users.email,
           role: users.role,
           county: users.county,
           supervisorId: users.supervisorId,
         });
-      res.json(updated);
+      const result = { ...updated, name: [updated.firstName, updated.lastName].filter(Boolean).join(' ') || 'User' };
+      res.json(result);
     } catch (error) {
       console.error("Error adding to roster:", error);
       res.status(500).json({ error: "Failed to add to roster" });
@@ -695,12 +724,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ))
         .returning({
           id: users.id,
-          name: users.name,
+          firstName: users.firstName,
+          lastName: users.lastName,
           email: users.email,
           role: users.role,
           county: users.county,
         });
-      res.json(updated);
+      const result = { ...updated, name: [updated.firstName, updated.lastName].filter(Boolean).join(' ') || 'User' };
+      res.json(result);
     } catch (error) {
       console.error("Error updating technician county:", error);
       res.status(500).json({ error: "Failed to update county" });

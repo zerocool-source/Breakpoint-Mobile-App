@@ -57,21 +57,29 @@ export function getApiUrl(): string {
 }
 
 /**
- * Returns the auth API URL - uses proxy on web to avoid CORS issues.
- * Web browser: Uses local backend proxy at /api/proxy/auth/*
- * Mobile (Expo Go): Uses Render API directly
+ * Returns the auth API URL.
+ * All platforms now use the Replit backend for auth since it has the test accounts.
+ * Web browser: Uses local backend proxy at /api/proxy/auth/* to avoid CORS
+ * Mobile (Expo Go/EAS): Uses Replit backend directly via /api/auth/*
  */
 export function getAuthApiUrl(): string {
+  const domain = process.env.EXPO_PUBLIC_DOMAIN;
+  
   if (Platform.OS === 'web') {
     // Use local backend proxy to avoid CORS issues in browser
-    const domain = process.env.EXPO_PUBLIC_DOMAIN;
     if (domain) {
       return `https://${domain}`;
     }
     // Fallback for local dev
     return 'http://localhost:5000';
   }
-  // Mobile apps don't have CORS issues - use Render directly
+  
+  // Mobile apps - use Replit backend for auth (has test accounts)
+  if (domain) {
+    return `https://${domain}`;
+  }
+  
+  // Fallback to external API if no Replit domain available (EAS builds)
   return getApiUrl();
 }
 
@@ -151,10 +159,15 @@ export function logEnvironmentConfig(): void {
     const apiUrl = process.env.EXPO_PUBLIC_API_URL;
     const techOpsUrl = process.env.EXPO_PUBLIC_TECHOPS_URL;
     const mobileKey = process.env.EXPO_PUBLIC_MOBILE_API_KEY;
+    const domain = process.env.EXPO_PUBLIC_DOMAIN;
+    const authUrl = getAuthApiUrl();
     console.log("═══════════════════════════════════════════════════════════");
-    console.log("[ENV CONFIG] Auth/Data API:  ", apiUrl || "NOT SET");
-    console.log("[ENV CONFIG] Tech Ops API:   ", techOpsUrl || "(using Auth/Data API)");
-    console.log("[ENV CONFIG] Mobile API Key: ", mobileKey ? `${mobileKey.substring(0, 8)}...` : "NOT SET");
+    console.log("[ENV CONFIG] Platform:", Platform.OS);
+    console.log("[ENV CONFIG] Replit Domain:", domain || "NOT SET");
+    console.log("[ENV CONFIG] Auth API (actual):", authUrl);
+    console.log("[ENV CONFIG] Data API:", apiUrl || "NOT SET");
+    console.log("[ENV CONFIG] Tech Ops API:", techOpsUrl || "(using Data API)");
+    console.log("[ENV CONFIG] Mobile API Key:", mobileKey ? `${mobileKey.substring(0, 8)}...` : "NOT SET");
     console.log("═══════════════════════════════════════════════════════════");
   }
 }

@@ -370,6 +370,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/estimates", authMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      const {
+        estimateNumber,
+        propertyId,
+        propertyName,
+        estimateDate,
+        expirationDate,
+        description,
+        lineItems,
+        subtotal,
+        discountType,
+        discountValue,
+        discountAmount,
+        taxRate,
+        taxAmount,
+        total,
+        woRequired,
+        woReceived,
+        woNumber,
+        sendToOffice,
+      } = req.body;
+
+      const user = req.user!;
+      const now = new Date();
+
+      const status = sendToOffice ? 'pending_approval' : 'draft';
+
+      const result = await db.execute(sql`
+        INSERT INTO estimates (
+          id, property_id, property_name, estimate_number, estimate_date, expiration_date,
+          title, description, items, subtotal, discount_type, discount_value, discount_amount,
+          sales_tax_rate, sales_tax_amount, total_amount, status,
+          created_by_tech_id, created_by_tech_name, repair_tech_id, repair_tech_name,
+          wo_required, wo_received, wo_number,
+          created_at, reported_date, sent_for_approval_at
+        ) VALUES (
+          gen_random_uuid(),
+          ${propertyId || ''},
+          ${propertyName || ''},
+          ${estimateNumber},
+          ${estimateDate ? new Date(estimateDate) : now},
+          ${expirationDate ? new Date(expirationDate) : null},
+          ${'Pool Repair Estimate'},
+          ${description || ''},
+          ${JSON.stringify(lineItems || [])},
+          ${Math.round((subtotal || 0) * 100)},
+          ${discountType || 'percent'},
+          ${discountValue || 0},
+          ${Math.round((discountAmount || 0) * 100)},
+          ${taxRate || 9},
+          ${Math.round((taxAmount || 0) * 100)},
+          ${Math.round((total || 0) * 100)},
+          ${status},
+          ${user.id},
+          ${user.name || user.username},
+          ${user.id},
+          ${user.name || user.username},
+          ${woRequired || false},
+          ${woReceived || false},
+          ${woNumber || null},
+          ${now},
+          ${now},
+          ${sendToOffice ? now : null}
+        )
+        RETURNING id, estimate_number, status
+      `);
+
+      const savedEstimate = result.rows[0];
+
+      res.status(201).json({
+        success: true,
+        message: sendToOffice ? 'Estimate sent to office for approval' : 'Estimate saved as draft',
+        estimate: {
+          id: savedEstimate?.id,
+          estimateNumber: savedEstimate?.estimate_number,
+          status: savedEstimate?.status,
+        }
+      });
+    } catch (error) {
+      console.error("Error creating estimate:", error);
+      res.status(500).json({ error: "Failed to create estimate" });
+    }
+  });
+
   app.get("/api/route-stops", authMiddleware, async (req: AuthenticatedRequest, res) => {
     try {
       const today = new Date();

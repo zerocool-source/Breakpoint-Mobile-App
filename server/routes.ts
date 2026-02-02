@@ -2,11 +2,12 @@ import type { Express } from "express";
 import { createServer, type Server } from "node:http";
 import authRoutes, { authMiddleware, AuthenticatedRequest } from "./auth";
 import { db } from "./db";
-import { users, properties, jobs, assignments, estimates, routeStops, propertyChannels, techOps, repairHistory, adminMessages } from "@shared/schema";
+import { users, properties, jobs, assignments, estimates, routeStops, propertyChannels, techOps, repairHistory, adminMessages, poolRegulations } from "@shared/schema";
 import { eq, and, desc, sql, or } from "drizzle-orm";
 import transcribeRouter from "./routes/transcribe";
 import aiProductSearchRouter from "./routes/ai-product-search";
 import aiLearningRouter from "./routes/ai-learning";
+import poolRegulationsRouter from "./routes/pool-regulations";
 
 // Render API base URLs for proxy
 const RENDER_API_URL = process.env.RENDER_API_URL || "https://breakpoint-api-v2.onrender.com";
@@ -121,6 +122,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/transcribe", transcribeRouter);
   app.use("/api/ai-product-search", aiProductSearchRouter);
   app.use("/api/ai-learning", aiLearningRouter);
+  app.use("/api/pool-regulations", poolRegulationsRouter);
 
   app.get("/api/properties", authMiddleware, async (req: AuthenticatedRequest, res) => {
     try {

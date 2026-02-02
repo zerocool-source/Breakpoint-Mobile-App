@@ -491,4 +491,39 @@ export type AIProductFeedback = typeof aiProductFeedback.$inferSelect;
 export type AIProductPattern = typeof aiProductPatterns.$inferSelect;
 export type AIQueryMapping = typeof aiQueryMappings.$inferSelect;
 
+// Pool Regulations for AI Quote Descriptions
+export const regulationCategoryEnum = pgEnum('regulation_category', [
+  'anti_entrapment', 
+  'pumps_equipment', 
+  'filters', 
+  'disinfection', 
+  'safety_equipment', 
+  'enclosure_fencing', 
+  'lighting', 
+  'signage', 
+  'water_quality', 
+  'turnover_time',
+  'general_maintenance',
+  'health_safety'
+]);
+
+export const poolRegulations = pgTable("pool_regulations", {
+  id: varchar("id", { length: 36 })
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  codeSection: text("code_section").notNull(),
+  title: text("title").notNull(),
+  category: regulationCategoryEnum("category").notNull(),
+  summary: text("summary").notNull(),
+  fullText: text("full_text").notNull(),
+  hoaFriendlyExplanation: text("hoa_friendly_explanation").notNull(),
+  relatedProducts: text("related_products"),
+  sourceDocument: text("source_document").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export type PoolRegulation = typeof poolRegulations.$inferSelect;
+
 export * from "./models/chat";

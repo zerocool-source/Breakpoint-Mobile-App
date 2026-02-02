@@ -22,7 +22,7 @@ export type RootStackParamList = {
   ReportIssue: undefined;
   Chat: undefined;
   CreateEstimate: undefined;
-  AceEstimateBuilder: { updatedDescription?: string } | undefined;
+  AceEstimateBuilder: { updatedDescription?: string; propertyId?: string; propertyName?: string; jobTitle?: string } | undefined;
   UniversalEstimateBuilder: { mode?: 'manual' | 'ace' };
   QuoteDescription: { lineItems: any[]; currentDescription: string; propertyName: string };
   EstimateDetail: { estimateId: string };

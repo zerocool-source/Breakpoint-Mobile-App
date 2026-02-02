@@ -249,7 +249,7 @@ function RepairJobCard({ job, isFirst, drag, isActive, onPress, onNavigate, onCo
               <Feather name="navigation" size={16} color="#FFFFFF" />
               <ThemedText style={styles.jobActionButtonText}>Navigate</ThemedText>
             </Pressable>
-            <Pressable style={[styles.jobActionButton, { backgroundColor: theme.surfaceHighlight }]} onPress={onPress}>
+            <Pressable style={[styles.jobActionButton, { backgroundColor: theme.surfaceElevated }]} onPress={onPress}>
               <Feather name="file-text" size={16} color={theme.text} />
               <ThemedText style={[styles.jobActionButtonText, { color: theme.text }]}>Details</ThemedText>
             </Pressable>
@@ -555,6 +555,17 @@ export default function HomeScreen() {
     setJobs(prev => prev.filter(j => j.id !== jobId));
   };
 
+  const handleCreateEstimateFromJob = (job: Job) => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+    navigation.navigate('AceEstimateBuilder', { 
+      propertyId: job.property?.id,
+      propertyName: job.property?.name,
+      jobTitle: job.title,
+    });
+  };
+
   const renderJob = useCallback(
     ({ item, drag, isActive, getIndex }: RenderItemParams<Job>) => {
       const index = getIndex() ?? 0;
@@ -568,6 +579,7 @@ export default function HomeScreen() {
             onPress={() => console.log('Job details:', item.id)}
             onNavigate={() => handleNavigateToJob(item)}
             onComplete={() => handleCompleteJob(item.id)}
+            onCreateEstimate={() => handleCreateEstimateFromJob(item)}
           />
         </ScaleDecorator>
       );
@@ -1068,6 +1080,55 @@ const styles = StyleSheet.create({
   swipeHintText: {
     fontSize: 11,
     fontWeight: '500',
+  },
+  jobTypeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.full,
+    gap: Spacing.xs,
+    marginBottom: Spacing.sm,
+  },
+  jobTypeBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  jobCardActions: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginTop: Spacing.md,
+  },
+  jobActionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.md,
+    gap: Spacing.xs,
+  },
+  jobActionButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  jobPrimaryAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
+    marginTop: Spacing.sm,
+    gap: Spacing.sm,
+  },
+  jobPrimaryActionText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   emptyJobsContainer: {
     flex: 1,

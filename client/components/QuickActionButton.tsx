@@ -23,9 +23,9 @@ interface QuickActionButtonProps {
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 const sizeConfigs = {
-  small: { iconContainer: 44, iconSize: 22, padding: Spacing.md, labelSize: 11, borderRadius: BorderRadius.lg },
-  medium: { iconContainer: 52, iconSize: 26, padding: Spacing.lg, labelSize: 13, borderRadius: BorderRadius.xl },
-  large: { iconContainer: 60, iconSize: 30, padding: Spacing.xl, labelSize: 14, borderRadius: BorderRadius['2xl'] },
+  small: { iconContainer: 80, iconSize: 40, padding: Spacing.lg, labelSize: 14, borderRadius: BorderRadius.lg },
+  medium: { iconContainer: 100, iconSize: 50, padding: Spacing.xl, labelSize: 16, borderRadius: BorderRadius.xl },
+  large: { iconContainer: 120, iconSize: 60, padding: Spacing['2xl'], labelSize: 18, borderRadius: BorderRadius['2xl'] },
 };
 
 export function QuickActionButton({ icon, imageSource, label, color, onPress, size = 'medium' }: QuickActionButtonProps) {

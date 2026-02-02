@@ -252,6 +252,10 @@ export default function HomeScreen() {
         style={[styles.header, { paddingTop: insets.top + Spacing.md }]}
       >
         <View style={styles.headerTop}>
+          <Image 
+            source={require('@/assets/images/breakpoint-logo.png')} 
+            style={styles.headerLogo}
+          />
           <View style={styles.timeBadge}>
             <Feather name="clock" size={14} color="#FFFFFF" />
             <ThemedText style={styles.timeBadgeText}>{getCurrentTime()}</ThemedText>
@@ -480,9 +484,14 @@ const styles = StyleSheet.create({
   },
   headerTop: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     alignItems: 'center',
     gap: Spacing.md,
+  },
+  headerLogo: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
   },
   timeBadge: {
     flexDirection: 'row',
@@ -636,32 +645,35 @@ const styles = StyleSheet.create({
   },
   quickActionsGrid: {
     flexDirection: 'row',
-    gap: Spacing.sm,
+    flexWrap: 'wrap',
+    gap: Spacing.md,
     marginBottom: Spacing.xl,
   },
   quickAction: {
-    flex: 1,
+    width: '47%',
     alignItems: 'center',
-    paddingVertical: Spacing.lg,
-    borderRadius: BorderRadius.md,
+    paddingVertical: Spacing.xl,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.lg,
     ...Shadows.card,
   },
   quickActionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: BorderRadius.md,
+    width: 120,
+    height: 120,
+    borderRadius: BorderRadius.lg,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.md,
+    overflow: 'hidden',
   },
   quickActionCustomImage: {
-    width: 44,
-    height: 44,
-    borderRadius: BorderRadius.sm,
+    width: 120,
+    height: 120,
+    borderRadius: BorderRadius.lg,
   },
   quickActionLabel: {
-    fontSize: 12,
-    fontWeight: '500',
+    fontSize: 16,
+    fontWeight: '600',
     textAlign: 'center',
   },
   todaysJobsHeader: {

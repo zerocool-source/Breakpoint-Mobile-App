@@ -4,6 +4,7 @@ import OpenAI from "openai";
 import { HERITAGE_PRODUCTS } from "../../client/lib/heritageProducts";
 import { db } from "../db";
 import { sql } from "drizzle-orm";
+import { poolRegulations } from "../../shared/schema";
 
 const router = Router();
 
@@ -55,6 +56,56 @@ async function getRelatedProducts(productSkus: string[], userId?: string, proper
   }
 }
 
+interface PoolRegulation {
+  id: number;
+  codeSection: string;
+  title: string;
+  category: string;
+  summary: string;
+  fullText: string | null;
+  hoaFriendlyExplanation: string | null;
+  relatedProducts: string[];
+  sourceDocument: string | null;
+}
+
+async function getRelevantPoolRegulations(productCategories: string[]): Promise<PoolRegulation[]> {
+  try {
+    if (productCategories.length === 0) return [];
+    
+    // Map product categories to regulation categories
+    const categoryMappings: Record<string, string[]> = {
+      'Pumps': ['pumps', 'anti-entrapment', 'maintenance'],
+      'Filters': ['filters', 'water-quality', 'maintenance'],
+      'Heaters': ['maintenance', 'safety'],
+      'Automation': ['maintenance', 'safety'],
+      'Valves': ['plumbing', 'safety'],
+      'Chemicals': ['disinfection', 'water-quality'],
+      'Cleaners': ['maintenance', 'water-quality'],
+      'Lighting': ['lighting', 'electrical-safety'],
+      'Safety': ['safety', 'anti-entrapment', 'enclosure', 'signage'],
+      'Plumbing': ['plumbing', 'turnover', 'pumps'],
+      'Motors': ['pumps', 'electrical-safety'],
+      'Parts': ['maintenance'],
+    };
+    
+    const regulationCategories = new Set<string>();
+    for (const category of productCategories) {
+      const mappedCategories = categoryMappings[category] || ['maintenance'];
+      mappedCategories.forEach(c => regulationCategories.add(c));
+    }
+    
+    const result = await db.query.poolRegulations.findMany({
+      where: sql`category = ANY(${Array.from(regulationCategories)})`,
+      limit: 5,
+    });
+    
+    return result as PoolRegulation[];
+  } catch (error) {
+    console.error("Error fetching pool regulations:", error);
+    return [];
+  }
+}
+
 interface ProductMatch {
   sku: string;
   name: string;
@@ -72,16 +123,25 @@ interface ProductMatch {
 
 router.post("/", express.json(), async (req: Request, res: Response) => {
   try {
-    const { description, query, generateDescription, userId } = req.body;
+    const { description, query, generateDescription, userId, languageStyle, productCategories } = req.body;
     const searchText = description || query;
 
     if (generateDescription && searchText) {
-      const descResponse = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          { 
-            role: "system", 
-            content: `You are writing a quote description for a commercial pool repair estimate. Your audience is HOA board members and property managers who have NO technical pool knowledge.
+      // Fetch relevant pool regulations for HOA-friendly descriptions
+      let poolCodeContext = '';
+      if (languageStyle === 'hoa-friendly' && productCategories && productCategories.length > 0) {
+        const regulations = await getRelevantPoolRegulations(productCategories);
+        if (regulations.length > 0) {
+          poolCodeContext = `\n\nCALIFORNIA POOL CODE REFERENCES (use these to explain WHY repairs are legally required):\n${regulations.map(r => 
+            `- ${r.codeSection}: ${r.title}\n  Summary: ${r.summary}\n  HOA Explanation: ${r.hoaFriendlyExplanation || 'Maintains pool safety and compliance.'}`
+          ).join('\n\n')}`;
+        }
+      }
+
+      const isHoaFriendly = languageStyle !== 'professional';
+      
+      const systemPrompt = isHoaFriendly 
+        ? `You are writing a quote description for a commercial pool repair estimate. Your audience is HOA board members and property managers who have NO technical pool knowledge.
 
 RULES:
 1. Start with a friendly greeting: "Dear Property Manager," or "To the Board,"
@@ -90,21 +150,40 @@ RULES:
    - What the part does in everyday terms
    - Why it needs to be replaced (safety, efficiency, code compliance)
    - What benefit they'll see after the repair
-4. Keep sentences short and easy to understand
-5. End with a reassuring statement about the work quality
+4. When applicable, REFERENCE California pool codes to explain legal requirements
+   - Cite specific code sections (e.g., "California Health & Safety Code Section 116064.2")
+   - Explain what the law requires and potential consequences of non-compliance
+   - Help them understand this isn't just a recommendation, but a legal requirement
+5. Keep sentences short and easy to understand
+6. End with a reassuring statement about the work quality and compliance
+${poolCodeContext}
 
-EXAMPLE for a "Tube Bundle":
-"The tube bundle is the part inside your pool heater that actually heats the water - think of it like the heating element in a water heater. When it fails, your pool can't maintain temperature. We'll install a new one so your guests can enjoy warm water again."
+EXAMPLE for a pump replacement:
+"The circulation pump is the heart of your pool system - it moves water through the filtration system to keep the pool clean and safe. California Health & Safety Code Section 65525 requires commercial pools to maintain proper water circulation at all times. When the pump fails, water quality degrades quickly, which can lead to pool closure orders from the health department. This replacement ensures your pool stays in compliance and your guests stay safe."
 
-EXAMPLE for a "Refractory Kit":
-"The refractory kit contains special heat-resistant blocks that protect the inside of your heater from the flame. Over time, these wear out and need replacing to keep the heater running safely and efficiently."
+EXAMPLE for an anti-entrapment drain cover:
+"Per California Health & Safety Code Section 116064.2 (Virginia Graeme Baker Pool and Spa Safety Act), all commercial pools must have compliant drain covers to prevent entrapment hazards. The current cover no longer meets code requirements and must be replaced to avoid potential liability and mandatory pool closure."
 
-Write 3-5 paragraphs that explain the complete scope of work in terms a non-technical person would understand.` 
-          },
+Write 3-5 paragraphs that explain the complete scope of work in terms a non-technical person would understand, with California pool code references where applicable.`
+        : `You are writing a professional quote description for a commercial pool repair estimate. Your audience is facility managers and pool service professionals.
+
+RULES:
+1. Use industry-standard terminology
+2. Include relevant technical specifications
+3. Reference applicable codes and standards
+4. Maintain a formal, business tone
+5. Be concise and precise
+
+Write 2-4 paragraphs that clearly communicate the scope of work with technical accuracy.`;
+
+      const descResponse = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
           { role: "user", content: searchText },
         ],
         temperature: 0.7,
-        max_tokens: 800,
+        max_tokens: 1000,
       });
       const generatedDescription = descResponse.choices[0]?.message?.content?.trim() || "";
       return res.json({ description: generatedDescription });

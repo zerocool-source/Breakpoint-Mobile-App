@@ -169,13 +169,17 @@ export default function QuoteDescriptionScreen() {
     try {
       const itemsSummary = buildItemsSummary();
       
+      // Extract unique product categories for pool code lookup
+      const productCategories = [...new Set(lineItems.map(item => item.product.category))];
+      
       const styleInstructions = languageStyle === 'hoa-friendly'
         ? `Write in simple, everyday language that a property manager or HOA board member would easily understand. 
            AVOID technical jargon, model numbers, and industry terms.
            Instead of technical terms, explain WHAT the equipment does and WHY it needs to be replaced.
            Example: Instead of "Replace Pentair IntelliFlo 3HP VSF pump", say "Replace the main water circulation pump that moves pool water through the filtration system."
            Focus on benefits: safety, efficiency, proper operation, and compliance.
-           Keep sentences short and clear. Use words like "the pool pump" instead of specific model names.`
+           Keep sentences short and clear. Use words like "the pool pump" instead of specific model names.
+           Reference California pool codes where applicable to help HOA managers understand legal requirements.`
         : `Write in professional, industry-standard language suitable for commercial pool service documentation.
            Include relevant technical specifications and product details where appropriate.
            Maintain a formal, business tone.`;
@@ -190,7 +194,7 @@ ${itemsSummary}
 
 Property: ${propertyName}
 
-Write 2-4 sentences explaining the work in a way that clearly communicates the scope and value.`
+Write 3-5 paragraphs explaining the work in a way that clearly communicates the scope, value, and any legal requirements.`
         : `Generate a quote description for this commercial pool repair estimate.
 
 ${styleInstructions}
@@ -200,7 +204,7 @@ ${itemsSummary}
 
 Property: ${propertyName}
 
-Write 2-4 sentences explaining the work in a way that clearly communicates the scope and value.`;
+Write 3-5 paragraphs explaining the work in a way that clearly communicates the scope, value, and any legal requirements.`;
 
       const apiUrl = getLocalApiUrl();
       const response = await fetch(joinUrl(apiUrl, '/api/ai-product-search'), {
@@ -209,7 +213,8 @@ Write 2-4 sentences explaining the work in a way that clearly communicates the s
         body: JSON.stringify({ 
           query: prompt,
           generateDescription: true,
-          languageStyle: languageStyle
+          languageStyle: languageStyle,
+          productCategories: productCategories
         }),
       });
 

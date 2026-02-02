@@ -388,6 +388,91 @@ export const aiQueryMappings = pgTable("ai_query_mappings", {
   lastUsed: timestamp("last_used").notNull().defaultNow(),
 });
 
+// Repair History - tracks all completed repairs per property
+export const repairHistory = pgTable("repair_history", {
+  id: varchar("id", { length: 36 })
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  propertyId: varchar("property_id", { length: 36 }).notNull().references(() => properties.id),
+  technicianId: varchar("technician_id", { length: 36 }).notNull().references(() => users.id),
+  jobId: varchar("job_id", { length: 36 }).references(() => jobs.id),
+  estimateId: varchar("estimate_id", { length: 36 }).references(() => estimates.id),
+  title: text("title").notNull(),
+  description: text("description"),
+  workPerformed: text("work_performed").notNull(),
+  partsUsed: text("parts_used"), // JSON array of parts/products
+  laborHours: decimal("labor_hours", { precision: 5, scale: 2 }),
+  totalCost: decimal("total_cost", { precision: 10, scale: 2 }),
+  completedAt: timestamp("completed_at").notNull().defaultNow(),
+  notes: text("notes"),
+  photoUrls: text("photo_urls"), // JSON array of photo URLs
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const repairHistoryRelations = relations(repairHistory, ({ one }) => ({
+  property: one(properties, {
+    fields: [repairHistory.propertyId],
+    references: [properties.id],
+  }),
+  technician: one(users, {
+    fields: [repairHistory.technicianId],
+    references: [users.id],
+  }),
+  job: one(jobs, {
+    fields: [repairHistory.jobId],
+    references: [jobs.id],
+  }),
+  estimate: one(estimates, {
+    fields: [repairHistory.estimateId],
+    references: [estimates.id],
+  }),
+}));
+
+// Admin Messages - direct chat between technicians and office/admin
+export const adminMessageStatusEnum = pgEnum('admin_message_status', ['unread', 'read', 'archived']);
+export const adminMessagePriorityEnum = pgEnum('admin_message_priority', ['normal', 'urgent']);
+
+export const adminMessages = pgTable("admin_messages", {
+  id: varchar("id", { length: 36 })
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  senderId: varchar("sender_id", { length: 36 }).notNull().references(() => users.id),
+  recipientId: varchar("recipient_id", { length: 36 }).references(() => users.id), // null = sent to office/admin
+  propertyId: varchar("property_id", { length: 36 }).references(() => properties.id), // optional context
+  jobId: varchar("job_id", { length: 36 }).references(() => jobs.id), // optional context
+  subject: text("subject"),
+  content: text("content").notNull(),
+  priority: adminMessagePriorityEnum("priority").notNull().default('normal'),
+  status: adminMessageStatusEnum("status").notNull().default('unread'),
+  isFromAdmin: boolean("is_from_admin").notNull().default(false),
+  parentMessageId: varchar("parent_message_id", { length: 36 }), // for reply threads
+  readAt: timestamp("read_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const adminMessagesRelations = relations(adminMessages, ({ one }) => ({
+  sender: one(users, {
+    fields: [adminMessages.senderId],
+    references: [users.id],
+  }),
+  recipient: one(users, {
+    fields: [adminMessages.recipientId],
+    references: [users.id],
+  }),
+  property: one(properties, {
+    fields: [adminMessages.propertyId],
+    references: [properties.id],
+  }),
+  job: one(jobs, {
+    fields: [adminMessages.jobId],
+    references: [jobs.id],
+  }),
+  parentMessage: one(adminMessages, {
+    fields: [adminMessages.parentMessageId],
+    references: [adminMessages.id],
+  }),
+}));
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type Property = typeof properties.$inferSelect;
@@ -397,6 +482,8 @@ export type Estimate = typeof estimates.$inferSelect;
 export type RouteStop = typeof routeStops.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
 export type TechOps = typeof techOps.$inferSelect;
+export type RepairHistory = typeof repairHistory.$inferSelect;
+export type AdminMessage = typeof adminMessages.$inferSelect;
 
 // AI Learning System types
 export type AILearningInteraction = typeof aiLearningInteractions.$inferSelect;

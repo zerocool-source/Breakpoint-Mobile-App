@@ -6,7 +6,7 @@
 ### Changelog
 | Version | Date | Features Added |
 |---------|------|----------------|
-| v1.2.0 | Feb 2026 | Ace AI Estimate Builder with voice input, personalized self-learning, web-enhanced product search, HOA-friendly quote descriptions |
+| v1.2.0 | Feb 2026 | Ace AI Estimate Builder with voice input, personalized self-learning, web-enhanced product search, HOA-friendly quote descriptions with California pool code references |
 | v1.1.0 | Feb 2026 | Local authentication system, dual-backend architecture, firstName/lastName user fields |
 | v1.0.0 | Jan 2026 | Core app: Role-based access (Service Tech, Repair Tech, Supervisor), Heritage Products Catalog (600+ items), Property management, Assignment tracking, Chat system, Offline mode, Battery saver |
 
@@ -96,6 +96,12 @@ Breakpoint Commercial Pool Systems is a mobile-first field service management ap
             - **Large Description Input**: 380px minimum height for comfortable editing
             - **Voice Input**: Hold-to-speak voice recording with transcription
             - **AI Generation**: Context-aware prompts based on selected language style
+            - **California Pool Code References**: HOA-friendly descriptions cite relevant California Health & Safety Code sections to explain legal requirements for repairs
+        - **Pool Regulations Database**: `server/routes/pool-regulations.ts`
+            - **Database Table**: `pool_regulations` stores California pool codes extracted from official documents
+            - **15 Key Regulations**: Covers anti-entrapment (116064.2), pumps (65525, 3123B), filters (3128B-3132B), disinfection (65529), water quality (65527, 65530), lighting (3115B), GFCI (116049), enclosure (3119B), safety equipment (65540), signage (3120B), maintenance (65535), closure requirements (65545)
+            - **HOA Explanations**: Each regulation includes a layman's explanation for property managers
+            - **AI Integration**: AI automatically references relevant codes based on product categories in estimates
 
 ## External Dependencies
 - **Database**: PostgreSQL

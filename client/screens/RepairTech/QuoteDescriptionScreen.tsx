@@ -9,10 +9,12 @@ import {
   Platform,
   Animated,
   Easing,
+  SegmentedControlIOSComponent,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
+import SegmentedControl from '@react-native-segmented-control/segmented-control';
 import * as Haptics from 'expo-haptics';
 import * as FileSystem from 'expo-file-system';
 import { useAudioRecorder, AudioModule, RecordingPresets, setAudioModeAsync } from 'expo-audio';
@@ -22,6 +24,8 @@ import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing } from '@/constants/theme';
 import { ESTIMATE_COLORS, formatCurrencyDollars } from '@/constants/estimateDesign';
 import { getLocalApiUrl, joinUrl } from '@/lib/query-client';
+
+type DescriptionLanguageStyle = 'professional' | 'hoa-friendly';
 
 interface LineItem {
   id: string;
@@ -61,6 +65,7 @@ export default function QuoteDescriptionScreen() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [languageStyle, setLanguageStyle] = useState<DescriptionLanguageStyle>('hoa-friendly');
 
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -163,9 +168,39 @@ export default function QuoteDescriptionScreen() {
 
     try {
       const itemsSummary = buildItemsSummary();
+      
+      const styleInstructions = languageStyle === 'hoa-friendly'
+        ? `Write in simple, everyday language that a property manager or HOA board member would easily understand. 
+           AVOID technical jargon, model numbers, and industry terms.
+           Instead of technical terms, explain WHAT the equipment does and WHY it needs to be replaced.
+           Example: Instead of "Replace Pentair IntelliFlo 3HP VSF pump", say "Replace the main water circulation pump that moves pool water through the filtration system."
+           Focus on benefits: safety, efficiency, proper operation, and compliance.
+           Keep sentences short and clear. Use words like "the pool pump" instead of specific model names.`
+        : `Write in professional, industry-standard language suitable for commercial pool service documentation.
+           Include relevant technical specifications and product details where appropriate.
+           Maintain a formal, business tone.`;
+      
       const prompt = voiceInput.trim() 
-        ? `Generate a professional quote description based on these instructions: "${voiceInput}"\n\nLine items:\n${itemsSummary}\n\nProperty: ${propertyName}`
-        : `Generate a professional quote description for this commercial pool repair estimate:\n\nLine items:\n${itemsSummary}\n\nProperty: ${propertyName}`;
+        ? `Generate a quote description based on these instructions: "${voiceInput}"
+
+${styleInstructions}
+
+Line items:
+${itemsSummary}
+
+Property: ${propertyName}
+
+Write 2-4 sentences explaining the work in a way that clearly communicates the scope and value.`
+        : `Generate a quote description for this commercial pool repair estimate.
+
+${styleInstructions}
+
+Line items:
+${itemsSummary}
+
+Property: ${propertyName}
+
+Write 2-4 sentences explaining the work in a way that clearly communicates the scope and value.`;
 
       const apiUrl = getLocalApiUrl();
       const response = await fetch(joinUrl(apiUrl, '/api/ai-product-search'), {
@@ -173,7 +208,8 @@ export default function QuoteDescriptionScreen() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           query: prompt,
-          generateDescription: true 
+          generateDescription: true,
+          languageStyle: languageStyle
         }),
       });
 
@@ -341,14 +377,39 @@ export default function QuoteDescriptionScreen() {
             <ThemedText style={styles.descriptionTitle}>Quote Description</ThemedText>
           </View>
           <ThemedText style={styles.descriptionHint}>
-            This is what the customer/HOA will read. Write in simple, non-technical language.
+            This is what the customer/HOA will read. Choose the language style below.
           </ThemedText>
+          
+          <View style={styles.languageToggleContainer}>
+            <ThemedText style={styles.languageToggleLabel}>Language Style:</ThemedText>
+            <SegmentedControl
+              values={['HOA-Friendly', 'Professional']}
+              selectedIndex={languageStyle === 'hoa-friendly' ? 0 : 1}
+              onChange={(event) => {
+                const index = event.nativeEvent.selectedSegmentIndex;
+                setLanguageStyle(index === 0 ? 'hoa-friendly' : 'professional');
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }}
+              style={styles.languageToggle}
+              tintColor={BrandColors.azureBlue}
+              fontStyle={{ fontSize: 13 }}
+              activeFontStyle={{ fontWeight: '600', fontSize: 13 }}
+            />
+            <ThemedText style={styles.languageHint}>
+              {languageStyle === 'hoa-friendly' 
+                ? 'Simple language for property managers and HOA boards'
+                : 'Technical language for industry professionals'}
+            </ThemedText>
+          </View>
+          
           <TextInput
             style={styles.descriptionInput}
             value={description}
             onChangeText={setDescription}
             multiline
-            placeholder="Describe the work in simple terms that a property manager or HOA board member would understand. Explain what each part does and why it needs to be replaced..."
+            placeholder={languageStyle === 'hoa-friendly'
+              ? "Describe the work in everyday terms. Example: 'We will replace the main water pump that circulates water through the pool system. The current pump is no longer operating efficiently, which affects water quality and increases energy costs.'"
+              : "Describe the work using industry-standard terminology. Include product specifications and technical details as needed."}
             placeholderTextColor={ESTIMATE_COLORS.textSlate400}
             textAlignVertical="top"
           />
@@ -600,16 +661,35 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
     fontStyle: 'italic',
   },
+  languageToggleContainer: {
+    marginBottom: Spacing.lg,
+    paddingVertical: Spacing.sm,
+  },
+  languageToggleLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: ESTIMATE_COLORS.textDark,
+    marginBottom: Spacing.sm,
+  },
+  languageToggle: {
+    marginBottom: Spacing.sm,
+  },
+  languageHint: {
+    fontSize: 12,
+    color: ESTIMATE_COLORS.textSlate500,
+    fontStyle: 'italic',
+    textAlign: 'center',
+  },
   descriptionInput: {
     backgroundColor: ESTIMATE_COLORS.bgSlate50,
     borderWidth: 2,
     borderColor: BrandColors.azureBlue,
     borderRadius: BorderRadius.lg,
     padding: Spacing.lg,
-    fontSize: 15,
+    fontSize: 16,
     color: ESTIMATE_COLORS.textDark,
-    minHeight: 280,
-    lineHeight: 24,
+    minHeight: 380,
+    lineHeight: 26,
   },
   charCount: {
     fontSize: 11,

@@ -1,11 +1,12 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { View, StyleSheet, Pressable, Platform, Image, ImageSourcePropType, Linking, Alert, Modal, FlatList, TextInput } from 'react-native';
+import { View, StyleSheet, Pressable, Platform, Image, ImageSourcePropType, Linking, Alert, Modal, FlatList, TextInput, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
 import { Swipeable } from 'react-native-gesture-handler';
+import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -23,7 +24,8 @@ import { useNetwork } from '@/context/NetworkContext';
 import { useBattery } from '@/context/BatteryContext';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
-import { mockJobs, mockRouteStops, mockQueueMetrics, mockProperties } from '@/lib/mockData';
+import { mockRouteStops, mockQueueMetrics, mockProperties } from '@/lib/mockData';
+import { getLocalApiUrl, joinUrl } from '@/lib/query-client';
 import { NewEstimateModal, OrderPartsModal, ReportIssueModal, EmergencyReportModal } from './Modals';
 import type { Job } from '@/types';
 import type { RootStackParamList } from '@/navigation/RootStackNavigator';
@@ -206,14 +208,30 @@ function RepairJobCard({ job, isFirst, drag, isActive, onPress, onNavigate, onCo
 
 export default function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const { isConnected } = useNetwork();
   const { isBatterySaverEnabled } = useBattery();
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
 
-  const [jobs, setJobs] = useState<Job[]>(mockJobs);
+  const { data: jobsData, isLoading: isLoadingJobs, refetch: refetchJobs } = useQuery<Job[]>({
+    queryKey: ['/api/jobs'],
+    queryFn: async () => {
+      const apiUrl = getLocalApiUrl();
+      const response = await fetch(joinUrl(apiUrl, '/api/jobs'), {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!response.ok) throw new Error('Failed to fetch jobs');
+      return response.json();
+    },
+    enabled: !!token,
+  });
+
+  const [jobs, setJobs] = useState<Job[]>([]);
   const [showNewEstimateModal, setShowNewEstimateModal] = useState(false);
   const [showOrderPartsModal, setShowOrderPartsModal] = useState(false);
   const [showReportIssueModal, setShowReportIssueModal] = useState(false);
@@ -223,13 +241,19 @@ export default function HomeScreen() {
   const [propertySearch, setPropertySearch] = useState('');
 
   useEffect(() => {
+    if (jobsData) {
+      setJobs(jobsData);
+    }
+  }, [jobsData]);
+
+  useEffect(() => {
     const timer = setTimeout(() => {
       setShowNotification(true);
     }, 2000);
     return () => clearTimeout(timer);
   }, []);
 
-  const nextStop = mockRouteStops.find(stop => !stop.completed);
+  const nextStop = jobs.length > 0 ? jobs[0] : null;
   const truckId = 'RT-007';
 
   const handleDragEnd = ({ data }: { data: Job[] }) => {
@@ -327,10 +351,10 @@ export default function HomeScreen() {
                 </View>
                 <Feather name="droplet" size={20} color={BrandColors.tropicalTeal} />
                 <View style={[styles.nextStopTime, { backgroundColor: BrandColors.vividTangerine }]}>
-                  <ThemedText style={styles.nextStopTimeText}>{nextStop.scheduledTime}</ThemedText>
+                  <ThemedText style={styles.nextStopTimeText}>{nextStop.scheduledTime || 'Today'}</ThemedText>
                 </View>
               </View>
-              <ThemedText style={styles.nextStopName}>{nextStop.property?.name ?? 'Unknown Property'}</ThemedText>
+              <ThemedText style={styles.nextStopName}>{nextStop.property?.name ?? nextStop.title ?? 'Unknown Property'}</ThemedText>
               <View style={styles.nextStopAddressRow}>
                 <Feather name="map-pin" size={14} color={BrandColors.vividTangerine} />
                 <ThemedText style={[styles.nextStopAddress, { color: theme.textSecondary }]}>
@@ -340,15 +364,17 @@ export default function HomeScreen() {
               <View style={styles.nextStopMeta}>
                 <View style={[styles.propertyTypeBadge, { backgroundColor: BrandColors.vividTangerine + '20' }]}>
                   <ThemedText style={[styles.propertyTypeBadgeText, { color: BrandColors.vividTangerine }]}>
-                    {nextStop.property.type?.toUpperCase() || 'HOA'}
+                    {(nextStop.property as any)?.type?.toUpperCase() || 'REPAIR'}
                   </ThemedText>
                 </View>
-                <View style={styles.poolCount}>
-                  <Feather name="droplet" size={14} color={BrandColors.tropicalTeal} />
-                  <ThemedText style={[styles.poolCountText, { color: BrandColors.tropicalTeal }]}>
-                    {nextStop.property.poolCount} pools
-                  </ThemedText>
-                </View>
+                {(nextStop.property as any)?.poolCount ? (
+                  <View style={styles.poolCount}>
+                    <Feather name="droplet" size={14} color={BrandColors.tropicalTeal} />
+                    <ThemedText style={[styles.poolCountText, { color: BrandColors.tropicalTeal }]}>
+                      {(nextStop.property as any).poolCount} pools
+                    </ThemedText>
+                  </View>
+                ) : null}
               </View>
             </View>
           </Animated.View>
@@ -508,11 +534,20 @@ export default function HomeScreen() {
         >
           {renderHeader()}
           <View style={styles.emptyJobsContainer}>
-            <Feather name="check-circle" size={48} color={BrandColors.emerald} />
-            <ThemedText style={styles.emptyJobsTitle}>All Caught Up!</ThemedText>
-            <ThemedText style={[styles.emptyJobsText, { color: theme.textSecondary }]}>
-              No jobs scheduled for today
-            </ThemedText>
+            {isLoadingJobs ? (
+              <>
+                <ActivityIndicator size="large" color={BrandColors.azureBlue} />
+                <ThemedText style={styles.emptyJobsTitle}>Loading Jobs...</ThemedText>
+              </>
+            ) : (
+              <>
+                <Feather name="check-circle" size={48} color={BrandColors.emerald} />
+                <ThemedText style={styles.emptyJobsTitle}>All Caught Up!</ThemedText>
+                <ThemedText style={[styles.emptyJobsText, { color: theme.textSecondary }]}>
+                  No jobs scheduled for today
+                </ThemedText>
+              </>
+            )}
           </View>
         </Animated.ScrollView>
       )}
@@ -534,7 +569,7 @@ export default function HomeScreen() {
       <ReportIssueModal
         visible={showReportIssueModal}
         onClose={() => setShowReportIssueModal(false)}
-        propertyId={nextStop?.propertyId || jobs[0]?.property?.id || 'unknown'}
+        propertyId={nextStop?.property?.id || jobs[0]?.property?.id || 'unknown'}
         propertyName={nextStop?.property?.name || jobs[0]?.property?.name || 'Current Property'}
         bodyOfWater="Main Pool"
         technicianId={user?.id || 'unknown'}

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { View, StyleSheet, Pressable, Platform, Image, ImageSourcePropType } from 'react-native';
+import { View, StyleSheet, Pressable, Platform, Image, ImageSourcePropType, Linking, Alert, Modal, FlatList, TextInput } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,7 +23,7 @@ import { useNetwork } from '@/context/NetworkContext';
 import { useBattery } from '@/context/BatteryContext';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
-import { mockJobs, mockRouteStops, mockQueueMetrics } from '@/lib/mockData';
+import { mockJobs, mockRouteStops, mockQueueMetrics, mockProperties } from '@/lib/mockData';
 import { NewEstimateModal, OrderPartsModal, ReportIssueModal, EmergencyReportModal } from './Modals';
 import type { Job } from '@/types';
 import type { RootStackParamList } from '@/navigation/RootStackNavigator';
@@ -203,6 +203,8 @@ export default function HomeScreen() {
   const [showReportIssueModal, setShowReportIssueModal] = useState(false);
   const [showEmergencyModal, setShowEmergencyModal] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
+  const [showRepairHistoryPicker, setShowRepairHistoryPicker] = useState(false);
+  const [propertySearch, setPropertySearch] = useState('');
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -238,8 +240,22 @@ export default function HomeScreen() {
       case 'issue':
         setShowReportIssueModal(true);
         break;
+      case 'history':
+        setShowRepairHistoryPicker(true);
+        break;
     }
   };
+
+  const handleSelectPropertyForHistory = (property: { id: string; name: string }) => {
+    setShowRepairHistoryPicker(false);
+    setPropertySearch('');
+    navigation.navigate('RepairHistory', { propertyId: property.id, propertyName: property.name });
+  };
+
+  const filteredProperties = mockProperties.filter(p => 
+    p.name.toLowerCase().includes(propertySearch.toLowerCase()) ||
+    p.address?.toLowerCase().includes(propertySearch.toLowerCase())
+  ).slice(0, 50);
 
   const getCurrentTime = () => {
     return new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
@@ -349,6 +365,12 @@ export default function HomeScreen() {
               color={BrandColors.danger}
               onPress={() => handleQuickAction('issue')}
             />
+            <QuickAction
+              icon="clock"
+              label="Repair History"
+              color={BrandColors.tropicalTeal}
+              onPress={() => handleQuickAction('history')}
+            />
           </View>
         </Animated.View>
 
@@ -365,11 +387,45 @@ export default function HomeScreen() {
     </View>
   );
 
-  const handleNavigateToJob = (job: Job) => {
+  const handleNavigateToJob = async (job: Job) => {
+    const address = job.property?.address;
+    if (!address) {
+      Alert.alert('No Address', 'This job does not have an address to navigate to.');
+      return;
+    }
+
     if (Platform.OS !== 'web') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
-    console.log('Navigate to:', job.property?.address);
+
+    const encodedAddress = encodeURIComponent(address);
+    
+    // Try platform-specific maps apps first
+    let url = '';
+    if (Platform.OS === 'ios') {
+      // Apple Maps
+      url = `maps://app?daddr=${encodedAddress}`;
+    } else if (Platform.OS === 'android') {
+      // Google Maps on Android
+      url = `google.navigation:q=${encodedAddress}`;
+    } else {
+      // Web fallback - Google Maps in browser
+      url = `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}`;
+    }
+
+    try {
+      const canOpen = await Linking.canOpenURL(url);
+      if (canOpen) {
+        await Linking.openURL(url);
+      } else {
+        // Fallback to Google Maps web
+        const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}`;
+        await Linking.openURL(webUrl);
+      }
+    } catch (error) {
+      console.error('Failed to open maps:', error);
+      Alert.alert('Navigation Error', 'Could not open maps application. Please try again.');
+    }
   };
 
   const handleCompleteJob = (jobId: string) => {
@@ -473,6 +529,61 @@ export default function HomeScreen() {
         onClose={() => setShowEmergencyModal(false)}
         onSubmit={(data) => console.log('Emergency:', data)}
       />
+
+      <Modal
+        visible={showRepairHistoryPicker}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowRepairHistoryPicker(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.repairHistoryModal, { backgroundColor: theme.surface }]}>
+            <View style={styles.modalHeader}>
+              <ThemedText style={styles.modalTitle}>Select Property</ThemedText>
+              <Pressable onPress={() => setShowRepairHistoryPicker(false)}>
+                <Feather name="x" size={24} color={theme.text} />
+              </Pressable>
+            </View>
+            <View style={[styles.searchContainer, { backgroundColor: theme.background }]}>
+              <Feather name="search" size={18} color={theme.textSecondary} />
+              <TextInput
+                style={[styles.searchInput, { color: theme.text }]}
+                placeholder="Search properties..."
+                placeholderTextColor={theme.textSecondary}
+                value={propertySearch}
+                onChangeText={setPropertySearch}
+              />
+            </View>
+            <FlatList
+              data={filteredProperties}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <Pressable
+                  style={[styles.propertyItem, { borderBottomColor: theme.border }]}
+                  onPress={() => handleSelectPropertyForHistory(item)}
+                >
+                  <View style={styles.propertyItemContent}>
+                    <ThemedText style={styles.propertyItemName}>{item.name}</ThemedText>
+                    <ThemedText style={[styles.propertyItemAddress, { color: theme.textSecondary }]} numberOfLines={1}>
+                      {item.address}
+                    </ThemedText>
+                  </View>
+                  <Feather name="chevron-right" size={20} color={theme.textSecondary} />
+                </Pressable>
+              )}
+              ListEmptyComponent={
+                <View style={styles.emptySearch}>
+                  <Feather name="search" size={32} color={theme.textSecondary} />
+                  <ThemedText style={[styles.emptySearchText, { color: theme.textSecondary }]}>
+                    No properties found
+                  </ThemedText>
+                </View>
+              }
+              keyboardShouldPersistTaps="handled"
+            />
+          </View>
+        </View>
+      </Modal>
     </BubbleBackground>
   );
 }
@@ -825,5 +936,71 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     marginTop: Spacing.xs,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  repairHistoryModal: {
+    borderTopLeftRadius: BorderRadius.xl,
+    borderTopRightRadius: BorderRadius.xl,
+    maxHeight: '80%',
+    paddingBottom: Spacing['2xl'],
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.screenPadding,
+    paddingVertical: Spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.1)',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: Spacing.screenPadding,
+    marginVertical: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    gap: Spacing.sm,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    paddingVertical: Spacing.xs,
+  },
+  propertyItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.screenPadding,
+    paddingVertical: Spacing.md,
+    borderBottomWidth: 1,
+  },
+  propertyItemContent: {
+    flex: 1,
+  },
+  propertyItemName: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  propertyItemAddress: {
+    fontSize: 13,
+    marginTop: 2,
+  },
+  emptySearch: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing['2xl'],
+  },
+  emptySearchText: {
+    fontSize: 14,
+    marginTop: Spacing.md,
   },
 });

@@ -3,7 +3,7 @@ import { createServer, type Server } from "node:http";
 import authRoutes, { authMiddleware, AuthenticatedRequest } from "./auth";
 import { db } from "./db";
 import { users, properties, jobs, assignments, estimates, routeStops, propertyChannels, techOps, repairHistory, adminMessages, poolRegulations } from "@shared/schema";
-import { eq, and, desc, sql, or } from "drizzle-orm";
+import { eq, and, desc, sql, or, ne } from "drizzle-orm";
 import transcribeRouter from "./routes/transcribe";
 import aiProductSearchRouter from "./routes/ai-product-search";
 import aiLearningRouter from "./routes/ai-learning";
@@ -140,7 +140,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/jobs", authMiddleware, async (req: AuthenticatedRequest, res) => {
     try {
       const userJobs = await db.query.jobs.findMany({
-        where: eq(jobs.assignedToId, req.user!.id),
+        where: and(
+          eq(jobs.assignedToId, req.user!.id),
+          ne(jobs.status, 'cancelled'),
+          ne(jobs.status, 'completed')
+        ),
         orderBy: [desc(jobs.createdAt)],
         with: {
           property: true,
@@ -169,6 +173,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching all jobs:", error);
       res.status(500).json({ error: "Failed to fetch jobs" });
+    }
+  });
+
+  // PATCH /api/jobs/:id/accept - Accept a job
+  app.patch("/api/jobs/:id/accept", authMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      
+      const job = await db.query.jobs.findFirst({
+        where: eq(jobs.id, id),
+      });
+      
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+      
+      if (job.assignedToId !== req.user!.id) {
+        return res.status(403).json({ error: "You can only accept jobs assigned to you" });
+      }
+      
+      if (job.status !== 'pending') {
+        return res.status(400).json({ error: "Only pending jobs can be accepted" });
+      }
+      
+      const [updatedJob] = await db
+        .update(jobs)
+        .set({ 
+          status: 'in_progress',
+          updatedAt: new Date(),
+        })
+        .where(eq(jobs.id, id))
+        .returning();
+      
+      res.json(updatedJob);
+    } catch (error) {
+      console.error("Error accepting job:", error);
+      res.status(500).json({ error: "Failed to accept job" });
+    }
+  });
+
+  // PATCH /api/jobs/:id/dismiss - Dismiss a job
+  app.patch("/api/jobs/:id/dismiss", authMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      
+      const job = await db.query.jobs.findFirst({
+        where: eq(jobs.id, id),
+      });
+      
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+      
+      if (job.assignedToId !== req.user!.id) {
+        return res.status(403).json({ error: "You can only dismiss jobs assigned to you" });
+      }
+      
+      if (job.status !== 'pending') {
+        return res.status(400).json({ error: "Only pending jobs can be dismissed" });
+      }
+      
+      const [updatedJob] = await db
+        .update(jobs)
+        .set({ 
+          status: 'cancelled',
+          updatedAt: new Date(),
+        })
+        .where(eq(jobs.id, id))
+        .returning();
+      
+      res.json(updatedJob);
+    } catch (error) {
+      console.error("Error dismissing job:", error);
+      res.status(500).json({ error: "Failed to dismiss job" });
     }
   });
 

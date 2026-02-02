@@ -35,16 +35,15 @@ export const properties = pgTable("properties", {
     .default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   address: text("address").notNull(),
-  type: propertyTypeEnum("type").notNull(),
+  propertyType: text("property_type"),
   gateCode: text("gate_code"),
-  contactName: text("contact_name"),
-  contactPhone: text("contact_phone"),
-  contactEmail: text("contact_email"),
+  primaryContactName: text("primary_contact_name"),
+  primaryContactPhone: text("primary_contact_phone"),
+  primaryContactEmail: text("primary_contact_email"),
   notes: text("notes"),
-  poolCount: integer("pool_count").notNull().default(1),
-  isActive: boolean("is_active").notNull().default(true),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  poolCount: integer("pool_count").default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const jobs = pgTable("jobs", {
@@ -63,6 +62,7 @@ export const jobs = pgTable("jobs", {
   estimatedCost: decimal("estimated_cost", { precision: 10, scale: 2 }),
   completedAt: timestamp("completed_at"),
   notes: text("notes"),
+  photos: text("photos").array().default([]),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

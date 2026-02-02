@@ -86,9 +86,11 @@ interface RepairJobCardProps {
   onNavigate: () => void;
   onComplete: () => void;
   onCreateEstimate: () => void;
+  onAccept: () => void;
+  onDismiss: () => void;
 }
 
-function RepairJobCard({ job, isFirst, drag, isActive, onPress, onNavigate, onComplete, onCreateEstimate }: RepairJobCardProps) {
+function RepairJobCard({ job, isFirst, drag, isActive, onPress, onNavigate, onComplete, onCreateEstimate, onAccept, onDismiss }: RepairJobCardProps) {
   const { theme } = useTheme();
   const swipeableRef = useRef<Swipeable>(null);
   
@@ -243,6 +245,36 @@ function RepairJobCard({ job, isFirst, drag, isActive, onPress, onNavigate, onCo
             </View>
           ) : null}
           
+          {/* Accept/Dismiss Buttons for pending jobs */}
+          {job.status === 'pending' ? (
+            <View style={styles.jobAcceptDismissRow}>
+              <Pressable 
+                style={[styles.jobAcceptButton, { backgroundColor: BrandColors.emerald }]} 
+                onPress={() => {
+                  if (Platform.OS !== 'web') {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  }
+                  onAccept();
+                }}
+              >
+                <Feather name="check" size={18} color="#FFFFFF" />
+                <ThemedText style={styles.jobAcceptButtonText}>Accept</ThemedText>
+              </Pressable>
+              <Pressable 
+                style={[styles.jobDismissButton, { backgroundColor: BrandColors.danger }]} 
+                onPress={() => {
+                  if (Platform.OS !== 'web') {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  }
+                  onDismiss();
+                }}
+              >
+                <Feather name="x" size={18} color="#FFFFFF" />
+                <ThemedText style={styles.jobDismissButtonText}>Dismiss</ThemedText>
+              </Pressable>
+            </View>
+          ) : null}
+          
           {/* Action Buttons */}
           <View style={styles.jobCardActions}>
             <Pressable style={[styles.jobActionButton, { backgroundColor: BrandColors.azureBlue }]} onPress={handleNavigate}>
@@ -255,23 +287,25 @@ function RepairJobCard({ job, isFirst, drag, isActive, onPress, onNavigate, onCo
             </Pressable>
           </View>
           
-          {isAssessment ? (
-            <Pressable 
-              style={[styles.jobPrimaryAction, { backgroundColor: BrandColors.tropicalTeal }]} 
-              onPress={onCreateEstimate}
-            >
-              <Feather name="file-plus" size={18} color="#FFFFFF" />
-              <ThemedText style={styles.jobPrimaryActionText}>Create Estimate</ThemedText>
-            </Pressable>
-          ) : (
-            <Pressable 
-              style={[styles.jobPrimaryAction, { backgroundColor: BrandColors.emerald }]} 
-              onPress={onComplete}
-            >
-              <Feather name="check-circle" size={18} color="#FFFFFF" />
-              <ThemedText style={styles.jobPrimaryActionText}>Verify & Complete</ThemedText>
-            </Pressable>
-          )}
+          {job.status === 'in_progress' ? (
+            isAssessment ? (
+              <Pressable 
+                style={[styles.jobPrimaryAction, { backgroundColor: BrandColors.tropicalTeal }]} 
+                onPress={onCreateEstimate}
+              >
+                <Feather name="file-plus" size={18} color="#FFFFFF" />
+                <ThemedText style={styles.jobPrimaryActionText}>Create Estimate</ThemedText>
+              </Pressable>
+            ) : (
+              <Pressable 
+                style={[styles.jobPrimaryAction, { backgroundColor: BrandColors.emerald }]} 
+                onPress={onComplete}
+              >
+                <Feather name="check-circle" size={18} color="#FFFFFF" />
+                <ThemedText style={styles.jobPrimaryActionText}>Verify & Complete</ThemedText>
+              </Pressable>
+            )
+          ) : null}
           
           {isFirst ? (
             <View style={styles.jobCardBadge}>
@@ -566,6 +600,59 @@ export default function HomeScreen() {
     });
   };
 
+  const handleAcceptJob = async (jobId: string) => {
+    try {
+      const apiUrl = getLocalApiUrl();
+      const response = await fetch(joinUrl(apiUrl, `/api/jobs/${jobId}/accept`), {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!response.ok) throw new Error('Failed to accept job');
+      refetchJobs();
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to accept job. Please try again.');
+    }
+  };
+
+  const handleDismissJob = async (jobId: string) => {
+    Alert.alert(
+      'Dismiss Job',
+      'Are you sure you want to dismiss this job? It will be removed from your queue.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Dismiss', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const apiUrl = getLocalApiUrl();
+              const response = await fetch(joinUrl(apiUrl, `/api/jobs/${jobId}/dismiss`), {
+                method: 'PATCH',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json',
+                },
+              });
+              if (!response.ok) throw new Error('Failed to dismiss job');
+              refetchJobs();
+              if (Platform.OS !== 'web') {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+              }
+            } catch (error) {
+              Alert.alert('Error', 'Failed to dismiss job. Please try again.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const renderJob = useCallback(
     ({ item, drag, isActive, getIndex }: RenderItemParams<Job>) => {
       const index = getIndex() ?? 0;
@@ -580,11 +667,13 @@ export default function HomeScreen() {
             onNavigate={() => handleNavigateToJob(item)}
             onComplete={() => handleCompleteJob(item.id)}
             onCreateEstimate={() => handleCreateEstimateFromJob(item)}
+            onAccept={() => handleAcceptJob(item.id)}
+            onDismiss={() => handleDismissJob(item.id)}
           />
         </ScaleDecorator>
       );
     },
-    [navigation]
+    [navigation, token]
   );
 
   return (
@@ -1114,6 +1203,39 @@ const styles = StyleSheet.create({
   jobActionButtonText: {
     fontSize: 13,
     fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  jobAcceptDismissRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginTop: Spacing.sm,
+  },
+  jobAcceptButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
+    gap: Spacing.xs,
+  },
+  jobAcceptButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  jobDismissButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
+    gap: Spacing.xs,
+  },
+  jobDismissButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
     color: '#FFFFFF',
   },
   jobPrimaryAction: {

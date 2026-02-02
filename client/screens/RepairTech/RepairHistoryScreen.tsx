@@ -1,7 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, Pressable, Platform, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -130,7 +129,6 @@ type RepairHistoryRouteParams = {
 
 export default function RepairHistoryScreen() {
   const insets = useSafeAreaInsets();
-  const tabBarHeight = useBottomTabBarHeight();
   const navigation = useNavigation<any>();
   const route = useRoute<RouteProp<RepairHistoryRouteParams, 'RepairHistory'>>();
   const { user, token } = useAuth();
@@ -204,7 +202,7 @@ export default function RepairHistoryScreen() {
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={{ paddingBottom: tabBarHeight + Spacing.xl }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + Spacing.xl }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         refreshControl={

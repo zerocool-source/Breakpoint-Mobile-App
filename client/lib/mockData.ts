@@ -197,7 +197,60 @@ export const mockProperties: Property[] = [
   { id: '187', name: 'Woodview Patio Homes Association - Repairs', address: '', email: 'weston.andrew@fsresidential.com', phone: '' },
 ];
 
-export const mockJobs: Job[] = [];
+export const mockJobs: Job[] = [
+  {
+    id: '1',
+    propertyId: '1',
+    title: 'Pump Motor Replacement',
+    property: { id: '1', name: 'AA Ron Property Services', address: '1234 Main St, Riverside, CA 92501', email: 'aaronpropertyservices951@gmail.com', phone: '9515413566' },
+    description: 'Customer reported loud noise from pump. May need complete motor replacement.',
+    priority: 'high',
+    status: 'pending',
+    photos: [],
+    scheduledTime: '8:30 AM',
+    order: 1,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: '2',
+    propertyId: '2',
+    title: 'Filter System Inspection',
+    property: { id: '2', name: 'Altis Master Association', address: '5678 Oak Ave, Murrieta, CA 92562', email: 'jason.kratz@seabreezemgmt.com', phone: '' },
+    description: 'Routine filter maintenance and pressure check.',
+    priority: 'normal',
+    status: 'pending',
+    photos: [],
+    scheduledTime: '10:30 AM',
+    order: 2,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: '3',
+    propertyId: '3',
+    title: 'Heater Repair',
+    property: { id: '3', name: 'Amberwalk HOA', address: '9012 Pine Rd, Temecula, CA 92591', email: 'hoavendor@wsr.net', phone: '' },
+    description: 'Pool heater not reaching set temperature. Possible thermostat or heat exchanger issue.',
+    priority: 'urgent',
+    status: 'pending',
+    photos: [],
+    scheduledTime: '1:00 PM',
+    order: 3,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: '4',
+    propertyId: '4',
+    title: 'Chemical Balance Service',
+    property: { id: '4', name: 'Amelia Square HOA', address: '3456 Elm Blvd, Corona, CA 92882', email: 'jwilliams@prescottmgt.com', phone: '' },
+    description: 'Weekly chemical testing and adjustment.',
+    priority: 'low',
+    status: 'pending',
+    photos: [],
+    scheduledTime: '3:30 PM',
+    order: 4,
+    createdAt: new Date().toISOString(),
+  },
+];
 
 export const mockEstimates: Estimate[] = [];
 

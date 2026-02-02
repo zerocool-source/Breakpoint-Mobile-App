@@ -1,0 +1,126 @@
+{
+  "id": "43de78f2-e5c3-4a8d-b24d-4c36771cbfc1",
+  "createdAt": "2026-02-02T15:05:47.238Z",
+  "runtimeVersion": "exposdk:54.0.0",
+  "launchAsset": {
+    "key": "bundle-1770044747238-1187",
+    "contentType": "application/javascript",
+    "url": "https://1d1d7cce-b0a3-4db6-bfb5-5f8bcd14c58a-00-q4nmssf91qlw.picard.replit.dev/1770044747238-1187/_expo/static/js/ios/bundle.js"
+  },
+  "assets": [],
+  "metadata": {},
+  "extra": {
+    "eas": {
+      "projectId": "318a0742-43fd-43c3-acd2-6474a2137f01"
+    },
+    "expoClient": {
+      "name": "Breakpoint",
+      "slug": "breakpoint-pool-systems",
+      "version": "1.0.0",
+      "orientation": "portrait",
+      "icon": "./assets/images/icon.png",
+      "scheme": "breakpoint",
+      "userInterfaceStyle": "automatic",
+      "newArchEnabled": true,
+      "ios": {
+        "supportsTablet": true,
+        "bundleIdentifier": "com.breakpoint.poolsystems"
+      },
+      "android": {
+        "adaptiveIcon": {
+          "backgroundColor": "#1a1a2e",
+          "foregroundImage": "./assets/images/android-icon-foreground.png",
+          "monochromeImage": "./assets/images/android-icon-monochrome.png",
+          "foregroundImageUrl": "https://1d1d7cce-b0a3-4db6-bfb5-5f8bcd14c58a-00-q4nmssf91qlw.picard.replit.dev/assets/./assets/images/android-icon-foreground.png",
+          "monochromeImageUrl": "https://1d1d7cce-b0a3-4db6-bfb5-5f8bcd14c58a-00-q4nmssf91qlw.picard.replit.dev/assets/./assets/images/android-icon-monochrome.png"
+        },
+        "edgeToEdgeEnabled": true,
+        "predictiveBackGestureEnabled": false,
+        "package": "com.breakpoint.poolsystems",
+        "permissions": [
+          "android.permission.RECORD_AUDIO"
+        ]
+      },
+      "web": {
+        "output": "single",
+        "favicon": "./assets/images/favicon.png"
+      },
+      "plugins": [
+        [
+          "expo-splash-screen",
+          {
+            "image": "./assets/images/splash-icon.png",
+            "imageWidth": 200,
+            "resizeMode": "contain",
+            "backgroundColor": "#1a1a2e",
+            "dark": {
+              "backgroundColor": "#16213e"
+            }
+          }
+        ],
+        "expo-web-browser",
+        "expo-image-picker",
+        "expo-secure-store",
+        "@react-native-community/datetimepicker"
+      ],
+      "experiments": {
+        "reactCompiler": true
+      },
+      "extra": {
+        "apiUrl": "https://breakpoint-api-v2.onrender.com",
+        "techOpsUrl": "https://breakpoint-app.onrender.com",
+        "eas": {
+          "projectId": "318a0742-43fd-43c3-acd2-6474a2137f01"
+        }
+      },
+      "_internal": {
+        "isDebug": false,
+        "projectRoot": "/home/runner/workspace",
+        "dynamicConfigPath": "/home/runner/workspace/app.config.js",
+        "staticConfigPath": {},
+        "packageJsonPath": "/home/runner/workspace/package.json",
+        "pluginHistory": {
+          "expo-splash-screen": {
+            "name": "expo-splash-screen",
+            "version": "31.0.13"
+          },
+          "expo-web-browser": {
+            "name": "expo-web-browser",
+            "version": "15.0.10"
+          },
+          "expo-image-picker": {
+            "name": "expo-image-picker",
+            "version": "17.0.10"
+          },
+          "expo-secure-store": {
+            "name": "expo-secure-store",
+            "version": "15.0.8"
+          }
+        }
+      },
+      "sdkVersion": "54.0.0",
+      "platforms": [
+        "ios",
+        "android",
+        "web"
+      ],
+      "androidStatusBar": {
+        "backgroundColor": "#1a1a2e"
+      },
+      "iconUrl": "https://1d1d7cce-b0a3-4db6-bfb5-5f8bcd14c58a-00-q4nmssf91qlw.picard.replit.dev/assets/./assets/images/icon.png",
+      "hostUri": "1d1d7cce-b0a3-4db6-bfb5-5f8bcd14c58a-00-q4nmssf91qlw.picard.replit.dev/ios"
+    },
+    "expoGo": {
+      "debuggerHost": "1d1d7cce-b0a3-4db6-bfb5-5f8bcd14c58a-00-q4nmssf91qlw.picard.replit.dev/ios",
+      "developer": {
+        "tool": "expo-cli",
+        "projectRoot": "/home/runner/workspace"
+      },
+      "packagerOpts": {
+        "dev": false
+      },
+      "mainModuleName": "client/index"
+    },
+    "scopeKey": "@anonymous/breakpoint-pool-systems-b2dafded-147e-45ab-bc81-652852410c0c"
+  }
+}

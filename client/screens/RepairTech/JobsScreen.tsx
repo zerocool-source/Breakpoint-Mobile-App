@@ -24,9 +24,10 @@ interface JobDetailCardProps {
   onNavigate: () => void;
   onDetails: () => void;
   onComplete: () => void;
+  onViewHistory: () => void;
 }
 
-function JobDetailCard({ job, isFirst, onNavigate, onDetails, onComplete }: JobDetailCardProps) {
+function JobDetailCard({ job, isFirst, onNavigate, onDetails, onComplete, onViewHistory }: JobDetailCardProps) {
   const { theme } = useTheme();
   
   return (
@@ -97,6 +98,14 @@ function JobDetailCard({ job, isFirst, onNavigate, onDetails, onComplete }: JobD
           <ThemedText style={styles.detailsButtonText}>Details</ThemedText>
         </Pressable>
       </View>
+      
+      <Pressable 
+        style={[styles.historyButton, { backgroundColor: BrandColors.tropicalTeal + '15', borderColor: BrandColors.tropicalTeal }]}
+        onPress={onViewHistory}
+      >
+        <Feather name="clock" size={16} color={BrandColors.tropicalTeal} />
+        <ThemedText style={[styles.historyButtonText, { color: BrandColors.tropicalTeal }]}>View Repair History</ThemedText>
+      </Pressable>
 
       {isFirst ? (
         <Pressable 
@@ -145,6 +154,23 @@ export default function JobsScreen() {
     }
   };
 
+  const handleViewHistory = (job: Job) => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    navigation.navigate('RepairHistory', {
+      propertyId: job.property?.id,
+      propertyName: job.property?.name,
+    });
+  };
+
+  const handleAdminChat = () => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+    navigation.navigate('AdminChat');
+  };
+
   return (
     <BubbleBackground bubbleCount={12}>
       <LinearGradient
@@ -186,6 +212,7 @@ export default function JobsScreen() {
                 onNavigate={() => handleNavigate(job)}
                 onDetails={() => handleDetails(job)}
                 onComplete={() => handleComplete(job)}
+                onViewHistory={() => handleViewHistory(job)}
               />
             </Animated.View>
           ))}
@@ -375,10 +402,25 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.md,
     gap: Spacing.xs,
+    marginTop: Spacing.sm,
   },
   completeButtonText: {
     color: '#FFFFFF',
     fontSize: 15,
+    fontWeight: '600',
+  },
+  historyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    gap: Spacing.xs,
+    marginBottom: Spacing.xs,
+  },
+  historyButtonText: {
+    fontSize: 13,
     fontWeight: '600',
   },
 });

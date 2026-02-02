@@ -11,6 +11,8 @@ import CreateEstimateModal from '@/screens/Modals/CreateEstimateModal';
 import AceEstimateBuilderScreen from '@/screens/RepairTech/AceEstimateBuilderScreen';
 import UniversalEstimateBuilderScreen from '@/screens/RepairTech/UniversalEstimateBuilderScreen';
 import QuoteDescriptionScreen from '@/screens/RepairTech/QuoteDescriptionScreen';
+import RepairHistoryScreen from '@/screens/RepairTech/RepairHistoryScreen';
+import AdminChatScreen from '@/screens/RepairTech/AdminChatScreen';
 import { useScreenOptions } from '@/hooks/useScreenOptions';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors } from '@/constants/theme';
@@ -24,6 +26,8 @@ export type RootStackParamList = {
   UniversalEstimateBuilder: { mode?: 'manual' | 'ace' };
   QuoteDescription: { lineItems: any[]; currentDescription: string; propertyName: string };
   EstimateDetail: { estimateId: string };
+  RepairHistory: { propertyId?: string; propertyName?: string };
+  AdminChat: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -101,6 +105,22 @@ export default function RootStackNavigator() {
       <Stack.Screen
         name="QuoteDescription"
         component={QuoteDescriptionScreen}
+        options={{
+          headerShown: false,
+          presentation: 'card',
+        }}
+      />
+      <Stack.Screen
+        name="RepairHistory"
+        component={RepairHistoryScreen}
+        options={{
+          headerShown: false,
+          presentation: 'card',
+        }}
+      />
+      <Stack.Screen
+        name="AdminChat"
+        component={AdminChatScreen}
         options={{
           headerShown: false,
           presentation: 'card',

@@ -36,6 +36,8 @@ export interface RouteStop {
   completed: boolean;
 }
 
+export type JobType = 'approved_repair' | 'assessment';
+
 export interface Job {
   id: string;
   propertyId: string;
@@ -44,6 +46,7 @@ export interface Job {
   description: string;
   priority: 'urgent' | 'high' | 'normal' | 'low';
   status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
+  jobType: JobType;
   photos: string[];
   scheduledTime?: string;
   order: number;

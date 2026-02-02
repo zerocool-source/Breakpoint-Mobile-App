@@ -7,6 +7,7 @@ export const userRoleEnum = pgEnum('user_role', ['service_tech', 'supervisor', '
 export const countyEnum = pgEnum('county', ['north_county', 'south_county', 'mid_county']);
 export const jobStatusEnum = pgEnum('job_status', ['pending', 'in_progress', 'completed', 'cancelled']);
 export const jobPriorityEnum = pgEnum('job_priority', ['low', 'normal', 'high', 'urgent']);
+export const jobTypeEnum = pgEnum('job_type', ['approved_repair', 'assessment']);
 export const propertyTypeEnum = pgEnum('property_type', ['HOA', 'Apartment', 'Hotel', 'Commercial', 'Municipal']);
 export const assignmentStatusEnum = pgEnum('assignment_status', ['pending', 'in_progress', 'completed', 'need_assistance']);
 export const estimateStatusEnum = pgEnum('estimate_status', ['draft', 'sent', 'approved', 'rejected', 'expired']);
@@ -56,6 +57,7 @@ export const jobs = pgTable("jobs", {
   description: text("description"),
   priority: jobPriorityEnum("priority").notNull().default('normal'),
   status: jobStatusEnum("status").notNull().default('pending'),
+  jobType: text("job_type").notNull().default('approved_repair'),
   scheduledDate: timestamp("scheduled_date"),
   scheduledTime: text("scheduled_time"),
   estimatedCost: decimal("estimated_cost", { precision: 10, scale: 2 }),

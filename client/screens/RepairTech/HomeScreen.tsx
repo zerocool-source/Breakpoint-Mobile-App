@@ -85,21 +85,44 @@ interface RepairJobCardProps {
   onPress: () => void;
   onNavigate: () => void;
   onComplete: () => void;
+  onCreateEstimate: () => void;
 }
 
-function RepairJobCard({ job, isFirst, drag, isActive, onPress, onNavigate, onComplete }: RepairJobCardProps) {
+function RepairJobCard({ job, isFirst, drag, isActive, onPress, onNavigate, onComplete, onCreateEstimate }: RepairJobCardProps) {
   const { theme } = useTheme();
   const swipeableRef = useRef<Swipeable>(null);
+  
+  const isAssessment = job.jobType === 'assessment';
+  const jobTypeLabel = isAssessment ? 'ASSESSMENT' : 'APPROVED REPAIR';
+  const jobTypeColor = isAssessment ? BrandColors.tropicalTeal : BrandColors.emerald;
+  const borderColor = isFirst ? BrandColors.vividTangerine : (isAssessment ? BrandColors.tropicalTeal : BrandColors.emerald);
+
+  const handleNavigate = () => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+    const address = job.property?.address;
+    if (address) {
+      const encodedAddress = encodeURIComponent(address);
+      const url = Platform.select({
+        ios: `maps:0,0?q=${encodedAddress}`,
+        android: `geo:0,0?q=${encodedAddress}`,
+        default: `https://maps.google.com/?q=${encodedAddress}`,
+      });
+      Linking.openURL(url).catch(() => {
+        Alert.alert('Navigation Error', 'Unable to open maps. Please try again.');
+      });
+    } else {
+      Alert.alert('No Address', 'This property does not have an address on file.');
+    }
+  };
 
   const renderLeftActions = () => (
     <Pressable
       style={styles.swipeActionLeft}
       onPress={() => {
-        if (Platform.OS !== 'web') {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        }
         swipeableRef.current?.close();
-        onNavigate();
+        handleNavigate();
       }}
     >
       <Feather name="navigation" size={20} color="#FFFFFF" />
@@ -122,19 +145,35 @@ function RepairJobCard({ job, isFirst, drag, isActive, onPress, onNavigate, onCo
         <Feather name="file-text" size={20} color="#FFFFFF" />
         <ThemedText style={styles.swipeActionText}>Details</ThemedText>
       </Pressable>
-      <Pressable
-        style={styles.swipeActionComplete}
-        onPress={() => {
-          if (Platform.OS !== 'web') {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          }
-          swipeableRef.current?.close();
-          onComplete();
-        }}
-      >
-        <Feather name="check-circle" size={20} color="#FFFFFF" />
-        <ThemedText style={styles.swipeActionText}>Complete</ThemedText>
-      </Pressable>
+      {isAssessment ? (
+        <Pressable
+          style={[styles.swipeActionComplete, { backgroundColor: BrandColors.azureBlue }]}
+          onPress={() => {
+            if (Platform.OS !== 'web') {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            }
+            swipeableRef.current?.close();
+            onCreateEstimate();
+          }}
+        >
+          <Feather name="file-plus" size={20} color="#FFFFFF" />
+          <ThemedText style={styles.swipeActionText}>Estimate</ThemedText>
+        </Pressable>
+      ) : (
+        <Pressable
+          style={styles.swipeActionComplete}
+          onPress={() => {
+            if (Platform.OS !== 'web') {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            }
+            swipeableRef.current?.close();
+            onComplete();
+          }}
+        >
+          <Feather name="check-circle" size={20} color="#FFFFFF" />
+          <ThemedText style={styles.swipeActionText}>Complete</ThemedText>
+        </Pressable>
+      )}
     </View>
   );
   
@@ -159,8 +198,20 @@ function RepairJobCard({ job, isFirst, drag, isActive, onPress, onNavigate, onCo
           isActive && styles.jobCardActive,
         ]}
       >
-        <View style={[styles.jobCardBorder, { backgroundColor: isFirst ? BrandColors.vividTangerine : BrandColors.azureBlue }]} />
+        <View style={[styles.jobCardBorder, { backgroundColor: borderColor }]} />
         <View style={styles.jobCardContent}>
+          {/* Job Type Badge */}
+          <View style={[styles.jobTypeBadge, { backgroundColor: jobTypeColor + '20' }]}>
+            <Feather 
+              name={isAssessment ? 'clipboard' : 'check-circle'} 
+              size={12} 
+              color={jobTypeColor} 
+            />
+            <ThemedText style={[styles.jobTypeBadgeText, { color: jobTypeColor }]}>
+              {jobTypeLabel}
+            </ThemedText>
+          </View>
+          
           <View style={styles.jobCardHeader}>
             <View style={styles.jobCardTitleRow}>
               <ThemedText style={styles.jobCardTitle}>{job.property?.name}</ThemedText>
@@ -168,12 +219,13 @@ function RepairJobCard({ job, isFirst, drag, isActive, onPress, onNavigate, onCo
             </View>
             <ThemedText style={[styles.jobCardType, { color: BrandColors.vividTangerine }]}>{job.title}</ThemedText>
           </View>
-          <View style={styles.jobCardAddress}>
-            <Feather name="map-pin" size={12} color={theme.textSecondary} />
-            <ThemedText style={[styles.jobCardAddressText, { color: theme.textSecondary }]} numberOfLines={1}>
+          <Pressable style={styles.jobCardAddress} onPress={handleNavigate}>
+            <Feather name="map-pin" size={12} color={BrandColors.azureBlue} />
+            <ThemedText style={[styles.jobCardAddressText, { color: BrandColors.azureBlue }]} numberOfLines={1}>
               {job.property?.address}
             </ThemedText>
-          </View>
+            <Feather name="external-link" size={12} color={BrandColors.azureBlue} />
+          </Pressable>
           {job.photos && job.photos.length > 0 ? (
             <View style={styles.jobCardPhotos}>
               {job.photos.slice(0, 3).map((photo, index) => (
@@ -190,11 +242,37 @@ function RepairJobCard({ job, isFirst, drag, isActive, onPress, onNavigate, onCo
               ) : null}
             </View>
           ) : null}
-          <View style={styles.swipeHint}>
-            <Feather name="chevrons-left" size={14} color={theme.textSecondary} />
-            <ThemedText style={[styles.swipeHintText, { color: theme.textSecondary }]}>Swipe for actions</ThemedText>
-            <Feather name="chevrons-right" size={14} color={theme.textSecondary} />
+          
+          {/* Action Buttons */}
+          <View style={styles.jobCardActions}>
+            <Pressable style={[styles.jobActionButton, { backgroundColor: BrandColors.azureBlue }]} onPress={handleNavigate}>
+              <Feather name="navigation" size={16} color="#FFFFFF" />
+              <ThemedText style={styles.jobActionButtonText}>Navigate</ThemedText>
+            </Pressable>
+            <Pressable style={[styles.jobActionButton, { backgroundColor: theme.surfaceHighlight }]} onPress={onPress}>
+              <Feather name="file-text" size={16} color={theme.text} />
+              <ThemedText style={[styles.jobActionButtonText, { color: theme.text }]}>Details</ThemedText>
+            </Pressable>
           </View>
+          
+          {isAssessment ? (
+            <Pressable 
+              style={[styles.jobPrimaryAction, { backgroundColor: BrandColors.tropicalTeal }]} 
+              onPress={onCreateEstimate}
+            >
+              <Feather name="file-plus" size={18} color="#FFFFFF" />
+              <ThemedText style={styles.jobPrimaryActionText}>Create Estimate</ThemedText>
+            </Pressable>
+          ) : (
+            <Pressable 
+              style={[styles.jobPrimaryAction, { backgroundColor: BrandColors.emerald }]} 
+              onPress={onComplete}
+            >
+              <Feather name="check-circle" size={18} color="#FFFFFF" />
+              <ThemedText style={styles.jobPrimaryActionText}>Verify & Complete</ThemedText>
+            </Pressable>
+          )}
+          
           {isFirst ? (
             <View style={styles.jobCardBadge}>
               <ThemedText style={styles.jobCardBadgeText}>NEXT STOP</ThemedText>

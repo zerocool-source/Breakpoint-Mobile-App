@@ -53,6 +53,11 @@ Breakpoint Commercial Pool Systems is a mobile-first field service management ap
 - **User Roles**:
     - **Service Technician**: Home screen with assignments and route, Property Detail with checklists and quick actions, Emergency reporting, Truck inventory, Chat with property channels, and "Road to Success" training tracker (Training tab).
     - **Repair Technician**: Home screen with jobs, Queue for managing repair tasks, Estimates, Jobs list. Includes swipeable job cards and product catalog for estimates.
+        - **Two-Tier Job System**:
+            - **Approved Repairs**: Pre-approved work orders with green/emerald styling. Shows "Execute Job" and "Navigate" buttons.
+            - **Assessments**: Jobs requiring estimate creation with teal styling. Shows "Create Estimate" (links to Ace AI) and "Navigate" buttons.
+        - **Database**: `jobs` table with `job_type` column ('approved_repair' | 'assessment')
+        - **Navigate Button**: Opens device maps with property address (iOS Maps, Google Maps on Android/web)
     - **Supervisor**: Team dashboard with activity ticker, metrics, and Team Tracker. Assignment management, QC inspections with detailed checklists, Real-time "Who's On" tech tracking, Truck inspection with damage marking, Supportive actions documentation, and Roster management.
 - **Core Features**:
     - **Chat System**: Office communication, direct messages, urgent alerts, and property-specific channels.

@@ -89,6 +89,13 @@ Breakpoint Commercial Pool Systems is a mobile-first field service management ap
                 4. Future searches prioritize user-specific learned mappings, with fallback to global patterns
             - **Pattern Recognition**: Products frequently used together by each user are suggested automatically
             - **Query Mappings**: Successful user queries are mapped to products per-user for future use
+        - **Quote Description Screen**: `client/screens/RepairTech/QuoteDescriptionScreen.tsx`
+            - **Language Toggle**: Segmented control with "HOA-Friendly" (default) and "Professional" options
+            - **HOA-Friendly Mode**: AI generates descriptions in simple, non-technical language for property managers and HOA boards
+            - **Professional Mode**: AI generates industry-standard technical descriptions
+            - **Large Description Input**: 380px minimum height for comfortable editing
+            - **Voice Input**: Hold-to-speak voice recording with transcription
+            - **AI Generation**: Context-aware prompts based on selected language style
 
 ## External Dependencies
 - **Database**: PostgreSQL

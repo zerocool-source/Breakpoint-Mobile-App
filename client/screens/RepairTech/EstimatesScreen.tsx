@@ -1,36 +1,67 @@
-import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, FlatList, RefreshControl, Pressable, Image } from 'react-native';
+import React, { useState, useCallback, useMemo } from 'react';
+import { View, StyleSheet, FlatList, RefreshControl, Pressable, Image, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { Feather } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import { Platform } from 'react-native';
 
 import { EstimateCard } from '@/components/EstimateCard';
 import { EmptyState } from '@/components/EmptyState';
 import { ThemedText } from '@/components/ThemedText';
 import { useTheme } from '@/hooks/useTheme';
+import { useAuth } from '@/context/AuthContext';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
-import { mockEstimates } from '@/lib/mockData';
+import { getLocalApiUrl, joinUrl } from '@/lib/query-client';
 import type { Estimate } from '@/types';
 import type { RootStackParamList } from '@/navigation/RootStackNavigator';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+type FilterTab = 'all' | 'draft' | 'pending' | 'approved';
 
 export default function EstimatesScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { theme } = useTheme();
   const tabBarHeight = useBottomTabBarHeight();
   const insets = useSafeAreaInsets();
+  const { token } = useAuth();
+  const queryClient = useQueryClient();
 
-  const [refreshing, setRefreshing] = useState(false);
-  const [estimates] = useState<Estimate[]>(mockEstimates);
+  const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
+
+  const { data: estimatesData, isLoading, refetch, isRefetching } = useQuery<Estimate[]>({
+    queryKey: ['/api/estimates'],
+    queryFn: async () => {
+      const apiUrl = getLocalApiUrl();
+      const response = await fetch(joinUrl(apiUrl, '/api/estimates'), {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!response.ok) throw new Error('Failed to fetch estimates');
+      return response.json();
+    },
+    enabled: !!token,
+  });
+
+  const estimates = estimatesData || [];
+
+  const filteredEstimates = useMemo(() => {
+    if (activeFilter === 'all') return estimates;
+    if (activeFilter === 'draft') return estimates.filter(e => e.status === 'draft');
+    if (activeFilter === 'pending') return estimates.filter(e => e.status === 'pending_approval');
+    if (activeFilter === 'approved') return estimates.filter(e => e.status === 'approved' || e.status === 'scheduled' || e.status === 'completed');
+    return estimates;
+  }, [estimates, activeFilter]);
 
   const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1000);
-  }, []);
+    refetch();
+  }, [refetch]);
 
   const renderEstimate = useCallback(
     ({ item, index }: { item: Estimate; index: number }) => (
@@ -44,15 +75,36 @@ export default function EstimatesScreen() {
     [navigation]
   );
 
+  const getEmptyMessage = () => {
+    if (activeFilter === 'draft') return 'No draft estimates. Create one to get started!';
+    if (activeFilter === 'pending') return 'No estimates pending approval.';
+    if (activeFilter === 'approved') return 'No approved estimates yet.';
+    return 'Create your first estimate to get started';
+  };
+
   const renderEmpty = () => (
     <EmptyState
       image={require('../../../assets/images/empty-estimates.png')}
-      title="No Estimates Yet"
-      message="Create your first estimate to get started"
+      title={activeFilter === 'all' ? 'No Estimates Yet' : `No ${activeFilter.charAt(0).toUpperCase() + activeFilter.slice(1)} Estimates`}
+      message={getEmptyMessage()}
       actionLabel="Create Estimate"
       onAction={() => navigation.navigate('AceEstimateBuilder')}
     />
   );
+
+  const handleFilterChange = (filter: FilterTab) => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    setActiveFilter(filter);
+  };
+
+  const filterTabs: { key: FilterTab; label: string; count: number }[] = [
+    { key: 'all', label: 'All', count: estimates.length },
+    { key: 'draft', label: 'Drafts', count: estimates.filter(e => e.status === 'draft').length },
+    { key: 'pending', label: 'Pending', count: estimates.filter(e => e.status === 'pending_approval').length },
+    { key: 'approved', label: 'Approved', count: estimates.filter(e => ['approved', 'scheduled', 'completed'].includes(e.status)).length },
+  ];
 
   const renderHeader = () => (
     <View style={styles.createOptionsContainer}>
@@ -67,28 +119,55 @@ export default function EstimatesScreen() {
         />
       </Pressable>
 
-      <Pressable
-        onPress={() => navigation.navigate('UniversalEstimateBuilder', { mode: 'manual' })}
-        style={[styles.manualCreateCard, { backgroundColor: theme.surface, borderColor: theme.border }]}
-      >
-        <View style={styles.manualIconContainer}>
-          <Feather name="file-plus" size={24} color={BrandColors.azureBlue} />
-        </View>
-        <View style={styles.manualCardContent}>
-          <ThemedText style={styles.manualCardTitle}>Create Manually</ThemedText>
-          <ThemedText style={[styles.manualCardSubtitle, { color: theme.textSecondary }]}>
-            Build estimate from catalog
-          </ThemedText>
-        </View>
-        <Feather name="chevron-right" size={20} color={theme.textSecondary} />
-      </Pressable>
+      <View style={styles.filterTabsContainer}>
+        {filterTabs.map((tab) => (
+          <Pressable
+            key={tab.key}
+            onPress={() => handleFilterChange(tab.key)}
+            style={[
+              styles.filterTab,
+              activeFilter === tab.key && styles.filterTabActive,
+              { backgroundColor: activeFilter === tab.key ? BrandColors.azureBlue : theme.surface },
+            ]}
+          >
+            <ThemedText style={[
+              styles.filterTabText,
+              { color: activeFilter === tab.key ? '#fff' : theme.text },
+            ]}>
+              {tab.label}
+            </ThemedText>
+            {tab.count > 0 ? (
+              <View style={[
+                styles.filterBadge,
+                { backgroundColor: activeFilter === tab.key ? 'rgba(255,255,255,0.3)' : BrandColors.azureBlue + '20' },
+              ]}>
+                <ThemedText style={[
+                  styles.filterBadgeText,
+                  { color: activeFilter === tab.key ? '#fff' : BrandColors.azureBlue },
+                ]}>
+                  {tab.count}
+                </ThemedText>
+              </View>
+            ) : null}
+          </Pressable>
+        ))}
+      </View>
     </View>
   );
+
+  if (isLoading) {
+    return (
+      <View style={[styles.container, styles.loadingContainer, { backgroundColor: theme.backgroundRoot }]}>
+        <ActivityIndicator size="large" color={BrandColors.azureBlue} />
+        <ThemedText style={[styles.loadingText, { color: theme.textSecondary }]}>Loading estimates...</ThemedText>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: theme.backgroundRoot }]}>
       <FlatList
-        data={estimates}
+        data={filteredEstimates}
         keyExtractor={(item) => item.id}
         renderItem={renderEstimate}
         ListHeaderComponent={renderHeader}
@@ -100,11 +179,11 @@ export default function EstimatesScreen() {
             paddingBottom: tabBarHeight + Spacing.xl,
             paddingHorizontal: Spacing.screenPadding,
           },
-          estimates.length === 0 && styles.emptyContainer,
+          filteredEstimates.length === 0 && styles.emptyContainer,
         ]}
         scrollIndicatorInsets={{ bottom: insets.bottom }}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BrandColors.azureBlue} />
+          <RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor={BrandColors.azureBlue} />
         }
         showsVerticalScrollIndicator={false}
       />
@@ -171,5 +250,42 @@ const styles = StyleSheet.create({
   manualCardSubtitle: {
     fontSize: 13,
     marginTop: 2,
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  loadingText: {
+    fontSize: 14,
+  },
+  filterTabsContainer: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    flexWrap: 'wrap',
+  },
+  filterTab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.full,
+    gap: Spacing.xs,
+  },
+  filterTabActive: {},
+  filterTabText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  filterBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+    minWidth: 20,
+    alignItems: 'center',
+  },
+  filterBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
   },
 });

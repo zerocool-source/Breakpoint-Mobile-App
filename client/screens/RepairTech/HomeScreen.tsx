@@ -172,6 +172,22 @@ function RepairJobCard({ job, isFirst, drag, isActive, onPress, onNavigate, onCo
               {job.property?.address}
             </ThemedText>
           </View>
+          {job.photos && job.photos.length > 0 ? (
+            <View style={styles.jobCardPhotos}>
+              {job.photos.slice(0, 3).map((photo, index) => (
+                <Image
+                  key={index}
+                  source={{ uri: photo }}
+                  style={styles.jobCardPhoto}
+                />
+              ))}
+              {job.photos.length > 3 ? (
+                <View style={[styles.jobCardPhoto, styles.jobCardPhotoMore]}>
+                  <ThemedText style={styles.jobCardPhotoMoreText}>+{job.photos.length - 3}</ThemedText>
+                </View>
+              ) : null}
+            </View>
+          ) : null}
           <View style={styles.swipeHint}>
             <Feather name="chevrons-left" size={14} color={theme.textSecondary} />
             <ThemedText style={[styles.swipeHintText, { color: theme.textSecondary }]}>Swipe for actions</ThemedText>
@@ -544,7 +560,7 @@ export default function HomeScreen() {
                 <Feather name="x" size={24} color={theme.text} />
               </Pressable>
             </View>
-            <View style={[styles.searchContainer, { backgroundColor: theme.background }]}>
+            <View style={[styles.searchContainer, { backgroundColor: theme.surface }]}>
               <Feather name="search" size={18} color={theme.textSecondary} />
               <TextInput
                 style={[styles.searchInput, { color: theme.text }]}
@@ -857,6 +873,27 @@ const styles = StyleSheet.create({
   jobCardAddressText: {
     fontSize: 13,
     flex: 1,
+  },
+  jobCardPhotos: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginTop: Spacing.sm,
+  },
+  jobCardPhoto: {
+    width: 48,
+    height: 48,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: '#E5E7EB',
+  },
+  jobCardPhotoMore: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: BrandColors.azureBlue + '20',
+  },
+  jobCardPhotoMoreText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: BrandColors.azureBlue,
   },
   jobCardBadge: {
     position: 'absolute',

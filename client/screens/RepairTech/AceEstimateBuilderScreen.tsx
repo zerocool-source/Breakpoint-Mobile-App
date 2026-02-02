@@ -768,6 +768,8 @@ export default function AceEstimateBuilderScreen() {
 
     try {
       const selectedProp = mockProperties.find(p => p.name === selectedProperty);
+      const { storage } = await import('@/lib/storage');
+      const authToken = await storage.getAuthToken();
       
       const estimateData = {
         estimateNumber,
@@ -801,11 +803,16 @@ export default function AceEstimateBuilderScreen() {
       };
 
       const apiUrl = getLocalApiUrl();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+      }
+      
       const response = await fetch(joinUrl(apiUrl, '/api/estimates'), {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(estimateData),
       });
 

@@ -61,17 +61,10 @@ export default function EstimatesScreen() {
         style={styles.aceCreateCard}
       >
         <Image
-          source={require('../../../assets/images/ace-ai-hero.png')}
+          source={require('../../../assets/images/ace-ai-button.png')}
           style={styles.aceCardImage}
           resizeMode="contain"
         />
-        <View style={styles.aceCardContent}>
-          <ThemedText style={styles.aceCardTitle}>Create with Ace AI</ThemedText>
-          <ThemedText style={[styles.aceCardSubtitle, { color: theme.textSecondary }]}>
-            Let AI help you find products
-          </ThemedText>
-        </View>
-        <Feather name="chevron-right" size={20} color={BrandColors.azureBlue} />
       </Pressable>
 
       <Pressable
@@ -131,20 +124,14 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   aceCreateCard: {
-    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#E8F4FD',
-    padding: Spacing.md,
+    justifyContent: 'center',
     borderRadius: BorderRadius.lg,
-    borderWidth: 2,
-    borderColor: BrandColors.azureBlue,
-    gap: Spacing.md,
-    ...Shadows.card,
+    overflow: 'hidden',
   },
   aceCardImage: {
-    width: 120,
-    height: 120,
-    borderRadius: BorderRadius.lg,
+    width: '100%',
+    height: 140,
   },
   aceCardContent: {
     flex: 1,

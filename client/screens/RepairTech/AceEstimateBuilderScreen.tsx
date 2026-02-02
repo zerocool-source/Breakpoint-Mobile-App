@@ -1185,7 +1185,7 @@ export default function AceEstimateBuilderScreen() {
         <Animated.View style={[styles.aceFloatingButton, { transform: [{ scale: pulseAnim }] }]}>
           <Pressable onPress={() => setShowAceModal(true)} style={styles.aceButtonInner}>
             <Image
-              source={require('../../../assets/images/ace-ai-hero.png')}
+              source={require('../../../assets/images/ace-ai-button.png')}
               style={styles.aceButtonImage}
               resizeMode="contain"
             />
@@ -1360,7 +1360,7 @@ export default function AceEstimateBuilderScreen() {
           <View style={styles.aceModalHeader}>
             <View style={styles.aceModalTitleRow}>
               <Image
-                source={require('../../../assets/images/ace-ai-hero.png')}
+                source={require('../../../assets/images/ace-ai-button.png')}
                 style={styles.aceModalAvatar}
                 resizeMode="contain"
               />
@@ -1388,7 +1388,7 @@ export default function AceEstimateBuilderScreen() {
                 {msg.type === 'ace' ? (
                   <View style={styles.aceMessageRow}>
                     <Image
-                      source={require('../../../assets/images/ace-ai-hero.png')}
+                      source={require('../../../assets/images/ace-ai-button.png')}
                       style={styles.aceAvatar}
                       resizeMode="contain"
                     />
@@ -1490,7 +1490,7 @@ export default function AceEstimateBuilderScreen() {
               <View style={styles.messageContainer}>
                 <View style={styles.aceMessageRow}>
                   <Image
-                    source={require('../../../assets/images/ace-ai-hero.png')}
+                    source={require('../../../assets/images/ace-ai-button.png')}
                     style={styles.aceAvatar}
                     resizeMode="contain"
                   />

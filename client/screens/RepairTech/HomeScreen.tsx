@@ -332,8 +332,8 @@ export default function HomeScreen() {
               onPress={() => handleQuickAction('emergency')}
             />
             <QuickAction
-              customImage={require('@/assets/images/ace-ai-icon.png')}
-              label="Create Estimate with ACE"
+              customImage={require('@/assets/images/ace-ai-button.png')}
+              label=""
               color={BrandColors.azureBlue}
               onPress={() => navigation.navigate('AceEstimateBuilder')}
             />

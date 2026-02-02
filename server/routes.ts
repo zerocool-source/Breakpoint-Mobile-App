@@ -2,8 +2,8 @@ import type { Express } from "express";
 import { createServer, type Server } from "node:http";
 import authRoutes, { authMiddleware, AuthenticatedRequest } from "./auth";
 import { db } from "./db";
-import { users, properties, jobs, assignments, estimates, routeStops, propertyChannels, techOps } from "@shared/schema";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { users, properties, jobs, assignments, estimates, routeStops, propertyChannels, techOps, repairHistory, adminMessages } from "@shared/schema";
+import { eq, and, desc, sql, or } from "drizzle-orm";
 import transcribeRouter from "./routes/transcribe";
 import aiProductSearchRouter from "./routes/ai-product-search";
 import aiLearningRouter from "./routes/ai-learning";
@@ -940,6 +940,244 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating tech ops entry:", error);
       res.status(500).json({ error: "Failed to update tech ops entry" });
+    }
+  });
+
+  // ==================== REPAIR HISTORY ROUTES ====================
+
+  // GET /api/repair-history - Get all repair history for a property
+  app.get("/api/repair-history", authMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { propertyId } = req.query;
+      
+      if (propertyId) {
+        // Get repair history for specific property
+        const history = await db.query.repairHistory.findMany({
+          where: eq(repairHistory.propertyId, propertyId as string),
+          orderBy: [desc(repairHistory.completedAt)],
+          with: {
+            technician: true,
+            property: true,
+          },
+        });
+        return res.json(history);
+      }
+      
+      // Get all repair history (limited to recent 100)
+      const allHistory = await db.query.repairHistory.findMany({
+        orderBy: [desc(repairHistory.completedAt)],
+        limit: 100,
+        with: {
+          technician: true,
+          property: true,
+        },
+      });
+      res.json(allHistory);
+    } catch (error) {
+      console.error("Error fetching repair history:", error);
+      res.status(500).json({ error: "Failed to fetch repair history" });
+    }
+  });
+
+  // GET /api/repair-history/:id - Get specific repair history entry
+  app.get("/api/repair-history/:id", authMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      
+      const entry = await db.query.repairHistory.findFirst({
+        where: eq(repairHistory.id, id),
+        with: {
+          technician: true,
+          property: true,
+        },
+      });
+      
+      if (!entry) {
+        return res.status(404).json({ error: "Repair history entry not found" });
+      }
+      
+      res.json(entry);
+    } catch (error) {
+      console.error("Error fetching repair history entry:", error);
+      res.status(500).json({ error: "Failed to fetch repair history entry" });
+    }
+  });
+
+  // POST /api/repair-history - Create new repair history entry
+  app.post("/api/repair-history", authMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { propertyId, title, description, workPerformed, partsUsed, laborHours, totalCost, notes, photoUrls, jobId, estimateId } = req.body;
+      
+      if (!propertyId || !title || !workPerformed) {
+        return res.status(400).json({ error: "Missing required fields: propertyId, title, workPerformed" });
+      }
+      
+      const [newEntry] = await db.insert(repairHistory).values({
+        propertyId,
+        technicianId: req.user!.id,
+        jobId,
+        estimateId,
+        title,
+        description,
+        workPerformed,
+        partsUsed: partsUsed ? JSON.stringify(partsUsed) : null,
+        laborHours,
+        totalCost,
+        notes,
+        photoUrls: photoUrls ? JSON.stringify(photoUrls) : null,
+        completedAt: new Date(),
+      }).returning();
+      
+      res.status(201).json(newEntry);
+    } catch (error) {
+      console.error("Error creating repair history entry:", error);
+      res.status(500).json({ error: "Failed to create repair history entry" });
+    }
+  });
+
+  // ==================== ADMIN MESSAGES ROUTES ====================
+
+  // GET /api/admin-messages - Get messages for current user
+  app.get("/api/admin-messages", authMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      const messages = await db.query.adminMessages.findMany({
+        where: or(
+          eq(adminMessages.senderId, userId),
+          eq(adminMessages.recipientId, userId),
+          // Also include messages sent to office (no recipient) if user is supervisor
+          req.user!.role === 'supervisor' ? eq(adminMessages.recipientId, null as any) : undefined
+        ),
+        orderBy: [desc(adminMessages.createdAt)],
+        with: {
+          sender: true,
+          property: true,
+        },
+      });
+      
+      res.json(messages);
+    } catch (error) {
+      console.error("Error fetching admin messages:", error);
+      res.status(500).json({ error: "Failed to fetch messages" });
+    }
+  });
+
+  // GET /api/admin-messages/unread-count - Get count of unread messages
+  app.get("/api/admin-messages/unread-count", authMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      const result = await db.select({ count: sql<number>`count(*)` })
+        .from(adminMessages)
+        .where(
+          and(
+            or(
+              eq(adminMessages.recipientId, userId),
+              req.user!.role === 'supervisor' ? eq(adminMessages.recipientId, null as any) : undefined
+            ),
+            eq(adminMessages.status, 'unread'),
+            eq(adminMessages.isFromAdmin, req.user!.role !== 'supervisor') // Techs see admin messages, admins see tech messages
+          )
+        );
+      
+      res.json({ count: Number(result[0]?.count || 0) });
+    } catch (error) {
+      console.error("Error fetching unread count:", error);
+      res.status(500).json({ error: "Failed to fetch unread count" });
+    }
+  });
+
+  // POST /api/admin-messages - Send a message to office/admin
+  app.post("/api/admin-messages", authMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { content, subject, priority, propertyId, jobId, parentMessageId } = req.body;
+      
+      if (!content) {
+        return res.status(400).json({ error: "Message content is required" });
+      }
+      
+      const isFromAdmin = req.user!.role === 'supervisor' || req.user!.role === 'repair_foreman';
+      
+      const [newMessage] = await db.insert(adminMessages).values({
+        senderId: req.user!.id,
+        recipientId: null, // null = sent to office pool
+        content,
+        subject,
+        priority: priority || 'normal',
+        propertyId,
+        jobId,
+        parentMessageId,
+        isFromAdmin,
+        status: 'unread',
+      }).returning();
+      
+      res.status(201).json(newMessage);
+    } catch (error) {
+      console.error("Error sending message:", error);
+      res.status(500).json({ error: "Failed to send message" });
+    }
+  });
+
+  // PATCH /api/admin-messages/:id/read - Mark message as read
+  app.patch("/api/admin-messages/:id/read", authMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      
+      const [updated] = await db.update(adminMessages)
+        .set({ status: 'read', readAt: new Date() })
+        .where(eq(adminMessages.id, id))
+        .returning();
+      
+      if (!updated) {
+        return res.status(404).json({ error: "Message not found" });
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error marking message as read:", error);
+      res.status(500).json({ error: "Failed to update message" });
+    }
+  });
+
+  // POST /api/admin-messages/:id/reply - Reply to a message
+  app.post("/api/admin-messages/:id/reply", authMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const { content } = req.body;
+      
+      if (!content) {
+        return res.status(400).json({ error: "Reply content is required" });
+      }
+      
+      // Get original message
+      const originalMessage = await db.query.adminMessages.findFirst({
+        where: eq(adminMessages.id, id),
+      });
+      
+      if (!originalMessage) {
+        return res.status(404).json({ error: "Original message not found" });
+      }
+      
+      const isFromAdmin = req.user!.role === 'supervisor' || req.user!.role === 'repair_foreman';
+      
+      const [newMessage] = await db.insert(adminMessages).values({
+        senderId: req.user!.id,
+        recipientId: originalMessage.senderId, // Reply goes to original sender
+        content,
+        subject: originalMessage.subject ? `RE: ${originalMessage.subject}` : null,
+        priority: originalMessage.priority,
+        propertyId: originalMessage.propertyId,
+        jobId: originalMessage.jobId,
+        parentMessageId: id,
+        isFromAdmin,
+        status: 'unread',
+      }).returning();
+      
+      res.status(201).json(newMessage);
+    } catch (error) {
+      console.error("Error sending reply:", error);
+      res.status(500).json({ error: "Failed to send reply" });
     }
   });
 

@@ -4,7 +4,62 @@ import OpenAI from "openai";
 import { db } from "../db";
 import { sql, eq, like, or } from "drizzle-orm";
 import { poolRegulations, estimateTemplates } from "../../shared/schema";
-import { getProducts, mapPoolBrainToHeritageFormat } from "../services/poolbrain";
+import { 
+  getProducts, 
+  getNormalizedProducts, 
+  searchProducts, 
+  testConnection,
+  NormalizedProduct 
+} from "../services/poolbrain";
+
+// Product cache for Pool Brain
+let cachedProducts: NormalizedProduct[] = [];
+let lastCacheUpdate = 0;
+let cacheStatus = { available: false, error: '', productCount: 0 };
+const CACHE_TTL = 15 * 60 * 1000; // 15 minutes
+
+async function refreshProductCache(): Promise<{ success: boolean; count: number; error?: string }> {
+  try {
+    console.log('[Product Cache] Refreshing from Pool Brain...');
+    const products = await getNormalizedProducts();
+    if (products.length > 0) {
+      cachedProducts = products;
+      lastCacheUpdate = Date.now();
+      cacheStatus = { available: true, error: '', productCount: products.length };
+      console.log(`[Product Cache] Cached ${products.length} products`);
+      return { success: true, count: products.length };
+    }
+    return { success: false, count: 0, error: 'No products returned from API' };
+  } catch (error: any) {
+    const errorMsg = error?.message || 'Unknown error';
+    cacheStatus = { available: false, error: errorMsg, productCount: 0 };
+    console.error('[Product Cache] Refresh failed:', errorMsg);
+    return { success: false, count: 0, error: errorMsg };
+  }
+}
+
+async function getProductCatalogFromCache(): Promise<{ products: NormalizedProduct[]; available: boolean; error?: string }> {
+  const now = Date.now();
+  
+  // If cache is fresh, use it
+  if (cachedProducts.length > 0 && now - lastCacheUpdate < CACHE_TTL) {
+    return { products: cachedProducts, available: true };
+  }
+  
+  // Try to refresh cache
+  const result = await refreshProductCache();
+  if (result.success) {
+    return { products: cachedProducts, available: true };
+  }
+  
+  // If refresh failed but we have stale data, use it
+  if (cachedProducts.length > 0) {
+    console.log('[Product Cache] Using stale cache data');
+    return { products: cachedProducts, available: true, error: 'Using cached data (refresh failed)' };
+  }
+  
+  return { products: [], available: false, error: result.error };
+}
 
 // Commercial Pool Repair Knowledge Base functions
 async function getRepairKnowledge(workDescription: string): Promise<any[]> {
@@ -82,39 +137,25 @@ async function getEstimateTemplates(category?: string): Promise<any[]> {
   }
 }
 
-let cachedPoolBrainProducts: any[] = [];
-let lastPoolBrainFetch = 0;
-let poolBrainAvailable = false;
-let lastApiError = '';
-const POOL_BRAIN_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
-
+// Use the new cache system
 async function getProductCatalog(): Promise<{ products: any[], available: boolean, error?: string }> {
-  try {
-    const now = Date.now();
-    if (cachedPoolBrainProducts.length === 0 || now - lastPoolBrainFetch > POOL_BRAIN_CACHE_TTL) {
-      console.log('[AI Search] Fetching fresh products from Pool Brain...');
-      const rawProducts = await getProducts();
-      if (rawProducts.length > 0) {
-        cachedPoolBrainProducts = rawProducts.map(mapPoolBrainToHeritageFormat);
-        lastPoolBrainFetch = now;
-        poolBrainAvailable = true;
-        lastApiError = '';
-        console.log(`[AI Search] Using ${cachedPoolBrainProducts.length} Pool Brain products`);
-        return { products: cachedPoolBrainProducts, available: true };
-      } else {
-        poolBrainAvailable = false;
-        lastApiError = 'Pool Brain API returned no products';
-        return { products: [], available: false, error: lastApiError };
-      }
-    } else if (cachedPoolBrainProducts.length > 0) {
-      return { products: cachedPoolBrainProducts, available: true };
-    }
-  } catch (error: any) {
-    console.error('[AI Search] Pool Brain fetch failed:', error?.message || error);
-    poolBrainAvailable = false;
-    lastApiError = error?.message || 'Pool Brain API connection failed';
-  }
-  return { products: [], available: false, error: lastApiError };
+  const result = await getProductCatalogFromCache();
+  return {
+    products: result.products.map(p => ({
+      sku: p.sku,
+      name: p.name,
+      category: p.category,
+      subcategory: '',
+      manufacturer: '',
+      price: p.price,
+      cost: p.cost,
+      unit: 'EA',
+      description: p.description,
+      productId: p.recordId,
+    })),
+    available: result.available,
+    error: result.error,
+  };
 }
 
 const router = Router();
@@ -122,6 +163,112 @@ const router = Router();
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY,
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+});
+
+// Pool Brain API Status endpoint
+router.get("/pool-brain/status", async (_req: Request, res: Response) => {
+  try {
+    const connectionTest = await testConnection();
+    res.json({
+      connected: connectionTest.success,
+      message: connectionTest.message,
+      cache: {
+        available: cacheStatus.available,
+        productCount: cacheStatus.productCount,
+        lastUpdate: lastCacheUpdate > 0 ? new Date(lastCacheUpdate).toISOString() : null,
+        cacheAge: lastCacheUpdate > 0 ? Math.round((Date.now() - lastCacheUpdate) / 1000) + 's' : null,
+        error: cacheStatus.error || null,
+      },
+      apiKeyConfigured: !!process.env.POOLBRAIN_API_KEY,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      connected: false,
+      message: error?.message || 'Failed to check Pool Brain status',
+      cache: cacheStatus,
+      apiKeyConfigured: !!process.env.POOLBRAIN_API_KEY,
+    });
+  }
+});
+
+// Refresh Pool Brain product cache
+router.post("/pool-brain/refresh", async (_req: Request, res: Response) => {
+  try {
+    const result = await refreshProductCache();
+    res.json({
+      success: result.success,
+      productCount: result.count,
+      error: result.error || null,
+      message: result.success 
+        ? `Successfully cached ${result.count} products from Pool Brain`
+        : `Failed to refresh cache: ${result.error}`,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      productCount: 0,
+      error: error?.message || 'Failed to refresh product cache',
+    });
+  }
+});
+
+// Search Pool Brain products
+router.get("/pool-brain/products", async (req: Request, res: Response) => {
+  try {
+    const { search, category, limit = '50' } = req.query;
+    const catalog = await getProductCatalogFromCache();
+    
+    if (!catalog.available) {
+      return res.status(503).json({
+        success: false,
+        error: catalog.error || 'Product catalog unavailable',
+        products: [],
+      });
+    }
+    
+    let products = catalog.products;
+    
+    // Filter by search
+    if (search && typeof search === 'string') {
+      const searchLower = search.toLowerCase();
+      products = products.filter(p => 
+        p.name.toLowerCase().includes(searchLower) ||
+        p.description.toLowerCase().includes(searchLower) ||
+        p.sku.toLowerCase().includes(searchLower)
+      );
+    }
+    
+    // Filter by category
+    if (category && typeof category === 'string') {
+      const categoryLower = category.toLowerCase();
+      products = products.filter(p => 
+        p.category.toLowerCase().includes(categoryLower)
+      );
+    }
+    
+    // Limit results
+    const limitNum = Math.min(parseInt(limit as string) || 50, 500);
+    products = products.slice(0, limitNum);
+    
+    res.json({
+      success: true,
+      total: products.length,
+      products: products.map(p => ({
+        sku: p.sku,
+        name: p.name,
+        description: p.description,
+        category: p.category,
+        price: p.price,
+        cost: p.cost,
+      })),
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: error?.message || 'Failed to fetch products',
+      products: [],
+    });
+  }
 });
 
 async function getLearnedMappings(query: string, userId?: string): Promise<string[]> {
@@ -570,6 +717,34 @@ router.post("/generate-estimate", express.json(), async (req: Request, res: Resp
     const estimateHistory = await getUserEstimateHistory(userId);
     const learnedMappings = await getLearnedMappings(workDescription, userId);
 
+    // Try to get Pool Brain products for accurate pricing
+    let poolBrainProductContext = '';
+    let poolBrainAvailable = false;
+    try {
+      const catalogResult = await getProductCatalogFromCache();
+      if (catalogResult.available && catalogResult.products.length > 0) {
+        poolBrainAvailable = true;
+        // Get relevant products based on work description keywords
+        const keywords: string[] = workDescription.toLowerCase().split(/\s+/).filter((w: string) => w.length > 3);
+        const relevantProducts = catalogResult.products.filter(p => {
+          const searchText = `${p.name} ${p.description} ${p.category}`.toLowerCase();
+          return keywords.some((k: string) => searchText.includes(k));
+        }).slice(0, 50);
+        
+        if (relevantProducts.length > 0) {
+          poolBrainProductContext = `\n\n=== POOL BRAIN PRODUCT CATALOG (use these EXACT prices) ===
+The following products are from our current inventory with real-time pricing:
+
+${relevantProducts.map(p => `- ${p.name} | SKU: ${p.sku} | Price: $${p.price.toFixed(2)} | Category: ${p.category}`).join('\n')}
+
+IMPORTANT: When a Pool Brain product matches what's needed, use its EXACT price from above.
+`;
+        }
+      }
+    } catch (err) {
+      console.log('[Generate Estimate] Pool Brain unavailable, using fallback pricing');
+    }
+
     // Build knowledge base context
     let knowledgeBaseContext = '';
     if (repairKnowledge.length > 0) {
@@ -788,7 +963,7 @@ Return a JSON object with:
   "laborRate": 150.00,
   "termsText": "Include the full payment terms from above...",
   "notes": "Job-specific notes"
-}${knowledgeBaseContext}${personalizationContext}`;
+}${poolBrainProductContext}${knowledgeBaseContext}${personalizationContext}`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
@@ -833,6 +1008,7 @@ Provide accurate real-world pricing and complete parts lists.` },
       knowledgeBaseUsed: repairKnowledge.length > 0,
       codesReferenced: poolCodes.length,
       laborRatesApplied: laborRates.length > 0,
+      poolBrainProductsUsed: poolBrainAvailable,
     });
   } catch (error) {
     console.error("Estimate generation error:", error);

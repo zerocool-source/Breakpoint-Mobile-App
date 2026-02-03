@@ -1,160 +1,186 @@
-// Using global fetch (Node 18+)
+// Pool Brain API Integration
+// Using official OpenAPI endpoints from https://prodapi.poolbrain.com/OpenAPI/docs/
 
 const POOLBRAIN_API_BASE = 'https://prodapi.poolbrain.com';
-// Try Heritage API key first (from Pool Brain integration), then fallback to POOLBRAIN_API_KEY
-const HERITAGE_API_KEY = process.env.HERITAGE_API_KEY;
 const POOLBRAIN_API_KEY = process.env.POOLBRAIN_API_KEY;
-const API_KEY = HERITAGE_API_KEY || POOLBRAIN_API_KEY;
-const HERITAGE_ACCOUNT_ID = '68532'; // Heritage Pool Supply Corona branch
 
 export interface PoolBrainProduct {
-  id?: number;
-  productID?: number;
-  ProductID?: number;
-  productName?: string;
-  ProductName?: string;
-  name?: string;
-  description?: string;
-  productDescription?: string;
-  ProductDescription?: string;
-  cost?: number;
-  productCost?: number;
-  ProductCost?: number;
-  price?: number;
-  productPrice?: number;
-  ProductPrice?: number;
-  markup?: number;
-  productMarkup?: number;
-  ProductMarkup?: number;
-  categoryId?: number;
-  productCategoryID?: number;
-  ProductCategoryID?: number;
-  categoryName?: string;
-  productCategoryName?: string;
-  ProductCategoryName?: string;
-  subCategoryId?: number;
-  productSubCategoryID?: number;
-  ProductSubCategoryID?: number;
-  subCategoryName?: string;
-  productSubCategoryName?: string;
-  ProductSubCategoryName?: string;
-  unit?: string;
-  productUnit?: string;
-  ProductUnit?: string;
-  sku?: string;
-  productSKU?: string;
-  ProductSKU?: string;
-  heritageNumber?: string;
-  HeritageNumber?: string;
-  isActive?: boolean;
-  IsActive?: boolean;
-  createdDate?: string;
-  CreatedDate?: string;
-  modifiedDate?: string;
-  ModifiedDate?: string;
+  RecordID: number;
+  Name: string;
+  Description: string;
+  Category: string;
+  Cost: number;
+  Price: number;
+  'Part#': string;
+  'Product/Service/Bundle': string;
+  Status: number;
+  ChargeTax: number;
+  Duration: string;
+  CreatedDate: string;
+  LastModifiedDate: string;
 }
 
-export interface PoolBrainCategory {
-  CategoryID?: number;
-  categoryId?: number;
-  CategoryName?: string;
-  categoryName?: string;
-  name?: string;
-  SubCategories?: {
-    SubCategoryID?: number;
-    subCategoryId?: number;
-    SubCategoryName?: string;
-    subCategoryName?: string;
-  }[];
+export interface NormalizedProduct {
+  sku: string;
+  name: string;
+  description: string;
+  category: string;
+  cost: number;
+  price: number;
+  partNumber: string;
+  productType: string;
+  recordId: number;
+  isActive: boolean;
+  chargeTax: boolean;
 }
 
-export interface PoolBrainApiResponse<T> {
-  success?: boolean;
+export interface PoolBrainApiResponse {
   status?: string;
-  data?: T;
-  products?: T;
-  items?: T;
-  results?: T;
-  totalCount?: number;
   message?: string;
+  data?: PoolBrainProduct[];
 }
 
 async function makePoolBrainRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  if (!API_KEY) {
-    throw new Error('HERITAGE_API_KEY or POOLBRAIN_API_KEY is not configured');
+  if (!POOLBRAIN_API_KEY) {
+    throw new Error('POOLBRAIN_API_KEY is not configured');
   }
 
   const url = `${POOLBRAIN_API_BASE}${endpoint}`;
   
-  console.log(`[Heritage/Pool Brain] Making request to: ${url}`);
-  console.log(`[Heritage/Pool Brain] Using API key: ${API_KEY.substring(0, 8)}...`);
-  console.log(`[Heritage/Pool Brain] Account ID: ${HERITAGE_ACCOUNT_ID}`);
+  console.log(`[Pool Brain] Making request to: ${url}`);
+  console.log(`[Pool Brain] Using API key: ${POOLBRAIN_API_KEY.substring(0, 8)}...`);
   
   const response = await fetch(url, {
-    method: 'GET',
+    method: options.method || 'GET',
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'Authorization': `Bearer ${API_KEY}`,
-      'X-API-Key': API_KEY,
-      'X-Account-ID': HERITAGE_ACCOUNT_ID,
+      'ACCESS-KEY': POOLBRAIN_API_KEY,
       ...options.headers,
     },
+    body: options.body,
   });
 
+  const responseText = await response.text();
+  
   if (!response.ok) {
-    const errorText = await response.text();
-    console.error(`Heritage/Pool Brain API error: ${response.status} - ${errorText}`);
-    throw new Error(`Heritage/Pool Brain API error: ${response.status} - ${errorText}`);
+    console.error(`[Pool Brain] API error: ${response.status} - ${responseText}`);
+    throw new Error(`Pool Brain API error: ${response.status} - ${responseText}`);
   }
 
-  return response.json() as Promise<T>;
+  try {
+    return JSON.parse(responseText) as T;
+  } catch (e) {
+    console.error(`[Pool Brain] Failed to parse response: ${responseText.substring(0, 200)}`);
+    throw new Error('Failed to parse Pool Brain API response');
+  }
 }
 
-export async function getProducts(): Promise<PoolBrainProduct[]> {
+export async function getProducts(options?: {
+  fromDate?: string;
+  toDate?: string;
+  offset?: number;
+  limit?: number;
+}): Promise<PoolBrainProduct[]> {
   try {
-    const response = await makePoolBrainRequest<PoolBrainApiResponse<PoolBrainProduct[]>>('/v2/product_list');
+    const params = new URLSearchParams();
+    if (options?.fromDate) params.append('fromDate', options.fromDate);
+    if (options?.toDate) params.append('toDate', options.toDate);
+    if (options?.offset !== undefined) params.append('offset', options.offset.toString());
+    if (options?.limit !== undefined) params.append('limit', options.limit.toString());
     
-    console.log('[Pool Brain] Product response:', JSON.stringify(response).substring(0, 500));
+    const queryString = params.toString();
+    const endpoint = `/product_list${queryString ? `?${queryString}` : ''}`;
     
-    const products = response.data || response.products || response.items || response.results;
-    if (products && Array.isArray(products)) {
-      return products.filter(p => p.IsActive !== false && p.isActive !== false);
-    }
+    const response = await makePoolBrainRequest<PoolBrainProduct[] | PoolBrainApiResponse>(endpoint);
     
+    console.log('[Pool Brain] Product response type:', typeof response, Array.isArray(response));
+    
+    // Handle array response directly
     if (Array.isArray(response)) {
-      return (response as PoolBrainProduct[]).filter(p => p.IsActive !== false && p.isActive !== false);
+      console.log(`[Pool Brain] Fetched ${response.length} products`);
+      return response.filter(p => p.Status !== 0);
     }
     
-    console.error('Pool Brain API returned unexpected response format:', response);
+    // Handle wrapped response
+    if (response.data && Array.isArray(response.data)) {
+      console.log(`[Pool Brain] Fetched ${response.data.length} products from wrapped response`);
+      return response.data.filter(p => p.Status !== 0);
+    }
+    
+    console.error('[Pool Brain] Unexpected response format:', JSON.stringify(response).substring(0, 500));
     return [];
   } catch (error) {
-    console.error('Error fetching products from Pool Brain:', error);
+    console.error('[Pool Brain] Error fetching products:', error);
     throw error;
   }
 }
 
-export async function getProductCategories(): Promise<PoolBrainCategory[]> {
+export function normalizeProduct(product: PoolBrainProduct): NormalizedProduct {
+  return {
+    recordId: product.RecordID,
+    sku: product['Part#'] || `PB-${product.RecordID}`,
+    name: product.Name || 'Unknown Product',
+    description: product.Description || '',
+    category: product.Category || 'Uncategorized',
+    cost: product.Cost || 0,
+    price: product.Price || 0,
+    partNumber: product['Part#'] || '',
+    productType: product['Product/Service/Bundle'] || 'Product',
+    isActive: product.Status !== 0,
+    chargeTax: product.ChargeTax === 1,
+  };
+}
+
+export async function getNormalizedProducts(options?: {
+  fromDate?: string;
+  toDate?: string;
+  offset?: number;
+  limit?: number;
+}): Promise<NormalizedProduct[]> {
+  const rawProducts = await getProducts(options);
+  return rawProducts.map(normalizeProduct);
+}
+
+export async function searchProducts(query: string): Promise<NormalizedProduct[]> {
+  const allProducts = await getNormalizedProducts();
+  const searchLower = query.toLowerCase();
+  
+  return allProducts.filter(p => 
+    p.name.toLowerCase().includes(searchLower) ||
+    p.description.toLowerCase().includes(searchLower) ||
+    p.category.toLowerCase().includes(searchLower) ||
+    p.partNumber.toLowerCase().includes(searchLower)
+  );
+}
+
+export async function getProductsByCategory(category: string): Promise<NormalizedProduct[]> {
+  const allProducts = await getNormalizedProducts();
+  const categoryLower = category.toLowerCase();
+  
+  return allProducts.filter(p => 
+    p.category.toLowerCase().includes(categoryLower)
+  );
+}
+
+// Test connection to Pool Brain API
+export async function testConnection(): Promise<{ success: boolean; message: string; productCount?: number }> {
   try {
-    const response = await makePoolBrainRequest<PoolBrainApiResponse<PoolBrainCategory[]>>('/v2/product_service_category_list');
-    
-    const categories = response.data || response.products || response.items || response.results;
-    if (categories && Array.isArray(categories)) {
-      return categories;
-    }
-    
-    if (Array.isArray(response)) {
-      return response as PoolBrainCategory[];
-    }
-    
-    console.error('Pool Brain API returned unexpected response format:', response);
-    return [];
-  } catch (error) {
-    console.error('Error fetching categories from Pool Brain:', error);
-    throw error;
+    const products = await getProducts({ limit: 1 });
+    return {
+      success: true,
+      message: 'Successfully connected to Pool Brain API',
+      productCount: products.length,
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      message: error.message || 'Failed to connect to Pool Brain API',
+    };
   }
 }
 
+// Legacy function name for backward compatibility
 export function mapPoolBrainToHeritageFormat(product: PoolBrainProduct): {
   sku: string;
   heritageNumber: string;
@@ -168,28 +194,17 @@ export function mapPoolBrainToHeritageFormat(product: PoolBrainProduct): {
   description: string;
   productId: number;
 } {
-  const productId = product.ProductID || product.productID || product.id || 0;
-  const sku = product.ProductSKU || product.productSKU || product.sku || `PB-${productId}`;
-  const name = product.ProductName || product.productName || product.name || 'Unknown Product';
-  const category = product.ProductCategoryName || product.productCategoryName || product.categoryName || 'Uncategorized';
-  const subcategory = product.ProductSubCategoryName || product.productSubCategoryName || product.subCategoryName || '';
-  const price = product.ProductPrice || product.productPrice || product.price || 0;
-  const cost = product.ProductCost || product.productCost || product.cost || 0;
-  const unit = product.ProductUnit || product.productUnit || product.unit || 'EA';
-  const description = product.ProductDescription || product.productDescription || product.description || '';
-  const heritageNumber = product.HeritageNumber || product.heritageNumber || '';
-  
   return {
-    sku,
-    heritageNumber,
-    name,
-    category,
-    subcategory,
-    price,
-    cost,
-    unit,
+    productId: product.RecordID,
+    sku: product['Part#'] || `PB-${product.RecordID}`,
+    heritageNumber: product['Part#'] || '',
+    name: product.Name || 'Unknown Product',
+    category: product.Category || 'Uncategorized',
+    subcategory: '',
+    price: product.Price || 0,
+    cost: product.Cost || 0,
+    unit: 'EA',
     manufacturer: '',
-    description,
-    productId,
+    description: product.Description || '',
   };
 }

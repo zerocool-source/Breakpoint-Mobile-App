@@ -9,6 +9,7 @@ import {
   Platform,
   Animated,
   Easing,
+  Switch,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp, CommonActions } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,6 +23,17 @@ import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing } from '@/constants/theme';
 import { ESTIMATE_COLORS, formatCurrencyDollars } from '@/constants/estimateDesign';
 import { getLocalApiUrl, joinUrl } from '@/lib/query-client';
+
+interface RecommendedProduct {
+  sku: string;
+  name: string;
+  category: string;
+  manufacturer: string;
+  price: number;
+  unit: string;
+  matchReason?: string;
+  suggestedQuantity?: number;
+}
 
 
 interface LineItem {
@@ -46,6 +58,7 @@ type RouteParams = {
     lineItems: LineItem[];
     currentDescription: string;
     propertyName: string;
+    autoFindPartsEnabled?: boolean;
   };
 };
 
@@ -55,13 +68,17 @@ export default function QuoteDescriptionScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
 
-  const { lineItems = [], currentDescription = '', propertyName = '' } = route.params || {};
+  const { lineItems = [], currentDescription = '', propertyName = '', autoFindPartsEnabled: initialAutoFindParts = false } = route.params || {};
 
   const [description, setDescription] = useState(currentDescription);
   const [voiceInput, setVoiceInput] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [autoFindParts, setAutoFindParts] = useState(initialAutoFindParts);
+  const [isSearchingProducts, setIsSearchingProducts] = useState(false);
+  const [recommendedProducts, setRecommendedProducts] = useState<RecommendedProduct[]>([]);
+  const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
 
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -233,6 +250,11 @@ Write 3-5 paragraphs explaining the work in a way that clearly communicates the 
       if (data.description) {
         setDescription(data.description);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        
+        // If auto-find parts is enabled, search for products based on the description
+        if (autoFindParts && (voiceInput.trim() || data.description)) {
+          await searchForProducts(voiceInput.trim() || data.description);
+        }
       }
     } catch (error) {
       console.error('[Generate] Failed to generate description:', error);
@@ -241,13 +263,88 @@ Write 3-5 paragraphs explaining the work in a way that clearly communicates the 
     }
   };
 
+  const searchForProducts = async (searchQuery: string) => {
+    if (!searchQuery.trim()) return;
+    
+    setIsSearchingProducts(true);
+    console.log('[ProductSearch] Searching for products based on:', searchQuery.slice(0, 100) + '...');
+    
+    try {
+      const apiUrl = getLocalApiUrl();
+      const response = await fetch(joinUrl(apiUrl, '/api/ai-product-search'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: searchQuery,
+          generateDescription: false,
+          findProducts: true,
+          maxResults: 8,
+        }),
+      });
+      
+      if (!response.ok) {
+        console.error('[ProductSearch] API error:', response.status);
+        return;
+      }
+      
+      const data = await response.json();
+      console.log('[ProductSearch] Response:', data);
+      
+      if (data.products && data.products.length > 0) {
+        // Filter out products that are already in the estimate
+        const existingSkus = new Set(lineItems.map(item => item.product.sku));
+        const newProducts = data.products.filter((p: RecommendedProduct) => !existingSkus.has(p.sku));
+        setRecommendedProducts(newProducts);
+        setSelectedProducts(new Set()); // Reset selection
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        setRecommendedProducts([]);
+      }
+    } catch (error) {
+      console.error('[ProductSearch] Failed to search products:', error);
+      setRecommendedProducts([]);
+    } finally {
+      setIsSearchingProducts(false);
+    }
+  };
+
+  const toggleProductSelection = (sku: string) => {
+    setSelectedProducts(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(sku)) {
+        newSet.delete(sku);
+      } else {
+        newSet.add(sku);
+      }
+      return newSet;
+    });
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const selectAllProducts = () => {
+    setSelectedProducts(new Set(recommendedProducts.map(p => p.sku)));
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  };
+
+  const clearProductSelection = () => {
+    setSelectedProducts(new Set());
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
   const handleSave = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const routes = navigation.getState().routes;
     const aceRoute = routes.find((r: any) => r.name === 'AceEstimateBuilder');
+    
+    // Get selected products to add to estimate
+    const productsToAdd = recommendedProducts.filter(p => selectedProducts.has(p.sku));
+    
     if (aceRoute) {
       navigation.dispatch({
-        ...CommonActions.setParams({ updatedDescription: description }),
+        ...CommonActions.setParams({ 
+          updatedDescription: description,
+          recommendedProducts: productsToAdd.length > 0 ? productsToAdd : undefined,
+        }),
         source: aceRoute.key,
       });
     }
@@ -385,23 +482,136 @@ Write 3-5 paragraphs explaining the work in a way that clearly communicates the 
             ) : null}
           </View>
 
+          <View style={styles.toggleRow}>
+            <View style={styles.toggleInfo}>
+              <View style={styles.toggleIconContainer}>
+                <Feather name="search" size={16} color={autoFindParts ? BrandColors.azureBlue : ESTIMATE_COLORS.textSlate400} />
+              </View>
+              <View style={styles.toggleTextContainer}>
+                <ThemedText style={styles.toggleLabel}>Auto-Find Parts</ThemedText>
+                <ThemedText style={styles.toggleHint}>
+                  AI will search the catalog for matching products
+                </ThemedText>
+              </View>
+            </View>
+            <Switch
+              value={autoFindParts}
+              onValueChange={(value) => {
+                setAutoFindParts(value);
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }}
+              trackColor={{ false: ESTIMATE_COLORS.borderLight, true: BrandColors.azureBlue }}
+              thumbColor="#fff"
+            />
+          </View>
+
           <Pressable
             onPress={generateDescription}
-            style={[styles.generateButton, (isGenerating || (lineItems.length === 0 && !voiceInput.trim())) && styles.generateButtonDisabled]}
-            disabled={isGenerating || (lineItems.length === 0 && !voiceInput.trim())}
+            style={[styles.generateButton, (isGenerating || isSearchingProducts || (lineItems.length === 0 && !voiceInput.trim())) && styles.generateButtonDisabled]}
+            disabled={isGenerating || isSearchingProducts || (lineItems.length === 0 && !voiceInput.trim())}
           >
-            {isGenerating ? (
+            {isGenerating || isSearchingProducts ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : (
               <>
                 <Feather name="zap" size={18} color="#fff" />
                 <ThemedText style={styles.generateButtonText}>
-                  Generate with Ace
+                  {autoFindParts ? 'Generate & Find Parts' : 'Generate with Ace'}
                 </ThemedText>
               </>
             )}
           </Pressable>
         </View>
+
+        {isSearchingProducts ? (
+          <View style={styles.recommendedSection}>
+            <View style={styles.recommendedHeader}>
+              <Feather name="package" size={18} color={BrandColors.azureBlue} />
+              <ThemedText style={styles.recommendedTitle}>Finding Matching Products...</ThemedText>
+            </View>
+            <View style={styles.searchingContainer}>
+              <ActivityIndicator size="large" color={BrandColors.azureBlue} />
+              <ThemedText style={styles.searchingText}>Searching the catalog...</ThemedText>
+            </View>
+          </View>
+        ) : null}
+
+        {recommendedProducts.length > 0 && !isSearchingProducts ? (
+          <View style={styles.recommendedSection}>
+            <View style={styles.recommendedHeader}>
+              <Feather name="package" size={18} color={BrandColors.azureBlue} />
+              <ThemedText style={styles.recommendedTitle}>
+                Recommended Products ({recommendedProducts.length})
+              </ThemedText>
+            </View>
+            <ThemedText style={styles.recommendedHint}>
+              Select products to add to your estimate
+            </ThemedText>
+            
+            <View style={styles.selectionActions}>
+              <Pressable onPress={selectAllProducts} style={styles.selectionButton}>
+                <Feather name="check-square" size={14} color={BrandColors.azureBlue} />
+                <ThemedText style={styles.selectionButtonText}>Select All</ThemedText>
+              </Pressable>
+              <Pressable onPress={clearProductSelection} style={styles.selectionButton}>
+                <Feather name="x-square" size={14} color={ESTIMATE_COLORS.textSlate500} />
+                <ThemedText style={[styles.selectionButtonText, { color: ESTIMATE_COLORS.textSlate500 }]}>Clear</ThemedText>
+              </Pressable>
+            </View>
+            
+            <View style={styles.recommendedList}>
+              {recommendedProducts.map((product) => (
+                <Pressable
+                  key={product.sku}
+                  onPress={() => toggleProductSelection(product.sku)}
+                  style={[
+                    styles.recommendedItem,
+                    selectedProducts.has(product.sku) && styles.recommendedItemSelected,
+                  ]}
+                >
+                  <View style={[
+                    styles.productCheckbox,
+                    selectedProducts.has(product.sku) && styles.productCheckboxSelected,
+                  ]}>
+                    {selectedProducts.has(product.sku) ? (
+                      <Feather name="check" size={14} color="#fff" />
+                    ) : null}
+                  </View>
+                  <View style={styles.productInfo}>
+                    <ThemedText style={styles.productName} numberOfLines={2}>
+                      {product.name}
+                    </ThemedText>
+                    <View style={styles.productMeta}>
+                      <ThemedText style={styles.productManufacturer}>
+                        {product.manufacturer}
+                      </ThemedText>
+                      <ThemedText style={styles.productCategory}>
+                        {product.category}
+                      </ThemedText>
+                    </View>
+                    {product.matchReason ? (
+                      <ThemedText style={styles.matchReason} numberOfLines={1}>
+                        {product.matchReason}
+                      </ThemedText>
+                    ) : null}
+                  </View>
+                  <ThemedText style={styles.productPrice}>
+                    {formatCurrencyDollars(product.price)}
+                  </ThemedText>
+                </Pressable>
+              ))}
+            </View>
+            
+            {selectedProducts.size > 0 ? (
+              <View style={styles.selectedSummary}>
+                <Feather name="info" size={14} color={BrandColors.azureBlue} />
+                <ThemedText style={styles.selectedSummaryText}>
+                  {selectedProducts.size} product{selectedProducts.size !== 1 ? 's' : ''} will be added to estimate when you save
+                </ThemedText>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
 
         <View style={styles.descriptionSection}>
           <View style={styles.descriptionHeader}>
@@ -795,5 +1005,177 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 15,
     fontWeight: '600',
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: ESTIMATE_COLORS.bgSlate50,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    marginBottom: Spacing.md,
+  },
+  toggleInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: Spacing.sm,
+  },
+  toggleIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#E8F4FD',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  toggleTextContainer: {
+    flex: 1,
+  },
+  toggleLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: ESTIMATE_COLORS.textDark,
+  },
+  toggleHint: {
+    fontSize: 11,
+    color: ESTIMATE_COLORS.textSlate500,
+    marginTop: 2,
+  },
+  recommendedSection: {
+    backgroundColor: ESTIMATE_COLORS.bgWhite,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+    marginBottom: Spacing.lg,
+    borderWidth: 1,
+    borderColor: BrandColors.azureBlue,
+    borderLeftWidth: 4,
+  },
+  recommendedHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.xs,
+  },
+  recommendedTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: ESTIMATE_COLORS.textDark,
+  },
+  recommendedHint: {
+    fontSize: 13,
+    color: ESTIMATE_COLORS.textSlate500,
+    marginBottom: Spacing.md,
+  },
+  searchingContainer: {
+    alignItems: 'center',
+    paddingVertical: Spacing.xl,
+    gap: Spacing.md,
+  },
+  searchingText: {
+    fontSize: 14,
+    color: ESTIMATE_COLORS.textSlate500,
+  },
+  selectionActions: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    marginBottom: Spacing.md,
+  },
+  selectionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    backgroundColor: ESTIMATE_COLORS.bgSlate50,
+    borderRadius: BorderRadius.sm,
+  },
+  selectionButtonText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: BrandColors.azureBlue,
+  },
+  recommendedList: {
+    gap: Spacing.sm,
+  },
+  recommendedItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: Spacing.md,
+    backgroundColor: ESTIMATE_COLORS.bgSlate50,
+    borderRadius: BorderRadius.md,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    gap: Spacing.sm,
+  },
+  recommendedItemSelected: {
+    backgroundColor: '#E8F4FD',
+    borderColor: BrandColors.azureBlue,
+  },
+  productCheckbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: ESTIMATE_COLORS.borderLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    marginTop: 2,
+  },
+  productCheckboxSelected: {
+    backgroundColor: BrandColors.azureBlue,
+    borderColor: BrandColors.azureBlue,
+  },
+  productInfo: {
+    flex: 1,
+  },
+  productName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: ESTIMATE_COLORS.textDark,
+    lineHeight: 18,
+  },
+  productMeta: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginTop: 4,
+    flexWrap: 'wrap',
+  },
+  productManufacturer: {
+    fontSize: 12,
+    color: ESTIMATE_COLORS.textSlate500,
+  },
+  productCategory: {
+    fontSize: 12,
+    color: BrandColors.azureBlue,
+    fontWeight: '500',
+  },
+  matchReason: {
+    fontSize: 11,
+    color: ESTIMATE_COLORS.textSlate400,
+    fontStyle: 'italic',
+    marginTop: 4,
+  },
+  productPrice: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: ESTIMATE_COLORS.secondary,
+    marginTop: 2,
+  },
+  selectedSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginTop: Spacing.md,
+    padding: Spacing.sm,
+    backgroundColor: '#E8F4FD',
+    borderRadius: BorderRadius.sm,
+  },
+  selectedSummaryText: {
+    fontSize: 12,
+    color: BrandColors.azureBlue,
+    fontWeight: '500',
+    flex: 1,
   },
 });

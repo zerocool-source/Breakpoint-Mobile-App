@@ -94,9 +94,21 @@ const isDonePhrase = (text: string): boolean => {
   return DONE_PHRASES.some(phrase => lowerText === phrase || lowerText.includes(phrase));
 };
 
+interface RecommendedProduct {
+  sku: string;
+  name: string;
+  category: string;
+  manufacturer: string;
+  price: number;
+  unit: string;
+  matchReason?: string;
+  suggestedQuantity?: number;
+}
+
 type AceRouteParams = {
   AceEstimateBuilder: {
     updatedDescription?: string;
+    recommendedProducts?: RecommendedProduct[];
   };
 };
 
@@ -294,6 +306,42 @@ export default function AceEstimateBuilderScreen() {
       setEstimateDescription(route.params.updatedDescription);
     }
   }, [route.params?.updatedDescription]);
+
+  // Handle recommended products from QuoteDescriptionScreen
+  useEffect(() => {
+    if (route.params?.recommendedProducts && route.params.recommendedProducts.length > 0) {
+      const newProducts = route.params.recommendedProducts;
+      
+      // Add each recommended product as a line item
+      setLineItems(prev => {
+        const existingSkus = new Set(prev.map(item => item.product.sku));
+        const newLineItems = newProducts
+          .filter(product => !existingSkus.has(product.sku))
+          .map(product => ({
+            id: `li-${Date.now()}-${product.sku}`,
+            lineNumber: prev.length + 1,
+            product: {
+              sku: product.sku,
+              name: product.name,
+              category: product.category,
+              manufacturer: product.manufacturer,
+              price: product.price,
+              unit: product.unit || 'ea',
+            },
+            description: product.matchReason || '',
+            quantity: product.suggestedQuantity || 1,
+            rate: product.price,
+            taxable: true,
+          }));
+        
+        if (newLineItems.length > 0) {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+        
+        return [...prev, ...newLineItems];
+      });
+    }
+  }, [route.params?.recommendedProducts]);
 
   useEffect(() => {
     const pulse = Animated.loop(

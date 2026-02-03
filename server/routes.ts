@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "node:http";
 import authRoutes, { authMiddleware, AuthenticatedRequest } from "./auth";
 import { db } from "./db";
-import { users, properties, jobs, assignments, estimates, routeStops, propertyChannels, techOps, repairHistory, adminMessages, poolRegulations } from "@shared/schema";
+import { users, properties, jobs, assignments, estimates, routeStops, propertyChannels, techOps, repairHistory, adminMessages, poolRegulations, urgentNotifications } from "@shared/schema";
 import { eq, and, desc, sql, or, ne } from "drizzle-orm";
 import transcribeRouter from "./routes/transcribe";
 import aiProductSearchRouter from "./routes/ai-product-search";
@@ -136,6 +136,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching properties:", error);
       res.status(500).json({ error: "Failed to fetch properties" });
+    }
+  });
+
+  // Urgent Notifications from Office
+  app.get("/api/notifications", authMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userRole = req.user?.role;
+      const userId = req.user?.id;
+      
+      // Use raw SQL for complex OR conditions
+      const notifications = await db.execute(sql`
+        SELECT * FROM urgent_notifications 
+        WHERE is_dismissed = false
+        AND (target_role IS NULL OR target_role = ${userRole})
+        AND (target_user_id IS NULL OR target_user_id = ${userId})
+        AND (expires_at IS NULL OR expires_at > NOW())
+        ORDER BY created_at DESC
+      `);
+      
+      res.json(notifications.rows || []);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+      res.status(500).json({ error: "Failed to fetch notifications" });
+    }
+  });
+
+  app.post("/api/notifications/:id/dismiss", authMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      await db.update(urgentNotifications)
+        .set({ isDismissed: true })
+        .where(eq(urgentNotifications.id, id));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error dismissing notification:", error);
+      res.status(500).json({ error: "Failed to dismiss notification" });
+    }
+  });
+
+  // Create urgent notification (for office/admin use)
+  app.post("/api/notifications", authMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { title, message, type = 'info', icon = 'bell', targetRole, targetUserId, propertyId, expiresAt } = req.body;
+      
+      const [notification] = await db.insert(urgentNotifications)
+        .values({
+          title,
+          message,
+          type,
+          icon,
+          targetRole,
+          targetUserId,
+          propertyId,
+          expiresAt: expiresAt ? new Date(expiresAt) : null,
+          createdBy: req.user?.id,
+        })
+        .returning();
+      
+      res.json(notification);
+    } catch (error) {
+      console.error("Error creating notification:", error);
+      res.status(500).json({ error: "Failed to create notification" });
     }
   });
 

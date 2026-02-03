@@ -322,9 +322,33 @@ export default function HomeScreen() {
   const [showOrderPartsModal, setShowOrderPartsModal] = useState(false);
   const [showReportIssueModal, setShowReportIssueModal] = useState(false);
   const [showEmergencyModal, setShowEmergencyModal] = useState(false);
-  const [showNotification, setShowNotification] = useState(false);
   const [showRepairHistoryPicker, setShowRepairHistoryPicker] = useState(false);
   const [propertySearch, setPropertySearch] = useState('');
+  const [currentNotification, setCurrentNotification] = useState<{
+    id: string;
+    title: string;
+    message: string;
+    type: 'urgent' | 'warning' | 'info';
+    icon: string;
+  } | null>(null);
+
+  // Fetch urgent notifications from office
+  const { data: notifications } = useQuery<any[]>({
+    queryKey: ['/api/notifications'],
+    queryFn: async () => {
+      const apiUrl = getLocalApiUrl();
+      const response = await fetch(joinUrl(apiUrl, '/api/notifications'), {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!response.ok) throw new Error('Failed to fetch notifications');
+      return response.json();
+    },
+    enabled: !!token,
+    refetchInterval: 30000, // Poll every 30 seconds for new notifications
+  });
 
   useEffect(() => {
     if (jobsData) {
@@ -332,12 +356,19 @@ export default function HomeScreen() {
     }
   }, [jobsData]);
 
+  // Show first unread notification
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowNotification(true);
-    }, 2000);
-    return () => clearTimeout(timer);
-  }, []);
+    if (notifications && notifications.length > 0 && !currentNotification) {
+      const notif = notifications[0];
+      setCurrentNotification({
+        id: notif.id,
+        title: notif.title,
+        message: notif.message,
+        type: notif.type || 'info',
+        icon: notif.icon || 'bell',
+      });
+    }
+  }, [notifications]);
 
   const nextStop = jobs.length > 0 ? jobs[0] : null;
   const truckId = 'RT-007';
@@ -631,12 +662,28 @@ export default function HomeScreen() {
   return (
     <BubbleBackground bubbleCount={15}>
       <NotificationBanner
-        visible={showNotification}
-        title="Emergency: Power Outage"
-        message="Aqua Fitness Center - all pool equipment is offline due to power outage. Generator backup needed."
-        type="urgent"
-        icon="zap-off"
-        onDismiss={() => setShowNotification(false)}
+        visible={!!currentNotification}
+        title={currentNotification?.title || ''}
+        message={currentNotification?.message || ''}
+        type={currentNotification?.type || 'info'}
+        icon={currentNotification?.icon || 'bell'}
+        onDismiss={async () => {
+          if (currentNotification?.id) {
+            try {
+              const apiUrl = getLocalApiUrl();
+              await fetch(joinUrl(apiUrl, `/api/notifications/${currentNotification.id}/dismiss`), {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`,
+                },
+              });
+            } catch (error) {
+              console.error('Failed to dismiss notification:', error);
+            }
+          }
+          setCurrentNotification(null);
+        }}
       />
       <ScrollView
         style={styles.scrollContainer}

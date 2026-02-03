@@ -528,4 +528,28 @@ export const poolRegulations = pgTable("pool_regulations", {
 
 export type PoolRegulation = typeof poolRegulations.$inferSelect;
 
+// Urgent Notifications from Office
+export const notificationTypeEnum = pgEnum('notification_type', ['urgent', 'warning', 'info']);
+
+export const urgentNotifications = pgTable("urgent_notifications", {
+  id: varchar("id", { length: 36 })
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  type: notificationTypeEnum("type").notNull().default('info'),
+  icon: varchar("icon", { length: 50 }).default('bell'),
+  targetRole: varchar("target_role", { length: 50 }), // null means all roles
+  targetUserId: varchar("target_user_id", { length: 36 }), // null means all users of role
+  propertyId: varchar("property_id", { length: 36 }), // optional: related property
+  isRead: boolean("is_read").notNull().default(false),
+  isDismissed: boolean("is_dismissed").notNull().default(false),
+  expiresAt: timestamp("expires_at"), // optional expiration
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdBy: varchar("created_by", { length: 36 }), // office user who sent it
+});
+
+export type UrgentNotification = typeof urgentNotifications.$inferSelect;
+export type InsertUrgentNotification = typeof urgentNotifications.$inferInsert;
+
 export * from "./models/chat";

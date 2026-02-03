@@ -138,10 +138,11 @@ export default function ForemanHomeScreen() {
           styles.content,
           { paddingTop: headerHeight + Spacing.md, paddingBottom: insets.bottom + 100 },
         ]}
+        scrollIndicatorInsets={{ bottom: insets.bottom + 85 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={true}
       >
         <View style={styles.greeting}>
           <ThemedText style={styles.greetingText}>Good morning,</ThemedText>

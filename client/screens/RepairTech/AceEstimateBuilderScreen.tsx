@@ -24,6 +24,8 @@ import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { useAudioRecorder, AudioModule, RecordingPresets, setAudioModeAsync } from 'expo-audio';
 import { getLocalApiUrl, joinUrl } from '@/lib/query-client';
+import { checkNetworkConnection } from '@/lib/apiHelper';
+import NetInfo from '@react-native-community/netinfo';
 
 import { ThemedText } from '@/components/ThemedText';
 import { useTheme } from '@/hooks/useTheme';
@@ -486,14 +488,36 @@ export default function AceEstimateBuilderScreen() {
     setIsThinking(true);
 
     try {
+      const isConnected = await checkNetworkConnection();
+      if (!isConnected) {
+        setIsThinking(false);
+        addAceMessage("I can't connect right now. Please check your internet connection and try again.");
+        return;
+      }
+
       const apiUrl = getLocalApiUrl();
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000);
+
       const response = await fetch(joinUrl(apiUrl, '/api/ai-product-search'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ description, userId }),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
 
-      if (!response.ok) throw new Error('AI search failed');
+      if (!response.ok) {
+        setIsThinking(false);
+        if (response.status >= 500) {
+          addAceMessage("Our service is temporarily busy. Please try again in a moment.");
+        } else if (response.status === 401) {
+          addAceMessage("Your session has expired. Please log in again.");
+        } else {
+          addAceMessage("I had trouble searching. Please try again or describe it differently.");
+        }
+        return;
+      }
 
       const data = await response.json();
       setIsThinking(false);
@@ -501,7 +525,6 @@ export default function AceEstimateBuilderScreen() {
       if (data.matches && data.matches.length > 0) {
         const matches = data.matches.map((m: any) => ({ ...m, selected: true }));
         
-        // Log AI interaction for learning (now includes userId for per-user learning)
         logAIInteraction(description, matches);
         
         let messageText = `I found ${matches.length} product${matches.length > 1 ? 's' : ''} that match what you're looking for!`;
@@ -517,10 +540,14 @@ export default function AceEstimateBuilderScreen() {
       } else {
         addAceMessage("Hmm, I couldn't find any exact matches for that. Try describing it differently, or give me more details like the brand or type of equipment.");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('AI search error:', error);
       setIsThinking(false);
-      addAceMessage("Oops! I had trouble searching. Let me try again in a moment.");
+      if (error.name === 'AbortError') {
+        addAceMessage("That search took too long. Try being more specific, or try again in a moment.");
+      } else {
+        addAceMessage("I had trouble searching. Please check your connection and try again.");
+      }
     }
   };
 
@@ -686,16 +713,33 @@ export default function AceEstimateBuilderScreen() {
 
       const base64Audio = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' });
 
+      const isConnected = await checkNetworkConnection();
+      if (!isConnected) {
+        setIsTranscribing(false);
+        addAceMessage("No internet connection. Please check your network and try again.");
+        return;
+      }
+
       const apiUrl = getLocalApiUrl();
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+
       const transcribeResponse = await fetch(joinUrl(apiUrl, '/api/transcribe'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ audio: base64Audio }),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
 
       if (!transcribeResponse.ok) {
         setIsTranscribing(false);
-        throw new Error('Transcription failed');
+        if (transcribeResponse.status >= 500) {
+          addAceMessage("Our transcription service is busy right now. Please try typing your request instead.");
+        } else {
+          addAceMessage("I couldn't process your voice message. Please try again or type your request.");
+        }
+        return;
       }
 
       const transcribeData = await transcribeResponse.json();
@@ -710,10 +754,15 @@ export default function AceEstimateBuilderScreen() {
       setUserInput(description);
       
       await searchProductsWithAI(description);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to process recording:', error);
+      setIsTranscribing(false);
       setIsThinking(false);
-      addAceMessage("Sorry, I had trouble understanding that. Try typing your request instead.");
+      if (error.name === 'AbortError') {
+        addAceMessage("Voice processing timed out. Please try again or type your request instead.");
+      } else {
+        addAceMessage("Sorry, I had trouble understanding that. Try typing your request instead.");
+      }
     }
   };
 

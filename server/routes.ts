@@ -1,5 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "node:http";
+import path from "path";
+import multer from "multer";
 import authRoutes, { authMiddleware, AuthenticatedRequest } from "./auth";
 import { db } from "./db";
 import { users, properties, jobs, assignments, estimates, routeStops, propertyChannels, techOps, repairHistory, adminMessages, poolRegulations, urgentNotifications } from "@shared/schema";
@@ -10,12 +12,73 @@ import aiLearningRouter from "./routes/ai-learning";
 import poolRegulationsRouter from "./routes/pool-regulations";
 import poolbrainProductsRouter from "./routes/poolbrain-products";
 
+// Configure multer for photo uploads
+const photoStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/photos');
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname) || '.jpg';
+    cb(null, `photo-${uniqueSuffix}${ext}`);
+  }
+});
+
+const photoUpload = multer({
+  storage: photoStorage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed.'));
+    }
+  }
+});
+
 // Render API base URLs for proxy
 const RENDER_API_URL = process.env.RENDER_API_URL || "https://breakpoint-api-v2.onrender.com";
 const TECHOPS_API_URL = process.env.TECHOPS_API_URL || "https://breakpoint-app.onrender.com";
 const MOBILE_API_KEY = process.env.MOBILE_API_KEY;
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Serve uploaded photos as static files
+  const express = require('express');
+  app.use('/uploads', express.static('uploads'));
+
+  // Photo upload endpoint
+  app.post("/api/photos/upload", authMiddleware, photoUpload.array('photos', 10), (req: AuthenticatedRequest, res) => {
+    try {
+      const files = req.files as Express.Multer.File[];
+      if (!files || files.length === 0) {
+        return res.status(400).json({ error: 'No files uploaded' });
+      }
+
+      const baseUrl = process.env.EXPO_PUBLIC_DOMAIN 
+        ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
+        : `http://localhost:5000`;
+      
+      const photoUrls = files.map(file => ({
+        filename: file.filename,
+        url: `${baseUrl}/uploads/photos/${file.filename}`,
+        originalName: file.originalname,
+        size: file.size,
+        mimeType: file.mimetype
+      }));
+
+      console.log('[Photo Upload] Uploaded', files.length, 'photos');
+      res.status(201).json({ 
+        success: true, 
+        photos: photoUrls,
+        message: `${files.length} photo(s) uploaded successfully`
+      });
+    } catch (error) {
+      console.error('[Photo Upload] Error:', error);
+      res.status(500).json({ error: 'Failed to upload photos' });
+    }
+  });
+
   // Proxy auth requests - try local first, then Render API
   app.post("/api/proxy/auth/login", async (req, res) => {
     try {
@@ -567,6 +630,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdByTechId,
         createdByTechName,
         status: requestStatus,
+        photoUrls,
       } = req.body;
 
       const user = req.user!;
@@ -576,11 +640,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const finalTotal = totalAmount || total || 0;
       const status = requestStatus || (sendToOffice ? 'needs_review' : 'draft');
       const finalTitle = title || 'Pool Repair Estimate';
+      const finalPhotos = photoUrls || [];
 
       const result = await db.execute(sql`
         INSERT INTO estimates (
           id, property_id, property_name, estimate_number, estimate_date, expiration_date,
-          title, description, items, subtotal, discount_type, discount_value, discount_amount,
+          title, description, items, photos, subtotal, discount_type, discount_value, discount_amount,
           sales_tax_rate, sales_tax_amount, total_amount, status,
           created_by_tech_id, created_by_tech_name, repair_tech_id, repair_tech_name,
           wo_required, wo_received, wo_number, source_type,
@@ -595,6 +660,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ${finalTitle},
           ${description || ''},
           ${JSON.stringify(finalItems)},
+          ${finalPhotos.length > 0 ? finalPhotos : sql`NULL`},
           ${Math.round((subtotal || 0) * 100)},
           ${discountType || 'percent'},
           ${discountValue || 0},

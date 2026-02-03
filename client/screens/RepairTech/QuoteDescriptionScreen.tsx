@@ -9,12 +9,10 @@ import {
   Platform,
   Animated,
   Easing,
-  SegmentedControlIOSComponent,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import SegmentedControl from '@react-native-segmented-control/segmented-control';
 import * as Haptics from 'expo-haptics';
 import * as FileSystem from 'expo-file-system';
 import { useAudioRecorder, AudioModule, RecordingPresets, setAudioModeAsync } from 'expo-audio';
@@ -25,7 +23,6 @@ import { BrandColors, BorderRadius, Spacing } from '@/constants/theme';
 import { ESTIMATE_COLORS, formatCurrencyDollars } from '@/constants/estimateDesign';
 import { getLocalApiUrl, joinUrl } from '@/lib/query-client';
 
-type DescriptionLanguageStyle = 'professional' | 'hoa-friendly';
 
 interface LineItem {
   id: string;
@@ -65,7 +62,6 @@ export default function QuoteDescriptionScreen() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
-  const [languageStyle, setLanguageStyle] = useState<DescriptionLanguageStyle>('hoa-friendly');
 
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -172,17 +168,20 @@ export default function QuoteDescriptionScreen() {
       // Extract unique product categories for pool code lookup
       const productCategories = [...new Set(lineItems.map(item => item.product.category))];
       
-      const styleInstructions = languageStyle === 'hoa-friendly'
-        ? `Write in simple, everyday language that a property manager or HOA board member would easily understand. 
-           AVOID technical jargon, model numbers, and industry terms.
-           Instead of technical terms, explain WHAT the equipment does and WHY it needs to be replaced.
-           Example: Instead of "Replace Pentair IntelliFlo 3HP VSF pump", say "Replace the main water circulation pump that moves pool water through the filtration system."
-           Focus on benefits: safety, efficiency, proper operation, and compliance.
-           Keep sentences short and clear. Use words like "the pool pump" instead of specific model names.
-           Reference California pool codes where applicable to help HOA managers understand legal requirements.`
-        : `Write in professional, industry-standard language suitable for commercial pool service documentation.
-           Include relevant technical specifications and product details where appropriate.
-           Maintain a formal, business tone.`;
+      // HOA-friendly with professional mix - no toggle needed
+      const styleInstructions = `Write a quote description that is BOTH HOA-friendly AND professional.
+         START THE DESCRIPTION WITH: "Dear HOA Manager,"
+         
+         Use simple, everyday language that a property manager or HOA board member would easily understand.
+         AVOID excessive technical jargon, model numbers, and industry terms.
+         Instead of technical terms, explain WHAT the equipment does and WHY it needs to be replaced.
+         Example: Instead of "Replace Pentair IntelliFlo 3HP VSF pump", say "Replace the main water circulation pump that moves pool water through the filtration system."
+         
+         Focus on benefits: safety, efficiency, proper operation, and compliance.
+         Keep sentences short and clear but maintain a professional business tone.
+         Reference California pool codes where applicable to help HOA managers understand legal requirements.
+         
+         The tone should be respectful, informative, and reassuring - like a trusted contractor explaining necessary work to a property manager.`;
       
       const prompt = voiceInput.trim() 
         ? `Generate a quote description based on these instructions: "${voiceInput}"
@@ -194,7 +193,7 @@ ${itemsSummary}
 
 Property: ${propertyName}
 
-Write 3-5 paragraphs explaining the work in a way that clearly communicates the scope, value, and any legal requirements.`
+Write 3-5 paragraphs explaining the work in a way that clearly communicates the scope, value, and any legal requirements. Start with "Dear HOA Manager,"`
         : `Generate a quote description for this commercial pool repair estimate.
 
 ${styleInstructions}
@@ -204,7 +203,7 @@ ${itemsSummary}
 
 Property: ${propertyName}
 
-Write 3-5 paragraphs explaining the work in a way that clearly communicates the scope, value, and any legal requirements.`;
+Write 3-5 paragraphs explaining the work in a way that clearly communicates the scope, value, and any legal requirements. Start with "Dear HOA Manager,"`;
 
       const apiUrl = getLocalApiUrl();
       const response = await fetch(joinUrl(apiUrl, '/api/ai-product-search'), {
@@ -213,7 +212,7 @@ Write 3-5 paragraphs explaining the work in a way that clearly communicates the 
         body: JSON.stringify({ 
           query: prompt,
           generateDescription: true,
-          languageStyle: languageStyle,
+          languageStyle: 'hoa-friendly',
           productCategories: productCategories
         }),
       });
@@ -382,39 +381,19 @@ Write 3-5 paragraphs explaining the work in a way that clearly communicates the 
             <ThemedText style={styles.descriptionTitle}>Quote Description</ThemedText>
           </View>
           <ThemedText style={styles.descriptionHint}>
-            This is what the customer/HOA will read. Choose the language style below.
+            This is what the HOA Manager will read. Uses HOA-friendly language with professional tone.
           </ThemedText>
-          
-          <View style={styles.languageToggleContainer}>
-            <ThemedText style={styles.languageToggleLabel}>Language Style:</ThemedText>
-            <SegmentedControl
-              values={['HOA-Friendly', 'Professional']}
-              selectedIndex={languageStyle === 'hoa-friendly' ? 0 : 1}
-              onChange={(event) => {
-                const index = event.nativeEvent.selectedSegmentIndex;
-                setLanguageStyle(index === 0 ? 'hoa-friendly' : 'professional');
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              }}
-              style={styles.languageToggle}
-              tintColor={BrandColors.azureBlue}
-              fontStyle={{ fontSize: 13 }}
-              activeFontStyle={{ fontWeight: '600', fontSize: 13 }}
-            />
-            <ThemedText style={styles.languageHint}>
-              {languageStyle === 'hoa-friendly' 
-                ? 'Simple language for property managers and HOA boards'
-                : 'Technical language for industry professionals'}
-            </ThemedText>
-          </View>
           
           <TextInput
             style={styles.descriptionInput}
             value={description}
             onChangeText={setDescription}
             multiline
-            placeholder={languageStyle === 'hoa-friendly'
-              ? "Describe the work in everyday terms. Example: 'We will replace the main water pump that circulates water through the pool system. The current pump is no longer operating efficiently, which affects water quality and increases energy costs.'"
-              : "Describe the work using industry-standard terminology. Include product specifications and technical details as needed."}
+            placeholder="Dear HOA Manager,
+
+We will replace the main water pump that circulates water through the pool system. The current pump is no longer operating efficiently, which affects water quality and increases energy costs.
+
+This repair is required per California Health & Safety Code..."
             placeholderTextColor={ESTIMATE_COLORS.textSlate400}
             textAlignVertical="top"
           />

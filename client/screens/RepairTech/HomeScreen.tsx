@@ -696,20 +696,26 @@ export default function HomeScreen() {
           ListHeaderComponent={renderHeader}
           contentContainerStyle={{
             paddingBottom: tabBarHeight + Spacing.fabSize + Spacing['2xl'],
+            flexGrow: 1,
           }}
           scrollIndicatorInsets={{ bottom: insets.bottom }}
           showsVerticalScrollIndicator={true}
           nestedScrollEnabled={true}
+          bounces={true}
+          alwaysBounceVertical={true}
         />
       ) : (
         <Animated.ScrollView
           style={{ flex: 1 }}
           contentContainerStyle={{
             paddingBottom: tabBarHeight + Spacing.fabSize + Spacing['2xl'],
+            flexGrow: 1,
           }}
           scrollIndicatorInsets={{ bottom: insets.bottom }}
           showsVerticalScrollIndicator={true}
           nestedScrollEnabled={true}
+          bounces={true}
+          alwaysBounceVertical={true}
         >
           {renderHeader()}
           <View style={styles.emptyJobsContainer}>

@@ -11,6 +11,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { Badge } from '@/components/Badge';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
+import { formatCurrency } from '@/constants/estimateDesign';
 import type { Estimate } from '@/types';
 
 interface EstimateCardProps {
@@ -39,13 +40,6 @@ export function EstimateCard({ estimate, onPress }: EstimateCardProps) {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(amount);
   };
 
   return (

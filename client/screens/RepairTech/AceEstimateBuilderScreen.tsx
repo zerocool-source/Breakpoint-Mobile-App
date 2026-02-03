@@ -1645,6 +1645,7 @@ export default function AceEstimateBuilderScreen() {
             
             {estimateDescription && estimateDescription.trim().length >= 10 && (
               <Pressable
+                testID="build-estimate-ai-button"
                 onPress={generateEstimateWithAI}
                 disabled={isGeneratingEstimate}
                 style={[

@@ -1191,31 +1191,46 @@ export default function AceEstimateBuilderScreen() {
                 <ThemedText style={styles.emptySubtext}>Tap "Add Item" or ask Ace to find products</ThemedText>
               </View>
             ) : null}
+          </View>
 
-            {lineItems.length > 0 ? (
-              <View style={styles.photoRow}>
-                <Pressable onPress={takePhoto} style={styles.photoIconButton}>
-                  <Feather name="camera" size={18} color={ESTIMATE_COLORS.secondary} />
-                </Pressable>
-                <Pressable onPress={pickPhoto} style={styles.photoIconButton}>
-                  <Feather name="image" size={18} color={ESTIMATE_COLORS.secondary} />
-                </Pressable>
-                {photos.length > 0 ? (
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photoThumbnails}>
-                    {photos.map(photo => (
-                      <View key={photo.id} style={styles.photoThumbSmall}>
-                        <Image source={{ uri: photo.uri }} style={styles.photoThumbSmallImg} />
-                        <Pressable onPress={() => removePhoto(photo.id)} style={styles.photoRemoveSmall}>
-                          <Feather name="x" size={10} color="#fff" />
-                        </Pressable>
-                      </View>
-                    ))}
-                  </ScrollView>
-                ) : (
-                  <ThemedText style={styles.photoHintInline}>Add photos</ThemedText>
-                )}
+          <View style={styles.sectionCard}>
+            <View style={styles.photoSectionHeader}>
+              <Feather name="camera" size={18} color={ESTIMATE_COLORS.textDark} />
+              <ThemedText style={styles.sectionLabel}>Photos</ThemedText>
+              <ThemedText style={styles.photoCount}>
+                {photos.length > 0 ? `${photos.length} photo${photos.length > 1 ? 's' : ''}` : ''}
+              </ThemedText>
+            </View>
+            <View style={styles.photoUploadRow}>
+              <Pressable onPress={takePhoto} style={styles.photoUploadButton}>
+                <View style={styles.photoUploadIconCircle}>
+                  <Feather name="camera" size={20} color={ESTIMATE_COLORS.secondary} />
+                </View>
+                <ThemedText style={styles.photoUploadLabel}>Take Photo</ThemedText>
+              </Pressable>
+              <Pressable onPress={pickPhoto} style={styles.photoUploadButton}>
+                <View style={styles.photoUploadIconCircle}>
+                  <Feather name="image" size={20} color={ESTIMATE_COLORS.secondary} />
+                </View>
+                <ThemedText style={styles.photoUploadLabel}>From Gallery</ThemedText>
+              </Pressable>
+            </View>
+            {photos.length > 0 ? (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photoThumbnailsRow}>
+                {photos.map(photo => (
+                  <View key={photo.id} style={styles.photoThumbItem}>
+                    <Image source={{ uri: photo.uri }} style={styles.photoThumbImage} />
+                    <Pressable onPress={() => removePhoto(photo.id)} style={styles.photoRemoveBtn}>
+                      <Feather name="x" size={12} color="#fff" />
+                    </Pressable>
+                  </View>
+                ))}
+              </ScrollView>
+            ) : (
+              <View style={styles.noPhotosHint}>
+                <ThemedText style={styles.noPhotosText}>No photos attached yet</ThemedText>
               </View>
-            ) : null}
+            )}
           </View>
 
           <View style={styles.sectionCard}>
@@ -2094,6 +2109,80 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: ESTIMATE_COLORS.textSlate400,
     flex: 1,
+  },
+  photoSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  photoCount: {
+    fontSize: 12,
+    color: ESTIMATE_COLORS.textSlate400,
+    marginLeft: 'auto',
+  },
+  photoUploadRow: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    marginBottom: Spacing.md,
+  },
+  photoUploadButton: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
+    backgroundColor: ESTIMATE_COLORS.bgSlate50,
+    borderWidth: 1,
+    borderColor: ESTIMATE_COLORS.borderLight,
+    borderStyle: 'dashed',
+    gap: Spacing.sm,
+  },
+  photoUploadIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: ESTIMATE_COLORS.bgWhite,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoUploadLabel: {
+    fontSize: 13,
+    color: ESTIMATE_COLORS.textDark,
+    fontWeight: '500',
+  },
+  photoThumbnailsRow: {
+    marginTop: Spacing.sm,
+  },
+  photoThumbItem: {
+    width: 64,
+    height: 64,
+    borderRadius: BorderRadius.sm,
+    marginRight: Spacing.sm,
+    position: 'relative',
+  },
+  photoThumbImage: {
+    width: 64,
+    height: 64,
+    borderRadius: BorderRadius.sm,
+  },
+  photoRemoveBtn: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: ESTIMATE_COLORS.statusRed,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  noPhotosHint: {
+    alignItems: 'center',
+    paddingVertical: Spacing.sm,
+  },
+  noPhotosText: {
+    fontSize: 13,
+    color: ESTIMATE_COLORS.textSlate400,
   },
   descriptionHeader: {
     flexDirection: 'row',

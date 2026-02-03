@@ -264,11 +264,23 @@ Write 3-5 paragraphs explaining the work in a way that clearly communicates the 
         contentContainerStyle={styles.contentContainer}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Feather name="list" size={18} color={ESTIMATE_COLORS.textSlate500} />
-            <ThemedText style={styles.sectionTitle}>Line Items Summary</ThemedText>
+        <View style={styles.estimatePreviewCard}>
+          <View style={styles.previewHeader}>
+            <Feather name="file-text" size={20} color={BrandColors.azureBlue} />
+            <ThemedText style={styles.previewTitle}>Estimate Preview</ThemedText>
           </View>
+          
+          {propertyName ? (
+            <View style={styles.previewRow}>
+              <Feather name="home" size={14} color={ESTIMATE_COLORS.textSlate400} />
+              <ThemedText style={styles.previewLabel}>Property:</ThemedText>
+              <ThemedText style={styles.previewValue}>{propertyName}</ThemedText>
+            </View>
+          ) : null}
+
+          <View style={styles.previewDivider} />
+          
+          <ThemedText style={styles.previewSectionLabel}>Items ({lineItems.length})</ThemedText>
           <View style={styles.itemsList}>
             {lineItems.length > 0 ? (
               lineItems.map((item, idx) => (
@@ -474,6 +486,53 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
     borderWidth: 1,
     borderColor: ESTIMATE_COLORS.borderLight,
+  },
+  estimatePreviewCard: {
+    backgroundColor: ESTIMATE_COLORS.bgWhite,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+    marginBottom: Spacing.lg,
+    borderWidth: 1,
+    borderColor: BrandColors.azureBlue,
+    borderLeftWidth: 4,
+  },
+  previewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  previewTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: ESTIMATE_COLORS.textDark,
+  },
+  previewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  previewLabel: {
+    fontSize: 13,
+    color: ESTIMATE_COLORS.textSlate400,
+  },
+  previewValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: ESTIMATE_COLORS.textDark,
+    flex: 1,
+  },
+  previewDivider: {
+    height: 1,
+    backgroundColor: ESTIMATE_COLORS.borderLight,
+    marginVertical: Spacing.md,
+  },
+  previewSectionLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: ESTIMATE_COLORS.textSlate500,
+    marginBottom: Spacing.sm,
   },
   sectionHeader: {
     flexDirection: 'row',

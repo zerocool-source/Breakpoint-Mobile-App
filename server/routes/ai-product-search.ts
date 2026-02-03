@@ -2,9 +2,68 @@ import { Router, Request, Response } from "express";
 import express from "express";
 import OpenAI from "openai";
 import { db } from "../db";
-import { sql, eq } from "drizzle-orm";
+import { sql, eq, like, or } from "drizzle-orm";
 import { poolRegulations, estimateTemplates } from "../../shared/schema";
 import { getProducts, mapPoolBrainToHeritageFormat } from "../services/poolbrain";
+
+// Commercial Pool Repair Knowledge Base functions
+async function getRepairKnowledge(workDescription: string): Promise<any[]> {
+  try {
+    const keywords = workDescription.toLowerCase().split(' ').filter(w => w.length > 3);
+    const result = await db.execute(sql`
+      SELECT 
+        repair_name, repair_code, category,
+        professional_description, hoa_friendly_description,
+        technical_details, safety_considerations, code_references,
+        common_causes, diagnostic_steps, required_parts, recommended_products,
+        labor_hours_min, labor_hours_max, parts_cost_min, parts_cost_max,
+        preventive_measures, warranty_notes
+      FROM commercial_pool_repairs
+      WHERE is_active = true
+        AND (
+          ${sql.raw(keywords.map(k => `repair_name ILIKE '%${k}%' OR professional_description ILIKE '%${k}%' OR category::text ILIKE '%${k}%'`).join(' OR '))}
+        )
+      LIMIT 5
+    `);
+    return result.rows as any[];
+  } catch (error) {
+    console.error("Error fetching repair knowledge:", error);
+    return [];
+  }
+}
+
+async function getRelevantCodes(category?: string): Promise<any[]> {
+  try {
+    const result = await db.execute(sql`
+      SELECT code_type, code_number, title, full_text, plain_language, hoa_explanation
+      FROM commercial_pool_codes
+      WHERE is_active = true
+      ${category ? sql`AND applicable_repairs ILIKE ${'%' + category + '%'}` : sql``}
+      LIMIT 10
+    `);
+    return result.rows as any[];
+  } catch (error) {
+    console.error("Error fetching pool codes:", error);
+    return [];
+  }
+}
+
+async function getLaborRates(facilityType?: string): Promise<any[]> {
+  try {
+    const result = await db.execute(sql`
+      SELECT rate_name, rate_code, description, hourly_rate, minimum_hours,
+             after_hours_multiplier, weekend_multiplier
+      FROM labor_rates
+      WHERE is_active = true
+      ${facilityType ? sql`AND facility_types ILIKE ${'%' + facilityType + '%'}` : sql``}
+      ORDER BY rate_name
+    `);
+    return result.rows as any[];
+  } catch (error) {
+    console.error("Error fetching labor rates:", error);
+    return [];
+  }
+}
 
 // Get estimate templates for AI reference
 async function getEstimateTemplates(category?: string): Promise<any[]> {
@@ -488,10 +547,10 @@ async function getUserEstimateHistory(userId?: string): Promise<Array<{ query: s
   }
 }
 
-// Generate estimate with AI using templates as reference
+// Generate estimate with AI using templates and knowledge base
 router.post("/generate-estimate", express.json(), async (req: Request, res: Response) => {
   try {
-    const { workDescription, propertyName, category, userId } = req.body;
+    const { workDescription, propertyName, category, userId, facilityType } = req.body;
 
     if (!workDescription) {
       return res.status(400).json({ error: "Work description is required" });
@@ -501,10 +560,53 @@ router.post("/generate-estimate", express.json(), async (req: Request, res: Resp
     const templates = await getEstimateTemplates(category || 'equipment_room');
     const templateContext = templates.length > 0 ? templates[0] : null;
 
+    // Get commercial pool repair knowledge base data
+    const repairKnowledge = await getRepairKnowledge(workDescription);
+    const poolCodes = await getRelevantCodes();
+    const laborRates = await getLaborRates(facilityType);
+
     // Get user-specific learning data for personalization
     const frequentProducts = await getUserFrequentProducts(userId);
     const estimateHistory = await getUserEstimateHistory(userId);
     const learnedMappings = await getLearnedMappings(workDescription, userId);
+
+    // Build knowledge base context
+    let knowledgeBaseContext = '';
+    if (repairKnowledge.length > 0) {
+      knowledgeBaseContext += `\n\n=== COMMERCIAL POOL REPAIR KNOWLEDGE BASE ===
+Use this expert knowledge to create accurate, professional estimates:
+
+${repairKnowledge.map(r => `
+REPAIR: ${r.repair_name} (${r.repair_code})
+Category: ${r.category}
+Professional Description: ${r.professional_description}
+HOA-Friendly Description: ${r.hoa_friendly_description}
+Technical Details: ${r.technical_details}
+Safety Considerations: ${r.safety_considerations}
+Code References: ${r.code_references}
+Common Causes: ${r.common_causes}
+Required Parts: ${r.required_parts}
+Recommended Products: ${r.recommended_products}
+Labor Hours: ${r.labor_hours_min}-${r.labor_hours_max} hours
+Parts Cost Range: $${r.parts_cost_min}-$${r.parts_cost_max}
+Warranty Notes: ${r.warranty_notes}
+`).join('\n---\n')}`;
+    }
+
+    if (poolCodes.length > 0) {
+      knowledgeBaseContext += `\n\n=== CALIFORNIA POOL CODES (cite these in explanations) ===
+${poolCodes.map(c => `
+${c.code_type} ${c.code_number}: ${c.title}
+Full Text: ${c.full_text}
+Plain Language: ${c.plain_language}
+HOA Explanation: ${c.hoa_explanation}
+`).join('\n')}`;
+    }
+
+    if (laborRates.length > 0) {
+      knowledgeBaseContext += `\n\n=== LABOR RATES ===
+${laborRates.map(r => `${r.rate_name} (${r.rate_code}): $${r.hourly_rate}/hr - ${r.description}`).join('\n')}`;
+    }
 
     // Build personalization context
     let personalizationContext = '';
@@ -582,7 +684,7 @@ Return a JSON object with:
   "laborRate": 150.00,
   "termsText": "Closing terms...",
   "notes": "Any additional notes"
-}${personalizationContext}`;
+}${knowledgeBaseContext}${personalizationContext}`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
@@ -590,8 +692,10 @@ Return a JSON object with:
         { role: "system", content: systemPrompt },
         { role: "user", content: `Create a detailed estimate for:
 Property: ${propertyName || 'Commercial Property'}
+Facility Type: ${facilityType || 'Commercial'}
 Work Description: ${workDescription}
 
+Use the knowledge base data provided above to create accurate, professional estimates with proper code citations.
 Provide accurate real-world pricing and complete parts lists.` },
       ],
       response_format: { type: "json_object" },
@@ -622,6 +726,9 @@ Provide accurate real-world pricing and complete parts lists.` },
       estimate: estimateData, 
       templateUsed: templateContext?.name || null,
       personalized: frequentProducts.length > 0 || learnedMappings.length > 0,
+      knowledgeBaseUsed: repairKnowledge.length > 0,
+      codesReferenced: poolCodes.length,
+      laborRatesApplied: laborRates.length > 0,
     });
   } catch (error) {
     console.error("Estimate generation error:", error);

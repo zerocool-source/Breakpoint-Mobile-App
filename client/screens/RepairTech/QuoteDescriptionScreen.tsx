@@ -10,7 +10,7 @@ import {
   Animated,
   Easing,
 } from 'react-native';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp, CommonActions } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -233,11 +233,15 @@ Write 3-5 paragraphs explaining the work in a way that clearly communicates the 
 
   const handleSave = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    navigation.navigate({
-      name: 'AceEstimateBuilder',
-      params: { updatedDescription: description },
-      merge: true,
-    });
+    const routes = navigation.getState().routes;
+    const aceRoute = routes.find((r: any) => r.name === 'AceEstimateBuilder');
+    if (aceRoute) {
+      navigation.dispatch({
+        ...CommonActions.setParams({ updatedDescription: description }),
+        source: aceRoute.key,
+      });
+    }
+    navigation.goBack();
   };
 
   return (

@@ -317,14 +317,16 @@ export default function AceEstimateBuilderScreen() {
         const existingSkus = new Set(prev.map(item => item.product.sku));
         const newLineItems = newProducts
           .filter(product => !existingSkus.has(product.sku))
-          .map(product => ({
-            id: `li-${Date.now()}-${product.sku}`,
-            lineNumber: prev.length + 1,
+          .map((product, index) => ({
+            id: `li-${Date.now()}-${product.sku}-${index}`,
+            lineNumber: prev.length + 1 + index,
             product: {
               sku: product.sku,
               name: product.name,
               category: product.category,
+              subcategory: '', // Not available from recommendations
               manufacturer: product.manufacturer,
+              heritageNumber: '', // Not available from recommendations
               price: product.price,
               unit: product.unit || 'ea',
             },

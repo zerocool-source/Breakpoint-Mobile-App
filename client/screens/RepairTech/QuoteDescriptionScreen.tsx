@@ -290,13 +290,28 @@ Write 3-5 paragraphs explaining the work in a way that clearly communicates the 
       const data = await response.json();
       console.log('[ProductSearch] Response:', data);
       
-      if (data.products && data.products.length > 0) {
+      // Backend returns products in 'matches' field
+      const foundProducts = data.matches || data.products || [];
+      if (foundProducts.length > 0) {
         // Filter out products that are already in the estimate
         const existingSkus = new Set(lineItems.map(item => item.product.sku));
-        const newProducts = data.products.filter((p: RecommendedProduct) => !existingSkus.has(p.sku));
+        const newProducts = foundProducts
+          .filter((p: any) => !existingSkus.has(p.sku))
+          .map((p: any) => ({
+            sku: p.sku,
+            name: p.name,
+            category: p.category,
+            manufacturer: p.manufacturer || '',
+            price: p.price,
+            unit: p.unit || 'ea',
+            matchReason: p.reason || '',
+            suggestedQuantity: 1,
+          }));
         setRecommendedProducts(newProducts);
         setSelectedProducts(new Set()); // Reset selection
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        if (newProducts.length > 0) {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
       } else {
         setRecommendedProducts([]);
       }

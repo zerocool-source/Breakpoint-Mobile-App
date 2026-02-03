@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getProducts, getProductCategories, mapPoolBrainToHeritageFormat } from '../services/poolbrain';
+import { HERITAGE_PRODUCTS } from '../data/heritageProducts';
 
 const router = Router();
 
@@ -11,6 +12,15 @@ let poolBrainAvailable = true;
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 const RETRY_AFTER_ERROR = 60 * 1000; // Retry Pool Brain after 1 minute on errors
 let lastErrorTime = 0;
+
+// Helper to get products with fallback to static data
+function getProductsWithFallback(): { products: any[], source: string } {
+  if (cachedProducts.length > 0 && poolBrainAvailable) {
+    return { products: cachedProducts, source: 'poolbrain' };
+  }
+  // Use static HERITAGE_PRODUCTS as fallback
+  return { products: HERITAGE_PRODUCTS || [], source: 'fallback' };
+}
 
 router.get('/products', async (req, res) => {
   try {
@@ -28,10 +38,15 @@ router.get('/products', async (req, res) => {
       try {
         console.log('[Pool Brain] Fetching fresh products from API...');
         const rawProducts = await getProducts();
-        cachedProducts = rawProducts.map(mapPoolBrainToHeritageFormat);
-        lastProductFetch = now;
-        poolBrainAvailable = true;
-        console.log(`[Pool Brain] Fetched ${cachedProducts.length} products`);
+        if (rawProducts.length > 0) {
+          cachedProducts = rawProducts.map(mapPoolBrainToHeritageFormat);
+          lastProductFetch = now;
+          poolBrainAvailable = true;
+          console.log(`[Pool Brain] Fetched ${cachedProducts.length} products`);
+        } else {
+          console.log('[Pool Brain] API returned empty data, using fallback');
+          poolBrainAvailable = false;
+        }
       } catch (apiError) {
         console.error('[Pool Brain] API error, will use fallback:', apiError);
         poolBrainAvailable = false;
@@ -41,7 +56,9 @@ router.get('/products', async (req, res) => {
     
     const { category, subcategory, search } = req.query;
     
-    let filtered = [...cachedProducts];
+    // Get products with fallback to static data
+    const { products, source } = getProductsWithFallback();
+    let filtered = [...products];
     
     if (category && typeof category === 'string') {
       filtered = filtered.filter(p => 
@@ -60,8 +77,8 @@ router.get('/products', async (req, res) => {
       filtered = filtered.filter(p => 
         p.name.toLowerCase().includes(searchLower) ||
         p.sku.toLowerCase().includes(searchLower) ||
-        p.heritageNumber.toLowerCase().includes(searchLower) ||
-        p.description.toLowerCase().includes(searchLower)
+        (p.heritageNumber || '').toLowerCase().includes(searchLower) ||
+        (p.description || '').toLowerCase().includes(searchLower)
       );
     }
     
@@ -69,17 +86,18 @@ router.get('/products', async (req, res) => {
       success: true,
       data: filtered,
       totalCount: filtered.length,
-      source: poolBrainAvailable ? 'poolbrain' : 'fallback',
+      source,
       cachedAt: lastProductFetch > 0 ? new Date(lastProductFetch).toISOString() : null,
     });
   } catch (error) {
     console.error('[Pool Brain] Error fetching products:', error);
+    // Even on error, return fallback data
     res.json({
       success: true,
-      data: [],
-      totalCount: 0,
-      source: 'error',
-      message: 'Pool Brain API temporarily unavailable, using local catalog',
+      data: HERITAGE_PRODUCTS,
+      totalCount: HERITAGE_PRODUCTS.length,
+      source: 'fallback',
+      message: 'Using local catalog',
     });
   }
 });

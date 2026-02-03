@@ -248,7 +248,9 @@ export function ProductCatalog({ role, onSelectProduct, selectionMode = false }:
     return (
       <Pressable
         onPress={() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          if (Platform.OS !== 'web') {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          }
           if (isSelected) {
             setSelectedCategory(null);
             setSelectedSubcategory(null);
@@ -262,7 +264,7 @@ export function ProductCatalog({ role, onSelectProduct, selectionMode = false }:
           { backgroundColor: isSelected ? BrandColors.azureBlue : theme.surface, borderColor: theme.border },
         ]}
       >
-        <ThemedText style={[styles.categoryChipText, isSelected && { color: '#fff' }]}>
+        <ThemedText style={[styles.categoryChipText, { color: isSelected ? '#fff' : theme.text }]}>
           {item}
         </ThemedText>
       </Pressable>
@@ -274,7 +276,9 @@ export function ProductCatalog({ role, onSelectProduct, selectionMode = false }:
     return (
       <Pressable
         onPress={() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          if (Platform.OS !== 'web') {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          }
           setSelectedSubcategory(isSelected ? null : item);
         }}
         style={[
@@ -282,7 +286,7 @@ export function ProductCatalog({ role, onSelectProduct, selectionMode = false }:
           { backgroundColor: isSelected ? BrandColors.tropicalTeal : theme.surface, borderColor: theme.border },
         ]}
       >
-        <ThemedText style={[styles.subcategoryChipText, isSelected && { color: '#fff' }]}>
+        <ThemedText style={[styles.subcategoryChipText, { color: isSelected ? '#fff' : theme.text }]}>
           {item}
         </ThemedText>
       </Pressable>

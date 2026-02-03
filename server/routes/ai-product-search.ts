@@ -5,6 +5,32 @@ import { HERITAGE_PRODUCTS } from "../../client/lib/heritageProducts";
 import { db } from "../db";
 import { sql } from "drizzle-orm";
 import { poolRegulations } from "../../shared/schema";
+import { getProducts, mapPoolBrainToHeritageFormat } from "../services/poolbrain";
+
+let cachedPoolBrainProducts: any[] = [];
+let lastPoolBrainFetch = 0;
+const POOL_BRAIN_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+
+async function getProductCatalog(): Promise<any[]> {
+  try {
+    const now = Date.now();
+    if (cachedPoolBrainProducts.length === 0 || now - lastPoolBrainFetch > POOL_BRAIN_CACHE_TTL) {
+      console.log('[AI Search] Fetching fresh products from Pool Brain...');
+      const rawProducts = await getProducts();
+      if (rawProducts.length > 0) {
+        cachedPoolBrainProducts = rawProducts.map(mapPoolBrainToHeritageFormat);
+        lastPoolBrainFetch = now;
+        console.log(`[AI Search] Using ${cachedPoolBrainProducts.length} Pool Brain products`);
+        return cachedPoolBrainProducts;
+      }
+    } else if (cachedPoolBrainProducts.length > 0) {
+      return cachedPoolBrainProducts;
+    }
+  } catch (error) {
+    console.error('[AI Search] Pool Brain fetch failed, using static catalog:', error);
+  }
+  return HERITAGE_PRODUCTS;
+}
 
 const router = Router();
 
@@ -57,14 +83,14 @@ async function getRelatedProducts(productSkus: string[], userId?: string, proper
 }
 
 interface PoolRegulation {
-  id: number;
+  id: string | number;
   codeSection: string;
   title: string;
   category: string;
   summary: string;
   fullText: string | null;
   hoaFriendlyExplanation: string | null;
-  relatedProducts: string[];
+  relatedProducts: string | string[] | null;
   sourceDocument: string | null;
 }
 
@@ -193,12 +219,13 @@ Write 2-4 paragraphs that clearly communicate the scope of work with technical a
       return res.status(400).json({ error: "Description is required" });
     }
 
-    const productList = HERITAGE_PRODUCTS.map(p => ({
+    const products = await getProductCatalog();
+    const productList = products.map((p: any) => ({
       sku: p.sku,
       name: p.name,
       category: p.category,
       subcategory: p.subcategory,
-      manufacturer: p.manufacturer,
+      manufacturer: p.manufacturer || '',
       price: p.price,
       unit: p.unit,
     }));
@@ -260,14 +287,14 @@ ${JSON.stringify(productList, null, 2)}`
     const matches: ProductMatch[] = [];
 
     for (const match of parsed.matches || []) {
-      const product = HERITAGE_PRODUCTS.find(p => p.sku === match.sku);
+      const product = products.find((p: any) => p.sku === match.sku);
       if (product) {
         matches.push({
           sku: product.sku,
           name: product.name,
           category: product.category,
           subcategory: product.subcategory,
-          manufacturer: product.manufacturer,
+          manufacturer: product.manufacturer || '',
           price: product.price,
           unit: product.unit,
           confidence: match.confidence,
@@ -285,14 +312,14 @@ ${JSON.stringify(productList, null, 2)}`
     
     for (const related of relatedProducts) {
       if (!matchedSkus.includes(related.sku)) {
-        const product = HERITAGE_PRODUCTS.find(p => p.sku === related.sku);
+        const product = products.find((p: any) => p.sku === related.sku);
         if (product) {
           suggestions.push({
             sku: product.sku,
             name: product.name,
             category: product.category,
             subcategory: product.subcategory,
-            manufacturer: product.manufacturer,
+            manufacturer: product.manufacturer || '',
             price: product.price,
             unit: product.unit,
             confidence: Math.min(90, 50 + related.count * 5),

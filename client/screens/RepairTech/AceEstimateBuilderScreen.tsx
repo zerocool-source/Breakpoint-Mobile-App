@@ -165,6 +165,7 @@ export default function AceEstimateBuilderScreen() {
 
   const [salesTaxRate] = useState(9);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGeneratingEstimate, setIsGeneratingEstimate] = useState(false);
 
   const [showAceModal, setShowAceModal] = useState(false);
   const [showSendConfirmModal, setShowSendConfirmModal] = useState(false);
@@ -931,6 +932,139 @@ export default function AceEstimateBuilderScreen() {
     }
   };
 
+  // Generate full estimate with line items from description using AI
+  const generateEstimateWithAI = async () => {
+    if (!estimateDescription || estimateDescription.trim().length < 10) {
+      Alert.alert('Description Required', 'Please add a description of the work first. Tell Ace what repairs are needed, and he will build the estimate for you.');
+      return;
+    }
+
+    setIsGeneratingEstimate(true);
+    try {
+      const apiUrl = getLocalApiUrl();
+      const response = await fetch(joinUrl(apiUrl, '/api/ai-product-search/generate-estimate'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workDescription: estimateDescription,
+          propertyName: selectedProperty || 'Commercial Property',
+          category: 'equipment_room',
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate estimate');
+      }
+
+      const data = await response.json();
+      const estimate = data.estimate;
+
+      if (estimate && estimate.sections) {
+        // Convert AI-generated sections to line items
+        const newLineItems: LineItem[] = [];
+        let lineNumber = 1;
+
+        for (const section of estimate.sections) {
+          // Add section header as a note or include in item descriptions
+          for (const item of section.items || []) {
+            newLineItems.push({
+              id: `ai-${Date.now()}-${lineNumber}`,
+              lineNumber,
+              product: {
+                sku: `AI-${lineNumber.toString().padStart(4, '0')}`,
+                name: item.description,
+                category: section.name || 'General',
+                subcategory: '',
+                manufacturer: '',
+                price: item.rate,
+                unit: 'Each',
+                description: item.description,
+              } as HeritageProduct,
+              description: `[${section.name}] ${item.description}`,
+              quantity: item.qty || 1,
+              rate: item.rate,
+              taxable: item.taxable !== false,
+            });
+            lineNumber++;
+          }
+
+          // Add labor hours for the section if specified
+          if (section.laborHours && section.laborHours > 0) {
+            newLineItems.push({
+              id: `ai-labor-${Date.now()}-${lineNumber}`,
+              lineNumber,
+              product: {
+                sku: `LABOR-${section.name}`,
+                name: `Labor - ${section.name}`,
+                category: 'Labor',
+                subcategory: '',
+                manufacturer: 'Breakpoint',
+                price: estimate.laborRate || 150,
+                unit: 'Hour',
+                description: `Labor for ${section.name} installation and service`,
+              } as HeritageProduct,
+              description: `Labor - ${section.name} (${section.laborHours} hrs @ $${estimate.laborRate || 150}/hr)`,
+              quantity: section.laborHours,
+              rate: estimate.laborRate || 150,
+              taxable: false,
+            });
+            lineNumber++;
+          }
+        }
+
+        // If no section-specific labor but total labor hours provided
+        if (!estimate.sections.some((s: any) => s.laborHours) && estimate.totalLaborHours) {
+          newLineItems.push({
+            id: `ai-labor-total-${Date.now()}`,
+            lineNumber,
+            product: {
+              sku: 'LABOR-TOTAL',
+              name: 'Labor',
+              category: 'Labor',
+              subcategory: '',
+              manufacturer: 'Breakpoint',
+              price: estimate.laborRate || 150,
+              unit: 'Hour',
+              description: 'Installation and service labor',
+            } as HeritageProduct,
+            description: `Labor (${estimate.totalLaborHours} hrs @ $${estimate.laborRate || 150}/hr)`,
+            quantity: estimate.totalLaborHours,
+            rate: estimate.laborRate || 150,
+            taxable: false,
+          });
+        }
+
+        // Replace line items with AI-generated ones
+        setLineItems(newLineItems);
+
+        // Update description with professional intro if provided
+        if (estimate.introText) {
+          setEstimateDescription(estimate.introText);
+        }
+
+        // Add terms to customer note if provided
+        if (estimate.termsText) {
+          setCustomerNote(estimate.termsText);
+        }
+
+        // Add any notes from AI
+        if (estimate.notes) {
+          setTechNotes(estimate.notes);
+        }
+
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        addAceMessage(`I've built your estimate with ${newLineItems.length} line items based on your description. Review the items and adjust as needed!`);
+      } else {
+        throw new Error('Invalid estimate data received');
+      }
+    } catch (error) {
+      console.error('Failed to generate estimate:', error);
+      Alert.alert('Generation Failed', 'Could not generate the estimate. Please try again or add items manually.');
+    } finally {
+      setIsGeneratingEstimate(false);
+    }
+  };
+
   const items = lineItems.map(item => ({
     ...item,
     amount: item.quantity * item.rate,
@@ -1508,6 +1642,33 @@ export default function AceEstimateBuilderScreen() {
                 </View>
               )}
             </Pressable>
+            
+            {estimateDescription && estimateDescription.trim().length >= 10 && (
+              <Pressable
+                onPress={generateEstimateWithAI}
+                disabled={isGeneratingEstimate}
+                style={[
+                  styles.buildEstimateButton,
+                  isGeneratingEstimate && styles.buildEstimateButtonDisabled,
+                ]}
+              >
+                {isGeneratingEstimate ? (
+                  <>
+                    <ActivityIndicator size="small" color="#fff" />
+                    <ThemedText style={styles.buildEstimateButtonText}>
+                      Building Estimate...
+                    </ThemedText>
+                  </>
+                ) : (
+                  <>
+                    <Feather name="zap" size={18} color="#fff" />
+                    <ThemedText style={styles.buildEstimateButtonText}>
+                      Build Estimate with AI
+                    </ThemedText>
+                  </>
+                )}
+              </Pressable>
+            )}
           </View>
 
           <View style={styles.sectionCard}>
@@ -2605,6 +2766,25 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: ESTIMATE_COLORS.textSlate400,
     textAlign: 'center',
+  },
+  buildEstimateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: BrandColors.azureBlue,
+    borderRadius: 8,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    marginTop: Spacing.md,
+    gap: Spacing.sm,
+  },
+  buildEstimateButtonDisabled: {
+    opacity: 0.7,
+  },
+  buildEstimateButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
   },
   noteField: {
     marginBottom: Spacing.md,

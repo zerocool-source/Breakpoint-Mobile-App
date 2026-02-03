@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -10,6 +10,7 @@ import {
   Platform,
   Switch,
   ActivityIndicator,
+  FlatList,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -21,6 +22,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/context/AuthContext';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
 import { getLocalApiUrl, joinUrl } from '@/lib/query-client';
+import { mockProperties } from '@/lib/mockData';
 
 interface PartItem {
   id: string;
@@ -43,6 +45,8 @@ export function OrderPartsModal({ visible, onClose, onSubmit }: OrderPartsModalP
   const { height: windowHeight } = useWindowDimensions();
 
   const [property, setProperty] = useState('');
+  const [propertySearch, setPropertySearch] = useState('');
+  const [showPropertyPicker, setShowPropertyPicker] = useState(false);
   const [parts, setParts] = useState<PartItem[]>([{ id: '1', name: '', quantity: 1 }]);
   const [urgency, setUrgency] = useState<UrgencyLevel>('Normal');
   const [notes, setNotes] = useState('');
@@ -55,6 +59,22 @@ export function OrderPartsModal({ visible, onClose, onSubmit }: OrderPartsModalP
   const recordingRef = useRef<Audio.Recording | null>(null);
 
   const urgencyOptions: UrgencyLevel[] = ['Low', 'Normal', 'High'];
+
+  const filteredProperties = useMemo(() => {
+    if (!propertySearch.trim()) return mockProperties;
+    return mockProperties.filter(p => 
+      p.name.toLowerCase().includes(propertySearch.toLowerCase())
+    );
+  }, [propertySearch]);
+
+  const selectProperty = (name: string) => {
+    setProperty(name);
+    setPropertySearch('');
+    setShowPropertyPicker(false);
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+  };
   
   const getUrgencyColor = (level: UrgencyLevel) => {
     switch (level) {
@@ -185,6 +205,8 @@ export function OrderPartsModal({ visible, onClose, onSubmit }: OrderPartsModalP
 
   const resetForm = () => {
     setProperty('');
+    setPropertySearch('');
+    setShowPropertyPicker(false);
     setParts([{ id: '1', name: '', quantity: 1 }]);
     setUrgency('Normal');
     setNotes('');
@@ -217,13 +239,71 @@ export function OrderPartsModal({ visible, onClose, onSubmit }: OrderPartsModalP
           >
             <View style={styles.field}>
               <ThemedText style={[styles.label, { color: theme.textSecondary }]}>Property</ThemedText>
-              <TextInput
-                style={[styles.input, { backgroundColor: theme.backgroundRoot, borderColor: theme.border, color: theme.text }]}
-                placeholder="Enter property name"
-                placeholderTextColor={theme.textSecondary}
-                value={property}
-                onChangeText={setProperty}
-              />
+              <Pressable 
+                style={[styles.selectField, { backgroundColor: theme.backgroundRoot, borderColor: theme.border }]}
+                onPress={() => setShowPropertyPicker(!showPropertyPicker)}
+              >
+                <ThemedText style={property ? { color: theme.text } : { color: theme.textSecondary }}>
+                  {property || 'Select a property...'}
+                </ThemedText>
+                <Feather name="chevron-down" size={18} color={theme.textSecondary} />
+              </Pressable>
+              
+              {showPropertyPicker ? (
+                <View style={[styles.propertyPicker, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                  <View style={[styles.searchContainer, { backgroundColor: theme.backgroundRoot, borderColor: theme.border }]}>
+                    <Feather name="search" size={16} color={theme.textSecondary} />
+                    <TextInput
+                      style={[styles.searchInput, { color: theme.text }]}
+                      placeholder="Search properties..."
+                      placeholderTextColor={theme.textSecondary}
+                      value={propertySearch}
+                      onChangeText={setPropertySearch}
+                      autoFocus
+                    />
+                    {propertySearch ? (
+                      <Pressable onPress={() => setPropertySearch('')}>
+                        <Feather name="x" size={16} color={theme.textSecondary} />
+                      </Pressable>
+                    ) : null}
+                  </View>
+                  <FlatList
+                    data={filteredProperties}
+                    keyExtractor={(item) => item.id}
+                    style={styles.propertyList}
+                    keyboardShouldPersistTaps="handled"
+                    renderItem={({ item }) => (
+                      <Pressable
+                        style={[
+                          styles.propertyOption,
+                          property === item.name && { backgroundColor: theme.backgroundRoot }
+                        ]}
+                        onPress={() => selectProperty(item.name)}
+                      >
+                        <Feather 
+                          name="home" 
+                          size={16} 
+                          color={property === item.name ? BrandColors.azureBlue : theme.textSecondary} 
+                        />
+                        <ThemedText 
+                          style={[
+                            styles.propertyOptionText,
+                            property === item.name && { color: BrandColors.azureBlue, fontWeight: '600' }
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {item.name}
+                        </ThemedText>
+                      </Pressable>
+                    )}
+                    ListEmptyComponent={
+                      <View style={styles.emptyList}>
+                        <ThemedText style={{ color: theme.textSecondary }}>No properties found</ThemedText>
+                      </View>
+                    }
+                  />
+                </View>
+              ) : null}
             </View>
 
             <View style={styles.field}>
@@ -565,6 +645,44 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.md,
+  },
+  propertyPicker: {
+    marginTop: Spacing.xs,
+    borderRadius: BorderRadius.sm,
+    borderWidth: 1,
+    overflow: 'hidden',
+    maxHeight: 250,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderBottomWidth: 1,
+    gap: Spacing.sm,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    paddingVertical: Spacing.xs,
+  },
+  propertyList: {
+    maxHeight: 200,
+  },
+  propertyOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+  },
+  propertyOptionText: {
+    fontSize: 15,
+    flex: 1,
+  },
+  emptyList: {
+    padding: Spacing.lg,
+    alignItems: 'center',
   },
   deliveryRow: {
     flexDirection: 'row',

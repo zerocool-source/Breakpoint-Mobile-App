@@ -84,6 +84,12 @@ export const storage = {
     return data ? JSON.parse(data) : [];
   },
 
+  async addEstimate(estimate: Estimate): Promise<void> {
+    const existing = await this.getEstimates();
+    const updated = [estimate, ...existing.filter(e => e.id !== estimate.id)];
+    await AsyncStorage.setItem(STORAGE_KEYS.ESTIMATES, JSON.stringify(updated));
+  },
+
   async setProperties(properties: Property[]): Promise<void> {
     await AsyncStorage.setItem(STORAGE_KEYS.PROPERTIES, JSON.stringify(properties));
   },

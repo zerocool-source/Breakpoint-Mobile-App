@@ -822,11 +822,42 @@ export default function AceEstimateBuilderScreen() {
 
       const result = await response.json();
       
+      // Save a local copy for offline access
+      const localEstimate = {
+        id: result.id || estimateNumber,
+        estimateNumber,
+        propertyId: selectedProp?.id || '',
+        propertyName: selectedProperty,
+        estimateDate: estimateDate.toISOString(),
+        expirationDate: expirationDate.toISOString(),
+        description: estimateDescription,
+        lineItems: lineItems.map(item => ({
+          sku: item.product.sku,
+          name: item.product.name,
+          description: item.description,
+          quantity: item.quantity,
+          rate: item.rate,
+          amount: item.quantity * item.rate,
+          taxable: item.taxable,
+        })),
+        subtotal,
+        discountType,
+        discountValue,
+        discountAmount,
+        taxRate: salesTaxRate,
+        taxAmount: salesTaxAmount,
+        total: totalAmount,
+        status: sendToOffice ? 'pending_approval' : 'draft',
+        sentToOffice: sendToOffice,
+        createdAt: new Date().toISOString(),
+      };
+      await storage.addEstimate(localEstimate as any);
+      
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert(
         sendToOffice ? 'Estimate Sent!' : 'Estimate Saved!',
         sendToOffice 
-          ? `Estimate ${estimateNumber} has been sent to the office for approval.`
+          ? `Estimate ${estimateNumber} has been sent to the office for approval. A copy has been saved locally.`
           : `Estimate ${estimateNumber} has been saved as a draft. You can edit it later.`,
         [{ text: 'OK', onPress: () => navigation.goBack() }]
       );

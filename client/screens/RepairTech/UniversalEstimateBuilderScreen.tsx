@@ -160,6 +160,52 @@ export default function UniversalEstimateBuilderScreen() {
     setPhotos(prev => prev.filter(p => p.id !== id));
   };
 
+  const uploadPhotos = async (photosToUpload: PhotoAttachment[], authToken: string | null): Promise<string[]> => {
+    if (photosToUpload.length === 0) return [];
+    
+    try {
+      const apiUrl = getLocalApiUrl();
+      const formData = new FormData();
+      
+      for (const photo of photosToUpload) {
+        const filename = photo.uri.split('/').pop() || `photo-${Date.now()}.jpg`;
+        const match = /\.(\w+)$/.exec(filename);
+        const type = match ? `image/${match[1]}` : 'image/jpeg';
+        
+        formData.append('photos', {
+          uri: photo.uri,
+          name: filename,
+          type,
+        } as any);
+      }
+      
+      const headers: Record<string, string> = {};
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+      }
+      
+      console.log('[Photo Upload] Uploading', photosToUpload.length, 'photos...');
+      const response = await fetch(joinUrl(apiUrl, '/api/photos/upload'), {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[Photo Upload] Server error:', response.status, errorText);
+        throw new Error('Failed to upload photos');
+      }
+      
+      const result = await response.json();
+      console.log('[Photo Upload] Success:', result);
+      return result.photos.map((p: any) => p.url);
+    } catch (error) {
+      console.error('[Photo Upload] Error:', error);
+      throw error;
+    }
+  };
+
   const items = lineItems.map(item => ({
     ...item,
     amount: item.quantity * item.rate,
@@ -196,6 +242,18 @@ export default function UniversalEstimateBuilderScreen() {
       const selectedProp = mockProperties.find(p => p.name === selectedProperty);
       const { storage } = await import('@/lib/storage');
       const authToken = await storage.getAuthToken();
+      
+      // Upload photos first if sending to office
+      let photoUrls: string[] = [];
+      if (sendToOffice && photos.length > 0) {
+        try {
+          photoUrls = await uploadPhotos(photos, authToken);
+          console.log('[Estimate Submit] Photos uploaded:', photoUrls.length);
+        } catch (photoError) {
+          console.error('[Estimate Submit] Photo upload failed:', photoError);
+          Alert.alert('Photo Upload Failed', 'Could not upload photos. The estimate will be saved without photos.');
+        }
+      }
       
       // Create local estimate first (always save locally)
       const localEstimate = {
@@ -276,6 +334,7 @@ export default function UniversalEstimateBuilderScreen() {
         createdByTechId: user?.id || null,
         createdByTechName: user?.name || null,
         status: sendToOffice ? 'needs_review' : 'draft',
+        photoUrls: photoUrls.length > 0 ? photoUrls : undefined,
       };
 
       const apiUrl = getLocalApiUrl();

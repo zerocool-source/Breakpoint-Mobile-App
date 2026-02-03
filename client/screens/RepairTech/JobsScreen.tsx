@@ -27,9 +27,11 @@ interface JobDetailCardProps {
   onDetails: () => void;
   onComplete: () => void;
   onViewHistory: () => void;
+  onAccept: () => void;
+  onDismiss: () => void;
 }
 
-function JobDetailCard({ job, isFirst, onNavigate, onDetails, onComplete, onViewHistory }: JobDetailCardProps) {
+function JobDetailCard({ job, isFirst, onNavigate, onDetails, onComplete, onViewHistory, onAccept, onDismiss }: JobDetailCardProps) {
   const { theme } = useTheme();
   
   return (
@@ -109,7 +111,26 @@ function JobDetailCard({ job, isFirst, onNavigate, onDetails, onComplete, onView
         <ThemedText style={[styles.historyButtonText, { color: BrandColors.tropicalTeal }]}>View Repair History</ThemedText>
       </Pressable>
 
-      {isFirst ? (
+      {job.status === 'pending' ? (
+        <View style={styles.acceptDismissRow}>
+          <Pressable 
+            style={[styles.acceptButton, { backgroundColor: BrandColors.emerald }]}
+            onPress={onAccept}
+          >
+            <Feather name="check-circle" size={16} color="#FFFFFF" />
+            <ThemedText style={styles.acceptButtonText}>Accept</ThemedText>
+          </Pressable>
+          <Pressable 
+            style={[styles.dismissButton, { backgroundColor: theme.backgroundRoot, borderColor: BrandColors.danger }]}
+            onPress={onDismiss}
+          >
+            <Feather name="x-circle" size={16} color={BrandColors.danger} />
+            <ThemedText style={[styles.dismissButtonText, { color: BrandColors.danger }]}>Dismiss</ThemedText>
+          </Pressable>
+        </View>
+      ) : null}
+
+      {isFirst && job.status === 'in_progress' ? (
         <Pressable 
           style={[styles.completeButton, { backgroundColor: BrandColors.emerald }]}
           onPress={onComplete}
@@ -334,6 +355,8 @@ export default function JobsScreen() {
                   onDetails={() => console.log('View job details:', item.id)}
                   onComplete={() => handleCompleteJob(item.id)}
                   onViewHistory={() => handleViewHistory(item)}
+                  onAccept={() => handleAcceptJob(item.id)}
+                  onDismiss={() => handleDismissJob(item.id)}
                 />
               </Animated.View>
             ))
@@ -574,6 +597,39 @@ const styles = StyleSheet.create({
   },
   historyButtonText: {
     fontSize: 13,
+    fontWeight: '600',
+  },
+  acceptDismissRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginTop: Spacing.sm,
+  },
+  acceptButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
+    gap: Spacing.xs,
+  },
+  acceptButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  dismissButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    gap: Spacing.xs,
+  },
+  dismissButtonText: {
+    fontSize: 14,
     fontWeight: '600',
   },
 });

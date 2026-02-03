@@ -526,7 +526,7 @@ export default function HomeScreen() {
               onPress={() => handleQuickAction('issue')}
             />
             <QuickAction
-              icon="clock"
+              customImage={require('@/assets/images/repair-history-icon.png')}
               label="Repair History"
               color={BrandColors.tropicalTeal}
               onPress={() => handleQuickAction('history')}

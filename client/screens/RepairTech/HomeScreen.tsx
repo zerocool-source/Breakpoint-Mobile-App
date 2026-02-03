@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { View, StyleSheet, Pressable, Platform, Image, ImageSourcePropType, Linking, Alert, Modal, FlatList, TextInput, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, Pressable, Platform, Image, ImageSourcePropType, Linking, Alert, Modal, FlatList, TextInput, ActivityIndicator, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -686,38 +686,36 @@ export default function HomeScreen() {
         icon="zap-off"
         onDismiss={() => setShowNotification(false)}
       />
-      {jobs.length > 0 ? (
-        <DraggableFlatList
-          style={{ flex: 1 }}
-          data={jobs}
-          keyExtractor={(item) => item.id}
-          renderItem={renderJob}
-          onDragEnd={handleDragEnd}
-          ListHeaderComponent={renderHeader}
-          contentContainerStyle={{
-            paddingBottom: tabBarHeight + Spacing.fabSize + Spacing['2xl'],
-            flexGrow: 1,
-          }}
-          scrollIndicatorInsets={{ bottom: insets.bottom }}
-          showsVerticalScrollIndicator={true}
-          nestedScrollEnabled={true}
-          bounces={true}
-          alwaysBounceVertical={true}
-        />
-      ) : (
-        <Animated.ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{
-            paddingBottom: tabBarHeight + Spacing.fabSize + Spacing['2xl'],
-            flexGrow: 1,
-          }}
-          scrollIndicatorInsets={{ bottom: insets.bottom }}
-          showsVerticalScrollIndicator={true}
-          nestedScrollEnabled={true}
-          bounces={true}
-          alwaysBounceVertical={true}
-        >
-          {renderHeader()}
+      <ScrollView
+        style={styles.scrollContainer}
+        contentContainerStyle={{
+          paddingBottom: tabBarHeight + Spacing.fabSize + Spacing['2xl'],
+          flexGrow: 1,
+        }}
+        scrollIndicatorInsets={{ bottom: insets.bottom }}
+        showsVerticalScrollIndicator={true}
+        bounces={true}
+        alwaysBounceVertical={true}
+      >
+        {renderHeader()}
+        {jobs.length > 0 ? (
+          <View style={styles.jobsContainer}>
+            {jobs.map((item, index) => (
+              <ScaleDecorator key={item.id}>
+                <RepairJobCard
+                  job={item}
+                  isFirst={index === 0}
+                  onPress={() => console.log('Job details:', item.id)}
+                  onNavigate={() => handleNavigateToJob(item)}
+                  onComplete={() => handleCompleteJob(item.id)}
+                  onCreateEstimate={() => handleCreateEstimateFromJob(item)}
+                  onAccept={() => handleAcceptJob(item.id)}
+                  onDismiss={() => handleDismissJob(item.id)}
+                />
+              </ScaleDecorator>
+            ))}
+          </View>
+        ) : (
           <View style={styles.emptyJobsContainer}>
             {isLoadingJobs ? (
               <>
@@ -734,8 +732,8 @@ export default function HomeScreen() {
               </>
             )}
           </View>
-        </Animated.ScrollView>
-      )}
+        )}
+      </ScrollView>
       <ChatFAB
         onPress={() => navigation.navigate('Chat')}
         bottom={tabBarHeight}
@@ -825,6 +823,12 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  scrollContainer: {
+    flex: 1,
+  },
+  jobsContainer: {
+    paddingHorizontal: Spacing.screenPadding,
+  },
   header: {
     paddingHorizontal: Spacing.screenPadding,
     paddingBottom: Spacing.xl,

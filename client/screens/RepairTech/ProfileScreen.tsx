@@ -13,6 +13,7 @@ import { BPButton } from '@/components/BPButton';
 import { BatteryStatusRow } from '@/components/BatterySaverBanner';
 import { useAuth, UserRole } from '@/context/AuthContext';
 import { useBattery } from '@/context/BatteryContext';
+import { useThemeContext } from '@/context/ThemeContext';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
 
@@ -25,7 +26,8 @@ const roleNames: Record<UserRole, string> = {
 
 export default function ProfileScreen() {
   const { user, logout, selectedRole } = useAuth();
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
+  const { themePreference, setThemePreference } = useThemeContext();
   const headerHeight = useHeaderHeight();
   const tabBarHeight = useBottomTabBarHeight();
   const insets = useSafeAreaInsets();
@@ -40,6 +42,22 @@ export default function ProfileScreen() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [offlineMode, setOfflineMode] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const cycleTheme = () => {
+    if (themePreference === 'system') {
+      setThemePreference('light');
+    } else if (themePreference === 'light') {
+      setThemePreference('dark');
+    } else {
+      setThemePreference('system');
+    }
+  };
+
+  const getThemeLabel = () => {
+    if (themePreference === 'system') return 'System';
+    if (themePreference === 'light') return 'Light';
+    return 'Dark';
+  };
 
   const roleName = selectedRole ? roleNames[selectedRole] : 'Technician';
 
@@ -96,6 +114,14 @@ export default function ProfileScreen() {
 
       <View style={[styles.settingsCard, { backgroundColor: theme.surface }]}>
         <ThemedText style={styles.sectionTitle}>Preferences</ThemedText>
+        <SettingsRow
+          icon={isDark ? "moon" : "sun"}
+          label="Appearance"
+          value={getThemeLabel()}
+          onPress={cycleTheme}
+          color={isDark ? BrandColors.tropicalTeal : BrandColors.vividTangerine}
+        />
+        <View style={[styles.divider, { backgroundColor: theme.border }]} />
         <SettingsRow
           icon="bell"
           label="Push Notifications"

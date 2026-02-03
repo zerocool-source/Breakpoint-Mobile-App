@@ -11,6 +11,7 @@ import { Avatar } from '@/components/Avatar';
 import { SettingsRow } from '@/components/SettingsRow';
 import { BPButton } from '@/components/BPButton';
 import { useAuth } from '@/context/AuthContext';
+import { useThemeContext } from '@/context/ThemeContext';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
 import { supervisorInfo, mockWeeklyMetrics, mockTechnicians } from '@/lib/supervisorMockData';
@@ -26,7 +27,8 @@ const COUNTY_LABELS: Record<County, string> = {
 
 export default function SupervisorProfileScreen() {
   const { user, logout, token } = useAuth();
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
+  const { themePreference, setThemePreference } = useThemeContext();
   const tabBarHeight = useBottomTabBarHeight();
   const insets = useSafeAreaInsets();
 
@@ -37,6 +39,22 @@ export default function SupervisorProfileScreen() {
     (user?.county as County) || null
   );
   const [isSavingCounty, setIsSavingCounty] = useState(false);
+
+  const cycleTheme = () => {
+    if (themePreference === 'system') {
+      setThemePreference('light');
+    } else if (themePreference === 'light') {
+      setThemePreference('dark');
+    } else {
+      setThemePreference('system');
+    }
+  };
+
+  const getThemeLabel = () => {
+    if (themePreference === 'system') return 'System';
+    if (themePreference === 'light') return 'Light';
+    return 'Dark';
+  };
 
   const handleCountySelect = async (county: County) => {
     if (Platform.OS !== 'web') {
@@ -176,6 +194,14 @@ export default function SupervisorProfileScreen() {
 
       <View style={[styles.settingsCard, { backgroundColor: theme.surface }]}>
         <ThemedText style={styles.sectionTitle}>Preferences</ThemedText>
+        <SettingsRow
+          icon={isDark ? "moon" : "sun"}
+          label="Appearance"
+          value={getThemeLabel()}
+          onPress={cycleTheme}
+          color={isDark ? BrandColors.tropicalTeal : BrandColors.vividTangerine}
+        />
+        <View style={[styles.divider, { backgroundColor: theme.border }]} />
         <SettingsRow
           icon="bell"
           label="Push Notifications"

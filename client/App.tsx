@@ -15,6 +15,7 @@ import { NetworkProvider } from '@/context/NetworkContext';
 import { BatteryProvider } from '@/context/BatteryContext';
 import { UrgentAlertsProvider } from '@/context/UrgentAlertsContext';
 import { PropertyChannelsProvider } from '@/context/PropertyChannelsContext';
+import { ThemeProvider } from '@/context/ThemeContext';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 
@@ -26,28 +27,30 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <SafeAreaProvider>
-          <GestureHandlerRootView style={styles.root}>
-            <KeyboardProvider>
-              <NetworkProvider>
-                <BatteryProvider>
-                  <UrgentAlertsProvider>
-                    <AuthProvider>
-                      <PropertyChannelsProvider>
-                        <NavigationContainer>
-                          <AuthNavigator />
-                        </NavigationContainer>
-                      </PropertyChannelsProvider>
-                    </AuthProvider>
-                  </UrgentAlertsProvider>
-                </BatteryProvider>
-              </NetworkProvider>
-              <StatusBar style="auto" />
-            </KeyboardProvider>
-          </GestureHandlerRootView>
-        </SafeAreaProvider>
-      </QueryClientProvider>
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          <SafeAreaProvider>
+            <GestureHandlerRootView style={styles.root}>
+              <KeyboardProvider>
+                <NetworkProvider>
+                  <BatteryProvider>
+                    <UrgentAlertsProvider>
+                      <AuthProvider>
+                        <PropertyChannelsProvider>
+                          <NavigationContainer>
+                            <AuthNavigator />
+                          </NavigationContainer>
+                        </PropertyChannelsProvider>
+                      </AuthProvider>
+                    </UrgentAlertsProvider>
+                  </BatteryProvider>
+                </NetworkProvider>
+                <StatusBar style="auto" />
+              </KeyboardProvider>
+            </GestureHandlerRootView>
+          </SafeAreaProvider>
+        </QueryClientProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }

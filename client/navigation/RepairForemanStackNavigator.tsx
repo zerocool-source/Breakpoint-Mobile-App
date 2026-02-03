@@ -7,6 +7,7 @@ import RepairForemanTabNavigator from '@/navigation/RepairForemanTabNavigator';
 import AceEstimateBuilderScreen from '@/screens/RepairTech/AceEstimateBuilderScreen';
 import QuoteDescriptionScreen from '@/screens/RepairTech/QuoteDescriptionScreen';
 import EstimatePrintView from '@/screens/RepairForeman/EstimatePrintView';
+import JobDetailsScreen from '@/screens/RepairForeman/JobDetailsScreen';
 import ChatConversationScreen from '@/screens/shared/ChatConversationScreen';
 import type { ChatChannel } from '@/screens/shared/ChatChannelsScreen';
 import { useScreenOptions } from '@/hooks/useScreenOptions';
@@ -41,6 +42,20 @@ interface EstimateData {
   techName?: string;
 }
 
+interface AssignedJob {
+  id: string;
+  jobNumber: string;
+  propertyName: string;
+  propertyAddress: string;
+  description: string;
+  priority: 'high' | 'medium' | 'low';
+  scheduledTime: string;
+  status: 'pending' | 'accepted' | 'in_progress' | 'completed' | 'dismissed';
+  estimatedDuration: string;
+  contactName?: string;
+  contactPhone?: string;
+}
+
 export type RepairForemanStackParamList = {
   ForemanMain: undefined;
   AceEstimateBuilder: { 
@@ -48,6 +63,8 @@ export type RepairForemanStackParamList = {
     propertyId?: string; 
     propertyName?: string; 
     updatedDescription?: string;
+    jobNumber?: string;
+    jobDescription?: string;
   } | undefined;
   QuoteDescription: { 
     lineItems: any[]; 
@@ -56,6 +73,9 @@ export type RepairForemanStackParamList = {
   };
   EstimatePrintView: {
     estimate: EstimateData;
+  };
+  JobDetails: {
+    job: AssignedJob;
   };
   ChatConversation: { channel: ChatChannel };
 };
@@ -92,6 +112,14 @@ export default function RepairForemanStackNavigator() {
       <Stack.Screen
         name="EstimatePrintView"
         component={EstimatePrintView}
+        options={{
+          headerShown: false,
+          presentation: 'card',
+        }}
+      />
+      <Stack.Screen
+        name="JobDetails"
+        component={JobDetailsScreen}
         options={{
           headerShown: false,
           presentation: 'card',

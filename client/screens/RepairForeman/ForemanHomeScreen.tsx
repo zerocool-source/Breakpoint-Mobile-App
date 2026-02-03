@@ -30,6 +30,68 @@ interface EstimatePreview {
   updatedAt: string;
 }
 
+interface AssignedJob {
+  id: string;
+  jobNumber: string;
+  propertyName: string;
+  propertyAddress: string;
+  description: string;
+  priority: 'high' | 'medium' | 'low';
+  scheduledTime: string;
+  status: 'pending' | 'accepted' | 'in_progress' | 'completed' | 'dismissed';
+  estimatedDuration: string;
+  contactName?: string;
+  contactPhone?: string;
+}
+
+const mockAssignedJobs: AssignedJob[] = [
+  {
+    id: 'job-1',
+    jobNumber: 'WO-2026-0158',
+    propertyName: 'Sunset Valley HOA',
+    propertyAddress: '1250 Sunset Blvd, San Diego, CA 92101',
+    description: 'Pool pump making unusual noise. Customer reports reduced water flow.',
+    priority: 'high',
+    scheduledTime: '2026-02-03T09:00:00Z',
+    status: 'pending',
+    estimatedDuration: '2 hours',
+    contactName: 'Maria Garcia',
+    contactPhone: '(619) 555-0142',
+  },
+  {
+    id: 'job-2',
+    jobNumber: 'WO-2026-0159',
+    propertyName: 'Marina Bay Apartments',
+    propertyAddress: '450 Marina Way, San Diego, CA 92109',
+    description: 'Annual pool equipment inspection and assessment for potential upgrades.',
+    priority: 'medium',
+    scheduledTime: '2026-02-03T11:30:00Z',
+    status: 'pending',
+    estimatedDuration: '1.5 hours',
+    contactName: 'James Wilson',
+    contactPhone: '(619) 555-0198',
+  },
+  {
+    id: 'job-3',
+    jobNumber: 'WO-2026-0160',
+    propertyName: 'Hilltop Country Club',
+    propertyAddress: '8900 Hilltop Dr, La Jolla, CA 92037',
+    description: 'Chemical feeder malfunction. pH levels unstable.',
+    priority: 'high',
+    scheduledTime: '2026-02-03T14:00:00Z',
+    status: 'pending',
+    estimatedDuration: '1 hour',
+    contactName: 'Robert Chen',
+    contactPhone: '(858) 555-0234',
+  },
+];
+
+const priorityConfig = {
+  high: { label: 'High', color: '#FF3B30', bg: 'rgba(255,59,48,0.15)' },
+  medium: { label: 'Medium', color: BrandColors.vividTangerine, bg: 'rgba(255,128,0,0.15)' },
+  low: { label: 'Low', color: BrandColors.azureBlue, bg: 'rgba(0,120,212,0.15)' },
+};
+
 const mockEstimates: EstimatePreview[] = [
   {
     id: '1',
@@ -74,8 +136,11 @@ export default function ForemanHomeScreen() {
   const insets = useSafeAreaInsets();
   const headerHeight = useHeaderHeight();
   const [refreshing, setRefreshing] = useState(false);
+  const [jobs, setJobs] = useState<AssignedJob[]>(mockAssignedJobs);
 
   const firstName = user?.name?.split(' ')[0] || 'Foreman';
+  const pendingJobs = jobs.filter(j => j.status === 'pending');
+  const acceptedJobs = jobs.filter(j => j.status === 'accepted' || j.status === 'in_progress');
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -97,6 +162,29 @@ export default function ForemanHomeScreen() {
     if (estimate.status === 'draft') {
       navigation.navigate('AceEstimateBuilder', { estimateId: estimate.id });
     }
+  };
+
+  const handleAcceptJob = (jobId: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setJobs(prev => prev.map(j => 
+      j.id === jobId ? { ...j, status: 'accepted' as const } : j
+    ));
+    const job = jobs.find(j => j.id === jobId);
+    if (job) {
+      navigation.navigate('JobDetails', { job: { ...job, status: 'accepted' } });
+    }
+  };
+
+  const handleDismissJob = (jobId: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setJobs(prev => prev.map(j => 
+      j.id === jobId ? { ...j, status: 'dismissed' as const } : j
+    ));
+  };
+
+  const handleViewJobDetails = (job: AssignedJob) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    navigation.navigate('JobDetails', { job });
   };
 
   const renderEstimateCard = ({ item }: { item: EstimatePreview }) => {
@@ -166,6 +254,99 @@ export default function ForemanHomeScreen() {
           </View>
           <Feather name="chevron-right" size={24} color="#fff" />
         </Pressable>
+
+        {pendingJobs.length > 0 && (
+          <>
+            <View style={styles.sectionHeader}>
+              <ThemedText style={styles.sectionTitle}>Today's Jobs</ThemedText>
+              <View style={[styles.jobCountBadge, { backgroundColor: BrandColors.vividTangerine }]}>
+                <ThemedText style={styles.jobCountText}>{pendingJobs.length}</ThemedText>
+              </View>
+            </View>
+            {pendingJobs.map((job) => {
+              const priority = priorityConfig[job.priority];
+              const time = new Date(job.scheduledTime).toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true,
+              });
+              return (
+                <View key={job.id} style={[styles.jobCard, { backgroundColor: theme.surface }]}>
+                  <View style={styles.jobHeader}>
+                    <View style={styles.jobTitleRow}>
+                      <ThemedText style={styles.jobNumber}>{job.jobNumber}</ThemedText>
+                      <View style={[styles.priorityBadge, { backgroundColor: priority.bg }]}>
+                        <ThemedText style={[styles.priorityText, { color: priority.color }]}>
+                          {priority.label}
+                        </ThemedText>
+                      </View>
+                    </View>
+                    <ThemedText style={styles.jobPropertyName}>{job.propertyName}</ThemedText>
+                    <ThemedText style={[styles.jobAddress, { color: theme.textSecondary }]} numberOfLines={1}>
+                      {job.propertyAddress}
+                    </ThemedText>
+                  </View>
+                  <ThemedText style={[styles.jobDescription, { color: theme.textSecondary }]} numberOfLines={2}>
+                    {job.description}
+                  </ThemedText>
+                  <View style={styles.jobMeta}>
+                    <View style={styles.jobMetaItem}>
+                      <Feather name="clock" size={14} color={theme.textSecondary} />
+                      <ThemedText style={[styles.jobMetaText, { color: theme.textSecondary }]}>
+                        {time}
+                      </ThemedText>
+                    </View>
+                    <View style={styles.jobMetaItem}>
+                      <Feather name="watch" size={14} color={theme.textSecondary} />
+                      <ThemedText style={[styles.jobMetaText, { color: theme.textSecondary }]}>
+                        {job.estimatedDuration}
+                      </ThemedText>
+                    </View>
+                  </View>
+                  <View style={styles.jobActions}>
+                    <Pressable
+                      style={[styles.dismissButton, { borderColor: theme.border }]}
+                      onPress={() => handleDismissJob(job.id)}
+                    >
+                      <Feather name="x" size={18} color={theme.textSecondary} />
+                      <ThemedText style={[styles.dismissText, { color: theme.textSecondary }]}>
+                        Dismiss
+                      </ThemedText>
+                    </Pressable>
+                    <Pressable
+                      style={[styles.acceptButton, { backgroundColor: BrandColors.emerald }]}
+                      onPress={() => handleAcceptJob(job.id)}
+                    >
+                      <Feather name="check" size={18} color="#fff" />
+                      <ThemedText style={styles.acceptText}>Accept</ThemedText>
+                    </Pressable>
+                  </View>
+                </View>
+              );
+            })}
+          </>
+        )}
+
+        {acceptedJobs.length > 0 && (
+          <>
+            <View style={styles.sectionHeader}>
+              <ThemedText style={styles.sectionTitle}>Active Jobs</ThemedText>
+            </View>
+            {acceptedJobs.map((job) => (
+              <Pressable
+                key={job.id}
+                style={[styles.activeJobCard, { backgroundColor: theme.surface }]}
+                onPress={() => handleViewJobDetails(job)}
+              >
+                <View style={styles.activeJobInfo}>
+                  <ThemedText style={styles.jobNumber}>{job.jobNumber}</ThemedText>
+                  <ThemedText style={styles.jobPropertyName}>{job.propertyName}</ThemedText>
+                </View>
+                <Feather name="chevron-right" size={20} color={theme.textSecondary} />
+              </Pressable>
+            ))}
+          </>
+        )}
 
         <View style={styles.statsRow}>
           <Pressable
@@ -350,5 +531,111 @@ const styles = StyleSheet.create({
   },
   date: {
     fontSize: 12,
+  },
+  jobCountBadge: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.full,
+    minWidth: 24,
+    alignItems: 'center',
+  },
+  jobCountText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  jobCard: {
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    marginBottom: Spacing.md,
+    gap: Spacing.sm,
+  },
+  jobHeader: {
+    gap: 4,
+  },
+  jobTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  jobNumber: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  priorityBadge: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.full,
+  },
+  priorityText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  jobPropertyName: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  jobAddress: {
+    fontSize: 13,
+  },
+  jobDescription: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  jobMeta: {
+    flexDirection: 'row',
+    gap: Spacing.lg,
+  },
+  jobMetaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  jobMetaText: {
+    fontSize: 13,
+  },
+  jobActions: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginTop: Spacing.xs,
+  },
+  dismissButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+  },
+  dismissText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  acceptButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.md,
+  },
+  acceptText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  activeJobCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    marginBottom: Spacing.sm,
+  },
+  activeJobInfo: {
+    gap: 2,
   },
 });

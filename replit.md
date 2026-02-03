@@ -1,11 +1,12 @@
 # Breakpoint Commercial Pool Systems
 
 ## Version
-**Current Version: v1.2.0** (February 2026)
+**Current Version: v1.2.2** (February 2026)
 
 ### Changelog
 | Version | Date | Features Added |
 |---------|------|----------------|
+| v1.2.2 | Feb 2026 | Expanded product catalog to 1,457 products (3.2x increase), added new categories (Accessories, Chemical Controller, Electrical, Service), Products screen is now purely for product lookup |
 | v1.2.1 | Feb 2026 | Quote descriptions now use mixed HOA-friendly + professional language by default (addressed to "Dear HOA Manager"), local estimate storage for offline access, improved navigation for estimate builder |
 | v1.2.0 | Feb 2026 | Ace AI Estimate Builder with voice input, personalized self-learning, web-enhanced product search, HOA-friendly quote descriptions with California pool code references |
 | v1.1.0 | Feb 2026 | Local authentication system, dual-backend architecture, firstName/lastName user fields |
@@ -69,11 +70,12 @@ Breakpoint Commercial Pool Systems is a mobile-first field service management ap
     - **Vehicle Inspections**: Digital forms with visual damage marking.
     - **Assignment Management**: Creation and overview of technician assignments.
     - **Performance Coaching**: Documentation system for supportive actions.
-    - **Heritage Products Catalog**: 600+ pool products with role-based pricing visibility.
-        - **Product Data**: `client/lib/heritageProducts.ts` - Categories include Pumps, Filters, Heaters, Automation, Valves, Chemicals, Cleaners, Lighting, Covers, Safety, Plumbing, Motors, Parts, Tools, Labor.
+    - **Heritage Products Catalog**: 1,457+ pool products with role-based pricing visibility.
+        - **Product Data**: `client/lib/heritageProducts.ts` - Categories include Accessories, Chemical Controller, Chemicals, Electrical, Filters, Heaters, Plumbing, Pumps, Service, Automation, Valves, Cleaners, Lighting, Covers, Safety, Motors, Parts, Tools, Labor.
         - **Shared Component**: `client/components/ProductCatalog.tsx` - Reusable component with search, category/subcategory filtering.
+        - **Products Screen**: Purely for product/service lookup - no estimate creation buttons.
         - **Role-Based Visibility**:
-            - Repair Tech: Full pricing visible, can create repair estimates
+            - Repair Tech: Full pricing visible, uses Ace AI for estimates
             - Service Tech: NO pricing visible, items auto-track to commission when added
             - Supervisor: Full pricing visible, can create work orders with technician assignment
         - **Navigation**: Products tab available on all roles with package icon.

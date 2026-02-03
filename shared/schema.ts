@@ -570,4 +570,131 @@ export const urgentNotifications = pgTable("urgent_notifications", {
 export type UrgentNotification = typeof urgentNotifications.$inferSelect;
 export type InsertUrgentNotification = typeof urgentNotifications.$inferInsert;
 
+// Commercial Pool Repair Knowledge Base - Comprehensive repair data for AI estimates
+export const repairCategoryEnum = pgEnum('repair_category', [
+  'pumps_motors',
+  'filters_media',
+  'heaters_heat_pumps',
+  'chemical_controllers',
+  'plumbing_valves',
+  'electrical_controls',
+  'safety_equipment',
+  'drains_suction',
+  'lighting_fixtures',
+  'deck_coping',
+  'tile_plaster',
+  'covers_enclosures',
+  'automation_systems',
+  'water_features'
+]);
+
+export const facilityTypeEnum = pgEnum('facility_type', [
+  'hoa_community',
+  'apartment_complex',
+  'hotel_resort',
+  'municipal_rec',
+  'fitness_center',
+  'water_park',
+  'therapy_pool',
+  'competition_pool'
+]);
+
+export const commercialPoolRepairs = pgTable("commercial_pool_repairs", {
+  id: varchar("id", { length: 36 })
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  category: repairCategoryEnum("category").notNull(),
+  repairName: text("repair_name").notNull(),
+  repairCode: varchar("repair_code", { length: 20 }).notNull().unique(),
+  shortDescription: text("short_description").notNull(),
+  professionalDescription: text("professional_description").notNull(),
+  hoaFriendlyDescription: text("hoa_friendly_description").notNull(),
+  technicalDetails: text("technical_details").notNull(),
+  safetyConsiderations: text("safety_considerations"),
+  codeReferences: text("code_references"),
+  commonCauses: text("common_causes"),
+  diagnosticSteps: text("diagnostic_steps"),
+  requiredParts: text("required_parts"),
+  recommendedProducts: text("recommended_products"),
+  laborHoursMin: decimal("labor_hours_min", { precision: 4, scale: 1 }),
+  laborHoursMax: decimal("labor_hours_max", { precision: 4, scale: 1 }),
+  partsCostMin: decimal("parts_cost_min", { precision: 10, scale: 2 }),
+  partsCostMax: decimal("parts_cost_max", { precision: 10, scale: 2 }),
+  facilityTypes: text("facility_types"),
+  urgencyLevel: varchar("urgency_level", { length: 20 }).default('standard'),
+  preventiveMeasures: text("preventive_measures"),
+  warrantyNotes: text("warranty_notes"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const commercialPoolProducts = pgTable("commercial_pool_products", {
+  id: varchar("id", { length: 36 })
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  sku: varchar("sku", { length: 50 }).notNull().unique(),
+  name: text("name").notNull(),
+  manufacturer: text("manufacturer").notNull(),
+  category: repairCategoryEnum("category").notNull(),
+  description: text("description").notNull(),
+  specifications: text("specifications"),
+  commercialGrade: boolean("commercial_grade").notNull().default(true),
+  nsf50Certified: boolean("nsf50_certified").notNull().default(false),
+  ulListed: boolean("ul_listed").notNull().default(false),
+  costPrice: decimal("cost_price", { precision: 10, scale: 2 }),
+  retailPrice: decimal("retail_price", { precision: 10, scale: 2 }),
+  markup: decimal("markup", { precision: 5, scale: 2 }).default('1.35'),
+  unitOfMeasure: varchar("unit_of_measure", { length: 20 }).default('each'),
+  warrantyMonths: integer("warranty_months"),
+  compatibleWith: text("compatible_with"),
+  supersedes: text("supersedes"),
+  notes: text("notes"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const commercialPoolCodes = pgTable("commercial_pool_codes", {
+  id: varchar("id", { length: 36 })
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  jurisdiction: varchar("jurisdiction", { length: 50 }).notNull().default('California'),
+  codeType: varchar("code_type", { length: 50 }).notNull(),
+  codeNumber: text("code_number").notNull(),
+  title: text("title").notNull(),
+  fullText: text("full_text").notNull(),
+  plainLanguage: text("plain_language").notNull(),
+  hoaExplanation: text("hoa_explanation").notNull(),
+  applicableRepairs: text("applicable_repairs"),
+  enforcementNotes: text("enforcement_notes"),
+  effectiveDate: timestamp("effective_date"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const laborRates = pgTable("labor_rates", {
+  id: varchar("id", { length: 36 })
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  rateName: text("rate_name").notNull(),
+  rateCode: varchar("rate_code", { length: 20 }).notNull().unique(),
+  description: text("description").notNull(),
+  hourlyRate: decimal("hourly_rate", { precision: 8, scale: 2 }).notNull(),
+  minimumHours: decimal("minimum_hours", { precision: 4, scale: 2 }).default('1'),
+  afterHoursMultiplier: decimal("after_hours_multiplier", { precision: 3, scale: 2 }).default('1.5'),
+  weekendMultiplier: decimal("weekend_multiplier", { precision: 3, scale: 2 }).default('1.5'),
+  holidayMultiplier: decimal("holiday_multiplier", { precision: 3, scale: 2 }).default('2.0'),
+  facilityTypes: text("facility_types"),
+  isActive: boolean("is_active").notNull().default(true),
+  effectiveDate: timestamp("effective_date").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export type CommercialPoolRepair = typeof commercialPoolRepairs.$inferSelect;
+export type CommercialPoolProduct = typeof commercialPoolProducts.$inferSelect;
+export type CommercialPoolCode = typeof commercialPoolCodes.$inferSelect;
+export type LaborRate = typeof laborRates.$inferSelect;
+
 export * from "./models/chat";

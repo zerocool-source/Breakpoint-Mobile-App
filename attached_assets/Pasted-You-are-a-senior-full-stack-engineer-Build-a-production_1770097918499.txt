@@ -1,0 +1,141 @@
+You are a senior full-stack engineer. Build a production-ready web app called “Ace Repair Foreman Dashboard” that lets a repair foreman create estimates/proposals by typing OR speaking while walking a site. It must support: product search by “HeritageKey”, adding items with quantity/markup/labor, saving drafts, resuming later, and generating a professional proposal narrative using our database and mode toggles (HOA-friendly vs Professional). The UX must be extremely fast and simple on mobile.
+
+TECH STACK (required)
+- Frontend: React + Vite + TypeScript
+- Backend: Node.js + Express + TypeScript
+- Database: PostgreSQL (use Prisma ORM)
+- Auth: simple username + PIN (foreman/tech)
+- AI: OpenAI (chat completions for matching + narrative, Whisper for transcription)
+- Hosting assumptions: Replit runtime, .env for secrets
+
+CORE USER STORIES
+1) Start Estimate (hands-free)
+- Foreman taps “New Estimate”, chooses customer/site, then can speak:
+  “Add a 2 horsepower pump replacement with unions and new seals”
+- The app transcribes (Whisper) then sends text to AI matching which returns ranked product matches from our local catalog using HeritageKey.
+- Foreman taps to add items, edits qty, adds labor minutes, adds notes.
+- Foreman can say “pause and save” or just navigate away. Must auto-save.
+
+2) Resume Estimate
+- Foreman opens “Drafts”, selects a draft, continues adding items.
+- Foreman can add additional parts later:
+  “Also add a 2 inch check valve and 10 feet of schedule 40 pipe”
+
+3) Generate Proposal / Estimate Output
+- Foreman clicks “Generate Proposal”
+- Output includes:
+  - Line items (parts, qty, unit price, extended)
+  - Labor line items (hours/rate)
+  - Taxes/fees (configurable)
+  - Total
+  - AI-written scope/description in two modes:
+    A) HOA-Friendly Mode: plain language, explains “why required” and can reference CA pool codes (from our stored regulation snippets table)
+    B) Professional Mode: technical language for pool pros
+- Foreman can edit the text manually and regenerate.
+
+4) Offline-ish behavior
+- If product search API is down (Heritage external unavailable), show “Service Unavailable” and only allow local catalog search. Never invent products or prices.
+
+DATA MODEL (Prisma)
+Create these tables (minimum):
+- User: id, firstName, role, pinHash
+- Customer: id, name, address, notes
+- Product: id, heritageKey (unique), sku, name, manufacturer, category, unitPrice, updatedAt
+- Estimate: id, customerId, createdByUserId, status (DRAFT/SENT/APPROVED), mode (HOA/PRO), title, internalNotes, aiNarrative, createdAt, updatedAt
+- EstimateItem: id, estimateId, productId nullable (for custom lines), description, quantity, unitPrice, markupPct, laborMinutes, laborRate, lineType (PART/LABOR/CUSTOM), sortOrder
+- VoiceTranscriptLog: id, userId, estimateId nullable, transcriptText, createdAt
+- SuggestionFeedback: id, userId, queryText, suggestedKeys(json), selectedKeys(json), createdAt
+- RegulationSnippet: id, codeRef, title, bodyText (short snippets), tags (json)
+
+CATALOG SEARCH + AI MATCHING
+Implement two-stage matching:
+1) Local search: Postgres full-text / trigram search on Product.name/manufacturer/category/sku/heritageKey
+2) AI rerank: send top 30 candidates + user query to OpenAI, ask it to rank and return:
+   - heritageKey
+   - confidence 0-100
+   - short reason
+If no candidates, AI must return “no match” and ask a follow-up question (HP? voltage? brand?).
+
+The UI must show:
+- Product name
+- Manufacturer
+- Unit price
+- Confidence score badge
+- “Why it matched” tooltip
+
+PERSONALIZATION / SELF-LEARNING
+- For each user, store selection patterns in SuggestionFeedback.
+- Next time a similar query occurs, boost previously selected products for that user.
+- Also implement “Frequently paired” suggestions:
+  if items A + B often added together by that user, suggest B when A added.
+
+VOICE INPUT
+- Mobile-first “Hold to Talk” button.
+- On press: record audio in browser, upload to backend, backend calls Whisper, returns transcript.
+- Transcript is inserted into chat input and auto-submitted (config toggle).
+
+UI REQUIREMENTS (mobile-first)
+Pages:
+- Login (name + PIN)
+- Dashboard (New Estimate, Drafts, Sent)
+- Estimate Builder (chat panel + line items panel)
+- Customer select/create modal
+Estimate Builder layout:
+- Top: Customer + Estimate title + status + mode toggle (HOA/PRO)
+- Middle: “Conversation” area that logs user requests + system responses
+- Bottom: input bar with text + mic hold button + “Add” + “Generate Proposal”
+- Right/Below: Line items list, editable inline, reorderable, quick delete, quick qty adjust (+/-)
+
+SAVE/STOP / AUTOSAVE
+- Autosave every 3 seconds if changes.
+- Also save on blur/navigation.
+- Must handle concurrent edits safely (last write wins is fine for now).
+
+ESTIMATE CALCULATIONS
+- For each part line:
+  effectiveUnit = unitPrice * (1 + markupPct/100)
+- Labor:
+  hours = laborMinutes / 60
+  laborCost = hours * laborRate
+- Subtotal, tax (configurable percent), total.
+- Allow per-estimate overrides for labor rate and markup defaults.
+
+EXPORT / OUTPUT
+- Generate a clean print view (HTML) suitable for PDF printing.
+- Include company header placeholder and signature line.
+- Provide a “Copy to clipboard” for narrative + line items summary.
+
+SECURITY / CONFIG
+- Use environment variables:
+  OPENAI_API_KEY
+  DATABASE_URL
+  DEFAULT_TAX_PCT
+  DEFAULT_LABOR_RATE
+- Never expose keys to frontend.
+
+ERROR HANDLING
+- Heritage external unavailable: show “Service Unavailable” banner and disable external refresh.
+- AI errors: show friendly error + allow retry.
+- Whisper errors: show “Couldn’t transcribe, try again.”
+
+SEED DATA
+- Seed at least 30 sample products with realistic pool repair items and fake HeritageKeys (format: HRT-xxxxx) so the UI works.
+- Seed 10 regulation snippets (short) and tag them (safety, suction, fencing, signage, chemical storage, etc.) for narrative inclusion.
+
+DELIVERABLES
+- Complete repo with:
+  /client (React)
+  /server (Express)
+  prisma schema + migrations + seed
+- Clear README with:
+  - setup steps
+  - env vars
+  - how to run dev
+  - how to run migrations/seed
+- Provide a minimal test script for:
+  - product search endpoint
+  - estimate save/load endpoints
+
+BUILD IT NOW.
+Focus on a polished working MVP first, then refine.
+Do not add unnecessary features.

@@ -181,6 +181,96 @@ export default function AceEstimateBuilderScreen() {
   const dot2Anim = useRef(new Animated.Value(0)).current;
   const dot3Anim = useRef(new Animated.Value(0)).current;
 
+  // Autosave functionality
+  const hasUnsavedChanges = useRef(false);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const autosaveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Mark as having unsaved changes when key data changes
+  useEffect(() => {
+    if (lineItems.length > 0 || selectedProperty || estimateDescription) {
+      hasUnsavedChanges.current = true;
+    }
+  }, [lineItems, selectedProperty, estimateDescription, discountValue, discountType, customerNote, techNotes]);
+
+  // Autosave every 3 seconds if there are changes
+  useEffect(() => {
+    const autosave = async () => {
+      if (!hasUnsavedChanges.current || isSavingDraft || lineItems.length === 0) return;
+      
+      try {
+        setIsSavingDraft(true);
+        const { storage } = await import('@/lib/storage');
+        
+        const selectedProp = mockProperties.find(p => p.name === selectedProperty);
+        // Map LineItems to EstimateLineItems for calculation
+        const estimateLineItems = lineItems.map((item, idx) => ({
+          id: item.id,
+          lineNumber: idx + 1,
+          productService: item.product.name,
+          description: item.description,
+          sku: item.product.sku,
+          quantity: item.quantity,
+          rate: item.rate,
+          amount: item.quantity * item.rate,
+          taxable: item.taxable,
+        }));
+        const { subtotal, discountAmount, salesTaxAmount, totalAmount } = calculateTotals(
+          estimateLineItems, discountType, discountValue, salesTaxRate
+        );
+
+        const draftEstimate = {
+          id: estimateNumber,
+          estimateNumber,
+          propertyId: selectedProp?.id || '',
+          propertyName: selectedProperty,
+          estimateDate: estimateDate.toISOString(),
+          expirationDate: expirationDate.toISOString(),
+          description: estimateDescription,
+          lineItems: lineItems.map(item => ({
+            sku: item.product.sku,
+            name: item.product.name,
+            description: item.description,
+            quantity: item.quantity,
+            rate: item.rate,
+            amount: item.quantity * item.rate,
+            taxable: item.taxable,
+          })),
+          subtotal,
+          discountType,
+          discountValue,
+          discountAmount,
+          taxRate: salesTaxRate,
+          taxAmount: salesTaxAmount,
+          total: totalAmount,
+          status: 'draft' as const,
+          customerNote,
+          techNotes,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
+        await storage.addEstimate(draftEstimate as any);
+        hasUnsavedChanges.current = false;
+        setLastSavedAt(new Date());
+        console.log('Autosaved estimate:', estimateNumber);
+      } catch (error) {
+        console.error('Autosave failed:', error);
+      } finally {
+        setIsSavingDraft(false);
+      }
+    };
+
+    autosaveIntervalRef.current = setInterval(autosave, 3000);
+    
+    return () => {
+      if (autosaveIntervalRef.current) {
+        clearInterval(autosaveIntervalRef.current);
+      }
+    };
+  }, [lineItems, selectedProperty, estimateDescription, discountType, discountValue, salesTaxRate, customerNote, techNotes, estimateNumber, estimateDate, expirationDate, isSavingDraft]);
+
   const thinkingMessages = [
     "Let me search the catalog...",
     "Looking through 600+ products...",
@@ -966,8 +1056,24 @@ export default function AceEstimateBuilderScreen() {
               </View>
               <View style={styles.halfField}>
                 <ThemedText style={styles.fieldLabel}>Status</ThemedText>
-                <View style={[styles.statusBadge, { backgroundColor: STATUS_BADGES.draft.bg, borderColor: STATUS_BADGES.draft.border }]}>
-                  <ThemedText style={[styles.statusText, { color: STATUS_BADGES.draft.text }]}>Draft</ThemedText>
+                <View style={styles.statusRow}>
+                  <View style={[styles.statusBadge, { backgroundColor: STATUS_BADGES.draft.bg, borderColor: STATUS_BADGES.draft.border }]}>
+                    <ThemedText style={[styles.statusText, { color: STATUS_BADGES.draft.text }]}>Draft</ThemedText>
+                  </View>
+                  {isSavingDraft ? (
+                    <View style={styles.autosaveIndicator}>
+                      <ActivityIndicator size="small" color={ESTIMATE_COLORS.textSlate400} />
+                      <ThemedText style={styles.autosaveText}>Saving...</ThemedText>
+                    </View>
+                  ) : lastSavedAt ? (
+                    <View style={styles.autosaveIndicator}>
+                      <Feather name="check-circle" size={12} color={ESTIMATE_COLORS.statusGreen} />
+                      <ThemedText style={styles.autosaveText}>
+                        Saved {Math.floor((Date.now() - lastSavedAt.getTime()) / 1000) < 5 ? 'just now' : 
+                          `${Math.floor((Date.now() - lastSavedAt.getTime()) / 1000)}s ago`}
+                      </ThemedText>
+                    </View>
+                  ) : null}
                 </View>
               </View>
             </View>
@@ -1738,6 +1844,21 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 12,
     fontWeight: '600',
+  },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    flexWrap: 'wrap',
+  },
+  autosaveIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  autosaveText: {
+    fontSize: 10,
+    color: ESTIMATE_COLORS.textSlate400,
   },
   woRow: {
     flexDirection: 'row',

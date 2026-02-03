@@ -949,6 +949,7 @@ export default function AceEstimateBuilderScreen() {
           workDescription: estimateDescription,
           propertyName: selectedProperty || 'Commercial Property',
           category: 'equipment_room',
+          userId: user?.id,
         }),
       });
 
@@ -1303,6 +1304,27 @@ export default function AceEstimateBuilderScreen() {
       // Update local copy with server ID
       const updatedEstimate = { ...localEstimate, id: result.estimate?.id || estimateNumber, status: 'pending_approval' };
       await storage.addEstimate(updatedEstimate as any);
+      
+      // Log estimate finalization for AI learning
+      try {
+        await fetch(joinUrl(apiUrl, '/api/ai-product-search/log-estimate-finalized'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user?.id,
+            workDescription: estimateDescription,
+            lineItems: lineItems.map(item => ({
+              description: item.product?.name || item.description,
+              qty: item.quantity,
+              rate: item.rate,
+            })),
+            propertyType: selectedProperty,
+          }),
+        });
+        console.log('[AI Learning] Estimate logged for learning');
+      } catch (learnError) {
+        console.log('[AI Learning] Failed to log for learning:', learnError);
+      }
       
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       

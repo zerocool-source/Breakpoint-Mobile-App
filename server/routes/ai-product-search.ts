@@ -439,10 +439,59 @@ router.get("/templates", async (req: Request, res: Response) => {
   }
 });
 
+// Get user's frequently used products for personalization
+async function getUserFrequentProducts(userId?: string): Promise<Array<{ description: string; avgQty: number; avgRate: number; count: number }>> {
+  if (!userId) return [];
+  try {
+    const result = await db.execute(sql`
+      SELECT 
+        primary_product_sku as description,
+        AVG(avg_quantity_ratio) as avg_qty,
+        COUNT(*) as count
+      FROM ai_product_patterns
+      WHERE user_id = ${userId}
+      GROUP BY primary_product_sku
+      ORDER BY count DESC
+      LIMIT 15
+    `);
+    return result.rows.map((r: any) => ({
+      description: r.description,
+      avgQty: Math.round(r.avg_qty || 1),
+      avgRate: 0,
+      count: Number(r.count),
+    }));
+  } catch (error) {
+    console.error("Error fetching user frequent products:", error);
+    return [];
+  }
+}
+
+// Get user's past successful estimates for learning
+async function getUserEstimateHistory(userId?: string): Promise<Array<{ query: string; products: string[] }>> {
+  if (!userId) return [];
+  try {
+    const result = await db.execute(sql`
+      SELECT user_query, selected_products
+      FROM ai_learning_interactions
+      WHERE user_id = ${userId}
+        AND selected_products IS NOT NULL
+      ORDER BY created_at DESC
+      LIMIT 5
+    `);
+    return result.rows.map((r: any) => ({
+      query: r.user_query,
+      products: (r.selected_products || []).map((p: any) => p.sku),
+    }));
+  } catch (error) {
+    console.error("Error fetching user estimate history:", error);
+    return [];
+  }
+}
+
 // Generate estimate with AI using templates as reference
 router.post("/generate-estimate", express.json(), async (req: Request, res: Response) => {
   try {
-    const { workDescription, propertyName, category } = req.body;
+    const { workDescription, propertyName, category, userId } = req.body;
 
     if (!workDescription) {
       return res.status(400).json({ error: "Work description is required" });
@@ -451,6 +500,26 @@ router.post("/generate-estimate", express.json(), async (req: Request, res: Resp
     // Get relevant templates for reference
     const templates = await getEstimateTemplates(category || 'equipment_room');
     const templateContext = templates.length > 0 ? templates[0] : null;
+
+    // Get user-specific learning data for personalization
+    const frequentProducts = await getUserFrequentProducts(userId);
+    const estimateHistory = await getUserEstimateHistory(userId);
+    const learnedMappings = await getLearnedMappings(workDescription, userId);
+
+    // Build personalization context
+    let personalizationContext = '';
+    if (frequentProducts.length > 0) {
+      personalizationContext += `\n\nUSER'S FREQUENTLY USED PRODUCTS (prioritize these when applicable):
+${frequentProducts.slice(0, 10).map(p => `- ${p.description} (used ${p.count} times)`).join('\n')}`;
+    }
+    if (learnedMappings.length > 0) {
+      personalizationContext += `\n\nPRODUCTS THE USER HAS SELECTED FOR SIMILAR WORK (strongly consider including):
+${learnedMappings.join(', ')}`;
+    }
+    if (estimateHistory.length > 0) {
+      personalizationContext += `\n\nUSER'S RECENT ESTIMATE PATTERNS (learn from these):
+${estimateHistory.map(h => `- "${h.query.substring(0, 100)}..." → Used: ${h.products.slice(0, 5).join(', ')}`).join('\n')}`; 
+    }
 
     // Build the AI prompt with template reference
     const systemPrompt = `You are an expert commercial pool repair estimator for Breakpoint Commercial Pool Systems. You create professional estimates that follow exact company standards.
@@ -513,7 +582,7 @@ Return a JSON object with:
   "laborRate": 150.00,
   "termsText": "Closing terms...",
   "notes": "Any additional notes"
-}`;
+}${personalizationContext}`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
@@ -535,7 +604,25 @@ Provide accurate real-world pricing and complete parts lists.` },
     }
 
     const estimateData = JSON.parse(content);
-    res.json({ estimate: estimateData, templateUsed: templateContext?.name || null });
+    
+    // Log interaction for learning
+    try {
+      const allItems = estimateData.sections?.flatMap((s: any) => s.items?.map((i: any) => i.description) || []) || [];
+      await db.execute(sql`
+        INSERT INTO ai_learning_interactions 
+          (user_id, user_query, suggested_products, session_id)
+        VALUES 
+          (${userId || null}, ${workDescription}, ${JSON.stringify(allItems)}, ${Date.now().toString()})
+      `);
+    } catch (logError) {
+      console.error("Error logging AI interaction:", logError);
+    }
+
+    res.json({ 
+      estimate: estimateData, 
+      templateUsed: templateContext?.name || null,
+      personalized: frequentProducts.length > 0 || learnedMappings.length > 0,
+    });
   } catch (error) {
     console.error("Estimate generation error:", error);
     res.status(500).json({ error: "Failed to generate estimate" });
@@ -574,6 +661,136 @@ router.post("/web-search", express.json(), async (req: Request, res: Response) =
   } catch (error) {
     console.error("Web search error:", error);
     res.status(500).json({ error: "Failed to perform web search" });
+  }
+});
+
+// Get personalized suggestions for a user based on their history
+router.get("/suggestions/:userId", async (req: Request, res: Response) => {
+  try {
+    const userId = req.params.userId as string;
+
+    // Get frequently used products
+    const frequentProducts = await getUserFrequentProducts(userId);
+
+    // Get recent query patterns
+    const recentPatterns = await db.execute(sql`
+      SELECT user_query, suggested_products, created_at
+      FROM ai_learning_interactions
+      WHERE user_id = ${userId}
+      ORDER BY created_at DESC
+      LIMIT 10
+    `);
+
+    // Get commonly paired products
+    const commonPairs = await db.execute(sql`
+      SELECT primary_product_sku, related_product_sku, co_occurrence_count
+      FROM ai_product_patterns
+      WHERE user_id = ${userId}
+      ORDER BY co_occurrence_count DESC
+      LIMIT 15
+    `);
+
+    // Generate smart suggestions
+    const suggestions = [];
+    
+    // Suggest based on frequent products
+    if (frequentProducts.length > 0) {
+      suggestions.push({
+        type: 'frequent',
+        title: 'Your Go-To Products',
+        items: frequentProducts.slice(0, 5).map(p => ({
+          name: p.description,
+          usageCount: p.count,
+          suggestedQty: p.avgQty,
+        })),
+      });
+    }
+
+    // Suggest based on product pairs
+    if (commonPairs.rows.length > 0) {
+      suggestions.push({
+        type: 'pairs',
+        title: 'Products You Often Use Together',
+        items: commonPairs.rows.slice(0, 5).map((p: any) => ({
+          primary: p.primary_product_sku,
+          related: p.related_product_sku,
+          count: p.co_occurrence_count,
+        })),
+      });
+    }
+
+    res.json({
+      suggestions,
+      recentQueries: recentPatterns.rows.map((r: any) => ({
+        query: r.user_query?.substring(0, 100),
+        date: r.created_at,
+      })),
+      learningStats: {
+        totalInteractions: recentPatterns.rows.length,
+        knownProducts: frequentProducts.length,
+        knownPairs: commonPairs.rows.length,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching suggestions:", error);
+    res.status(500).json({ error: "Failed to fetch suggestions" });
+  }
+});
+
+// Log when user finalizes an estimate (for learning)
+router.post("/log-estimate-finalized", express.json(), async (req: Request, res: Response) => {
+  try {
+    const { userId, sessionId, workDescription, lineItems, propertyType } = req.body;
+
+    // Update the interaction with selected products
+    if (sessionId) {
+      await db.execute(sql`
+        UPDATE ai_learning_interactions 
+        SET selected_products = ${JSON.stringify(lineItems)}
+        WHERE session_id = ${sessionId}
+      `);
+    }
+
+    // Learn product patterns from finalized estimates
+    const products = lineItems || [];
+    for (let i = 0; i < products.length; i++) {
+      for (let j = i + 1; j < products.length; j++) {
+        const primary = products[i];
+        const related = products[j];
+        
+        // Insert or update pattern
+        await db.execute(sql`
+          INSERT INTO ai_product_patterns 
+            (user_id, primary_product_sku, related_product_sku, co_occurrence_count, property_type, avg_quantity_ratio)
+          VALUES 
+            (${userId || null}, ${primary.description || primary.name}, ${related.description || related.name}, 1, ${propertyType || null}, 
+             ${(related.qty || 1) / (primary.qty || 1)})
+          ON CONFLICT (user_id, primary_product_sku, related_product_sku) 
+          DO UPDATE SET 
+            co_occurrence_count = ai_product_patterns.co_occurrence_count + 1,
+            last_updated = NOW()
+        `);
+      }
+    }
+
+    // Learn query-to-product mappings
+    if (workDescription) {
+      for (const product of products) {
+        await db.execute(sql`
+          INSERT INTO ai_query_mappings (user_id, query_term, mapped_product_sku, success_count, total_count)
+          VALUES (${userId || null}, ${workDescription.substring(0, 200)}, ${product.description || product.name}, 1, 1)
+          ON CONFLICT (user_id, query_term, mapped_product_sku) 
+          DO UPDATE SET 
+            success_count = ai_query_mappings.success_count + 1,
+            total_count = ai_query_mappings.total_count + 1
+        `);
+      }
+    }
+
+    res.json({ success: true, learned: products.length });
+  } catch (error) {
+    console.error("Error logging estimate finalization:", error);
+    res.status(500).json({ error: "Failed to log finalization" });
   }
 });
 

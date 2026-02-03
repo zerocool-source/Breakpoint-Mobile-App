@@ -84,12 +84,11 @@ interface RepairJobCardProps {
   onPress: () => void;
   onNavigate: () => void;
   onComplete: () => void;
-  onCreateEstimate: () => void;
   onAccept: () => void;
   onDismiss: () => void;
 }
 
-function RepairJobCard({ job, isFirst, drag, isActive, onPress, onNavigate, onComplete, onCreateEstimate, onAccept, onDismiss }: RepairJobCardProps) {
+function RepairJobCard({ job, isFirst, drag, isActive, onPress, onNavigate, onComplete, onAccept, onDismiss }: RepairJobCardProps) {
   const { theme } = useTheme();
   const swipeableRef = useRef<Swipeable>(null);
   
@@ -146,21 +145,7 @@ function RepairJobCard({ job, isFirst, drag, isActive, onPress, onNavigate, onCo
         <Feather name="file-text" size={20} color="#FFFFFF" />
         <ThemedText style={styles.swipeActionText}>Details</ThemedText>
       </Pressable>
-      {isAssessment ? (
-        <Pressable
-          style={[styles.swipeActionComplete, { backgroundColor: BrandColors.azureBlue }]}
-          onPress={() => {
-            if (Platform.OS !== 'web') {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            }
-            swipeableRef.current?.close();
-            onCreateEstimate();
-          }}
-        >
-          <Feather name="file-plus" size={20} color="#FFFFFF" />
-          <ThemedText style={styles.swipeActionText}>Estimate</ThemedText>
-        </Pressable>
-      ) : (
+      {!isAssessment ? (
         <Pressable
           style={styles.swipeActionComplete}
           onPress={() => {
@@ -174,7 +159,7 @@ function RepairJobCard({ job, isFirst, drag, isActive, onPress, onNavigate, onCo
           <Feather name="check-circle" size={20} color="#FFFFFF" />
           <ThemedText style={styles.swipeActionText}>Complete</ThemedText>
         </Pressable>
-      )}
+      ) : null}
     </View>
   );
   
@@ -286,24 +271,14 @@ function RepairJobCard({ job, isFirst, drag, isActive, onPress, onNavigate, onCo
             </Pressable>
           </View>
           
-          {job.status === 'in_progress' ? (
-            isAssessment ? (
-              <Pressable 
-                style={[styles.jobPrimaryAction, { backgroundColor: BrandColors.tropicalTeal }]} 
-                onPress={onCreateEstimate}
-              >
-                <Feather name="file-plus" size={18} color="#FFFFFF" />
-                <ThemedText style={styles.jobPrimaryActionText}>Create Estimate</ThemedText>
-              </Pressable>
-            ) : (
-              <Pressable 
-                style={[styles.jobPrimaryAction, { backgroundColor: BrandColors.emerald }]} 
-                onPress={onComplete}
-              >
-                <Feather name="check-circle" size={18} color="#FFFFFF" />
-                <ThemedText style={styles.jobPrimaryActionText}>Verify & Complete</ThemedText>
-              </Pressable>
-            )
+          {job.status === 'in_progress' && !isAssessment ? (
+            <Pressable 
+              style={[styles.jobPrimaryAction, { backgroundColor: BrandColors.emerald }]} 
+              onPress={onComplete}
+            >
+              <Feather name="check-circle" size={18} color="#FFFFFF" />
+              <ThemedText style={styles.jobPrimaryActionText}>Verify & Complete</ThemedText>
+            </Pressable>
           ) : null}
           
           {isFirst ? (
@@ -682,10 +657,9 @@ export default function HomeScreen() {
                 key={item.id}
                 job={item}
                 isFirst={index === 0}
-                onPress={() => console.log('Job details:', item.id)}
+                onPress={() => console.log('View job details:', item.id)}
                 onNavigate={() => handleNavigateToJob(item)}
                 onComplete={() => handleCompleteJob(item.id)}
-                onCreateEstimate={() => handleCreateEstimateFromJob(item)}
                 onAccept={() => handleAcceptJob(item.id)}
                 onDismiss={() => handleDismissJob(item.id)}
               />

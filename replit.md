@@ -6,6 +6,7 @@
 ### Changelog
 | Version | Date | Features Added |
 |---------|------|----------------|
+| v1.2.1 | Feb 2026 | Quote descriptions now use mixed HOA-friendly + professional language by default (addressed to "Dear HOA Manager"), local estimate storage for offline access, improved navigation for estimate builder |
 | v1.2.0 | Feb 2026 | Ace AI Estimate Builder with voice input, personalized self-learning, web-enhanced product search, HOA-friendly quote descriptions with California pool code references |
 | v1.1.0 | Feb 2026 | Local authentication system, dual-backend architecture, firstName/lastName user fields |
 | v1.0.0 | Jan 2026 | Core app: Role-based access (Service Tech, Repair Tech, Supervisor), Heritage Products Catalog (600+ items), Property management, Assignment tracking, Chat system, Offline mode, Battery saver |

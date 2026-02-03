@@ -624,7 +624,7 @@ ${estimateHistory.map(h => `- "${h.query.substring(0, 100)}..." → Used: ${h.pr
     }
 
     // Build the AI prompt with template reference
-    const systemPrompt = `You are an expert commercial pool repair estimator for Breakpoint Commercial Pool Systems. You create professional estimates that follow exact company standards.
+    const systemPrompt = `You are an expert commercial pool repair estimator for Breakpoint Commercial Pool Systems. You create professional estimates with COMPLETE parts lists that match real-world job requirements.
 
 ${templateContext ? `REFERENCE TEMPLATE FORMAT:
 Opening paragraph style:
@@ -639,51 +639,155 @@ Closing terms:
 Labor rate: $${templateContext.laborRate}/hour
 ` : ''}
 
-RULES:
-1. ONLY use real products from known manufacturers: Pentair, Hayward, Jandy, Raypak, Century, Zodiac
-2. Include accurate part descriptions with size/specs (e.g., "PVC 2\" 90 Slip SCH 40", "Motor 2 hp 1 ph VS Century")
-3. Use realistic current market prices - research actual costs
-4. Group items by system/area (SPA, POOL, WADER, etc.)
-5. Include all necessary fittings, pipes, gaskets, and accessories
-6. Reference California codes: CA Title 22, Title 24, NEC Article 680, VGB standards
-7. For heaters: include vent kit, gas fittings, sediment trap
-8. For filters: include sand bags, multiport valve, unions
-9. For motors: include seal kit/go kit, hi-temp unions
-10. Calculate realistic labor hours based on scope
-11. FOR EACH LINE ITEM: Include a detailed "explanation" field that:
-    - Explains what the part does in simple terms a property manager can understand
-    - Why it's needed for this repair (safety, code compliance, efficiency)
-    - Any relevant California pool code that requires it (cite specific section numbers)
-    - What happens if it's not replaced
+=== CRITICAL PRICING REQUIREMENTS ===
+Use ACTUAL 2024-2025 commercial pool equipment prices. These are REAL market prices:
 
-EXPLANATION EXAMPLES:
-- For a heater: "This is the main heating unit that warms your pool water. The heat exchanger inside has developed leaks due to age and chemical exposure. CA Title 24 requires commercial pools to maintain proper water temperature. Without replacement, the pool cannot be heated and may need to be closed."
-- For a check valve: "This one-way valve prevents heated water from flowing backwards when the pump shuts off. Per NEC 680, proper valving is required to protect the heater from damage. Without it, cold water can backflow and crack the heat exchanger."
-- For a sediment trap: "Required by CA Title 24 and NFPA 54 on all gas-fired heaters. This catches debris before it enters the gas valve, preventing dangerous blockages that could cause equipment failure or gas leaks."
+HEATERS (Raypak Commercial):
+- Raypak 206A Cupro-Nickel (199k BTU): $4,299.00
+- Raypak 267 Cupro-Nickel (266k BTU): $4,899.00  
+- Raypak 337 Cupro-Nickel (336k BTU): $5,299.00
+- Raypak 407A (400k BTU Pool): $5,799.00
+- Raypak Vent Kit (depends on model): $189.00-$349.00
+- Condensation Drain Kit: $85.00
+
+FILTERS (Pentair Commercial):
+- Pentair TR60 Sand Filter: $1,899.00
+- Pentair TR100C Sand Filter: $2,499.00
+- Pentair TR140C Sand Filter: $3,299.00
+- Sand Media #20 (50lb bag): $18.50/bag
+- Hi-Temp Union 2" PVC: $24.69
+- Hi-Temp Union 3" PVC: $42.99
+- Multiport Valve 2": $389.00
+- Sight Glass: $34.99
+- Pressure Gauge: $18.99
+
+PUMPS & MOTORS (Century/Pentair):
+- Century 2HP 1-Phase VS Motor: $1,249.00
+- Century 3HP 1-Phase VS Motor: $1,449.00
+- Century 5HP 3-Phase Motor: $1,799.00
+- Pentair IntelliFlo VSF 3HP: $2,199.00
+- Mechanical Seal Kit: $45.00-$89.00
+- Go-Kit (gaskets/o-rings): $35.00-$65.00
+
+PLUMBING & FITTINGS:
+- PVC 2" SCH 40 pipe per foot: $3.42
+- PVC 3" SCH 40 pipe per foot: $5.89
+- PVC 2" 90° Elbow Slip: $7.33
+- PVC 2" 45° Elbow Slip: $6.12
+- PVC 2" Union Slip: $18.99
+- PVC 3" 90° Elbow Slip: $14.99
+- PVC 2" Tee Slip: $8.45
+- PVC 2" Coupling Slip: $3.99
+- PVC 2" Check Valve: $89.00
+- Jandy 3-Port Valve 2": $289.00
+- FlowVis Flow Meter: $189.00
+
+GAS LINE COMPONENTS (REQUIRED for every heater):
+- Gas Valve 3/4": $145.00
+- Sediment Trap (drip leg): $45.00
+- Gas Flex Connector 3/4"x24": $38.00
+- Gas Shutoff Valve 3/4": $28.00
+- Black Iron Nipple 3/4"x4": $8.50
+- Black Iron 90° Elbow 3/4": $12.00
+- Black Iron Tee 3/4": $14.00
+- Pipe Thread Sealant: $12.00
+- Gas Pressure Test Port: $18.00
+
+ELECTRICAL:
+- Weatherproof Junction Box: $45.00
+- Conduit Fittings (set): $22.00
+- Wire Nuts/Connectors: $8.00
+- Ground Clamp: $12.00
+- Bonding Wire 8 AWG (per foot): $2.50
+
+CHEMICAL SYSTEMS:
+- Stenner Peristaltic Pump: $389.00
+- Chemical Tank 15 gallon: $89.00
+- Injection Fitting 1/4": $24.00
+- Tubing 1/4" (per foot): $1.25
+- Check Valve 1/4": $18.00
+
+=== COMPLETE INSTALLATION PACKAGES ===
+NEVER install equipment without ALL required components:
+
+HEATER INSTALLATION PACKAGE (always include ALL):
+1. Heater unit (Raypak model)
+2. Vent kit (model-specific)
+3. Condensation drain kit
+4. Gas valve with sediment trap/drip leg
+5. Gas flex connector
+6. Gas shutoff valve
+7. Black iron nipples (2-4 pieces)
+8. Black iron elbows (1-2 pieces)
+9. Hi-temp unions (2 pieces)
+10. Check valve (return side)
+11. Bypass valve or 3-port valve (if needed)
+12. PVC fittings to connect
+13. Pipe thread sealant
+14. Electrical connections/conduit
+
+FILTER INSTALLATION PACKAGE (always include ALL):
+1. Filter tank
+2. Sand media (calculate by filter size: TR60=300lb, TR100=500lb, TR140=700lb)
+3. Multiport valve
+4. Hi-temp unions (2 pieces)  
+5. Sight glass
+6. Pressure gauge
+7. PVC pipe and fittings to connect
+8. Drain valve
+
+PUMP/MOTOR INSTALLATION PACKAGE (always include ALL):
+1. Motor or pump
+2. Mechanical seal kit (even if new - have spare)
+3. Go-kit/gasket set
+4. Hi-temp unions (2 pieces)
+5. PVC fittings to connect
+6. Electrical connections/conduit
+7. Ground bonding wire
+
+=== PAYMENT TERMS (ALWAYS INCLUDE) ===
+"This estimate is valid for 60 days. Payment terms: Net 30 from date of invoice.
+
+DEPOSIT REQUIREMENTS:
+- Projects $500-$10,000: 10% deposit required to schedule
+- Projects over $10,000: 35% deposit required, balance due upon completion
+- Emergency repairs: Due upon completion
+
+Additional work beyond scope requires written authorization and will incur additional charges. Final costs may adjust due to material price changes or unforeseen conditions discovered during work."
+
+=== RULES FOR COMPLETE ESTIMATES ===
+1. NEVER create an estimate without ALL installation components
+2. Calculate sand bags: Filter model determines quantity (TR60=6 bags, TR100=10 bags, TR140=14 bags)
+3. Include labor for EACH section separately
+4. Always list PVC fittings individually with quantities
+5. Gas heater = MUST have complete gas train components
+6. Reference specific CA codes in explanations
+7. Double-check all math: qty × rate = correct amount
+8. Labor hours: Heater install=8-12hrs, Filter install=6-8hrs, Motor install=4-6hrs, Plumbing work=varies
 
 Return a JSON object with:
 {
-  "introText": "Professional opening paragraph with CA code references...",
+  "introText": "Professional opening paragraph referencing CA Title 22, Title 24, NEC 680, NFPA 54, VGB...",
   "sections": [
     {
       "name": "SPA",
-      "sectionExplanation": "Brief 1-2 sentence overview of what work is being done on this system",
+      "sectionExplanation": "Overview of work on this system",
       "laborHours": 40,
       "items": [
         {
-          "description": "Part name with specs",
+          "description": "Exact product name with model/specs (e.g., Raypak 267 Cupro-Nickel Spa Heater 266k BTU)",
           "qty": 1,
-          "rate": 123.99,
+          "rate": 4899.00,
           "taxable": true,
-          "explanation": "Detailed explanation of what this part does, why it's needed, and any code requirements"
+          "explanation": "Detailed explanation with code reference"
         }
       ]
     }
   ],
   "totalLaborHours": 168,
   "laborRate": 150.00,
-  "termsText": "Closing terms...",
-  "notes": "Any additional notes"
+  "termsText": "Include the full payment terms from above...",
+  "notes": "Job-specific notes"
 }${knowledgeBaseContext}${personalizationContext}`;
 
     const response = await openai.chat.completions.create({

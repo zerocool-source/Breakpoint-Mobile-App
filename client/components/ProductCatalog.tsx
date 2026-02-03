@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -16,6 +16,7 @@ import * as Haptics from 'expo-haptics';
 import { useAudioRecorder, AudioModule, RecordingPresets, setAudioModeAsync } from 'expo-audio';
 import * as FileSystem from 'expo-file-system';
 import { getLocalApiUrl, joinUrl } from '@/lib/query-client';
+import { useQuery } from '@tanstack/react-query';
 
 import { ThemedText } from '@/components/ThemedText';
 import { useTheme } from '@/hooks/useTheme';
@@ -41,20 +42,57 @@ interface SelectedProduct extends HeritageProduct {
   quantity: number;
 }
 
+interface PoolBrainProduct {
+  sku: string;
+  heritageNumber: string;
+  name: string;
+  category: string;
+  subcategory: string;
+  price: number;
+  cost: number;
+  unit: string;
+  manufacturer: string;
+  description: string;
+  productId: number;
+}
+
 export function ProductCatalog({ role, onSelectProduct, selectionMode = false }: ProductCatalogProps) {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<HeritageCategory | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
   const [quantityModalVisible, setQuantityModalVisible] = useState(false);
-  const [selectedForQuantity, setSelectedForQuantity] = useState<HeritageProduct | null>(null);
+  const [selectedForQuantity, setSelectedForQuantity] = useState<HeritageProduct | PoolBrainProduct | null>(null);
   const [quantity, setQuantity] = useState('1');
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
 
   const showPricing = role === 'repair_tech' || role === 'supervisor';
+
+  const { data: poolBrainData, isLoading: isLoadingProducts, error: productsError } = useQuery({
+    queryKey: ['/api/poolbrain/products'],
+    queryFn: async () => {
+      const apiUrl = getLocalApiUrl();
+      const response = await fetch(joinUrl(apiUrl, '/api/poolbrain/products'));
+      if (!response.ok) throw new Error('Failed to fetch products');
+      return response.json();
+    },
+    staleTime: 5 * 60 * 1000,
+    retry: 2,
+  });
+
+  const products: PoolBrainProduct[] = poolBrainData?.data ?? [];
+  const usingPoolBrain = products.length > 0;
+
+  const categories = useMemo(() => {
+    if (usingPoolBrain) {
+      const cats = [...new Set(products.map(p => p.category))].filter(Boolean).sort();
+      return cats;
+    }
+    return HERITAGE_CATEGORIES as unknown as string[];
+  }, [products, usingPoolBrain]);
 
   const startVoiceSearch = async () => {
     if (Platform.OS === 'web') {
@@ -130,32 +168,49 @@ export function ProductCatalog({ role, onSelectProduct, selectionMode = false }:
 
   const subcategories = useMemo(() => {
     if (!selectedCategory) return [];
-    return getSubcategories(selectedCategory);
-  }, [selectedCategory]);
+    if (usingPoolBrain) {
+      const subs = products
+        .filter(p => p.category === selectedCategory)
+        .map(p => p.subcategory)
+        .filter(Boolean);
+      return [...new Set(subs)].sort();
+    }
+    return getSubcategories(selectedCategory as HeritageCategory);
+  }, [selectedCategory, products, usingPoolBrain]);
 
   const filteredProducts = useMemo(() => {
-    let products = selectedCategory
-      ? getProductsByCategory(selectedCategory)
-      : HERITAGE_PRODUCTS;
+    let prods: (HeritageProduct | PoolBrainProduct)[];
+    
+    if (usingPoolBrain) {
+      prods = [...products];
+      if (selectedCategory) {
+        prods = prods.filter(p => p.category === selectedCategory);
+      }
+    } else {
+      prods = selectedCategory
+        ? getProductsByCategory(selectedCategory as HeritageCategory)
+        : HERITAGE_PRODUCTS;
+    }
 
     if (selectedSubcategory) {
-      products = products.filter(p => p.subcategory === selectedSubcategory);
+      prods = prods.filter(p => p.subcategory === selectedSubcategory);
     }
 
     if (search.trim()) {
       const lower = search.toLowerCase();
-      products = products.filter(p =>
+      prods = prods.filter(p =>
         p.name.toLowerCase().includes(lower) ||
         p.sku.toLowerCase().includes(lower) ||
-        p.heritageNumber.toLowerCase().includes(lower) ||
-        p.manufacturer.toLowerCase().includes(lower)
+        ('heritageNumber' in p && p.heritageNumber.toLowerCase().includes(lower)) ||
+        ('manufacturer' in p && p.manufacturer.toLowerCase().includes(lower)) ||
+        ('description' in p && p.description?.toLowerCase().includes(lower))
       );
     }
 
-    return products;
-  }, [selectedCategory, selectedSubcategory, search]);
+    return prods;
+  }, [selectedCategory, selectedSubcategory, search, products, usingPoolBrain]);
 
-  const handleProductPress = useCallback((product: HeritageProduct) => {
+  const handleProductPress = useCallback((product: HeritageProduct | PoolBrainProduct) => {
     if (selectionMode && onSelectProduct) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       setSelectedForQuantity(product);
@@ -167,7 +222,17 @@ export function ProductCatalog({ role, onSelectProduct, selectionMode = false }:
   const confirmQuantity = useCallback(() => {
     if (selectedForQuantity && onSelectProduct) {
       const qty = parseInt(quantity) || 1;
-      onSelectProduct(selectedForQuantity, qty);
+      const productAsHeritage: HeritageProduct = {
+        sku: selectedForQuantity.sku,
+        heritageNumber: 'heritageNumber' in selectedForQuantity ? selectedForQuantity.heritageNumber : '',
+        name: selectedForQuantity.name,
+        category: selectedForQuantity.category as HeritageCategory,
+        subcategory: selectedForQuantity.subcategory,
+        price: selectedForQuantity.price,
+        unit: selectedForQuantity.unit,
+        manufacturer: 'manufacturer' in selectedForQuantity ? selectedForQuantity.manufacturer : '',
+      };
+      onSelectProduct(productAsHeritage, qty);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
     setQuantityModalVisible(false);
@@ -175,7 +240,7 @@ export function ProductCatalog({ role, onSelectProduct, selectionMode = false }:
     setQuantity('1');
   }, [selectedForQuantity, quantity, onSelectProduct]);
 
-  const renderCategoryChip = ({ item }: { item: HeritageCategory }) => {
+  const renderCategoryChip = ({ item }: { item: string }) => {
     const isSelected = selectedCategory === item;
     return (
       <Pressable
@@ -221,45 +286,50 @@ export function ProductCatalog({ role, onSelectProduct, selectionMode = false }:
     );
   };
 
-  const renderProduct = ({ item }: { item: HeritageProduct }) => (
-    <Pressable
-      onPress={() => handleProductPress(item)}
-      style={[
-        styles.productCard,
-        { backgroundColor: theme.surface },
-        selectionMode && styles.productCardSelectable,
-      ]}
-    >
-      <View style={styles.productHeader}>
-        <View style={styles.productInfo}>
-          <ThemedText style={styles.productName}>{item.name}</ThemedText>
-          <ThemedText style={[styles.productSku, { color: theme.textSecondary }]}>
-            SKU: {item.sku} | Heritage: {item.heritageNumber}
-          </ThemedText>
-          <ThemedText style={[styles.productMeta, { color: theme.textSecondary }]}>
-            {item.manufacturer} • {item.subcategory}
-          </ThemedText>
+  const renderProduct = ({ item }: { item: HeritageProduct | PoolBrainProduct }) => {
+    const heritageNum = 'heritageNumber' in item ? item.heritageNumber : '';
+    const manufacturer = 'manufacturer' in item ? item.manufacturer : '';
+    
+    return (
+      <Pressable
+        onPress={() => handleProductPress(item)}
+        style={[
+          styles.productCard,
+          { backgroundColor: theme.surface },
+          selectionMode && styles.productCardSelectable,
+        ]}
+      >
+        <View style={styles.productHeader}>
+          <View style={styles.productInfo}>
+            <ThemedText style={styles.productName}>{item.name}</ThemedText>
+            <ThemedText style={[styles.productSku, { color: theme.textSecondary }]}>
+              SKU: {item.sku}{heritageNum ? ` | Heritage: ${heritageNum}` : ''}
+            </ThemedText>
+            <ThemedText style={[styles.productMeta, { color: theme.textSecondary }]}>
+              {manufacturer ? `${manufacturer} • ` : ''}{item.subcategory || item.category}
+            </ThemedText>
+          </View>
+          {showPricing ? (
+            <View style={styles.priceContainer}>
+              <ThemedText style={styles.priceLabel}>Price</ThemedText>
+              <ThemedText style={styles.price}>${item.price.toFixed(2)}</ThemedText>
+              <ThemedText style={[styles.priceUnit, { color: theme.textSecondary }]}>
+                per {item.unit}
+              </ThemedText>
+            </View>
+          ) : null}
         </View>
-        {showPricing ? (
-          <View style={styles.priceContainer}>
-            <ThemedText style={styles.priceLabel}>Price</ThemedText>
-            <ThemedText style={styles.price}>${item.price.toFixed(2)}</ThemedText>
-            <ThemedText style={[styles.priceUnit, { color: theme.textSecondary }]}>
-              per {item.unit}
+        {selectionMode ? (
+          <View style={styles.addIndicator}>
+            <Feather name="plus-circle" size={24} color={BrandColors.azureBlue} />
+            <ThemedText style={[styles.addText, { color: BrandColors.azureBlue }]}>
+              Tap to add
             </ThemedText>
           </View>
         ) : null}
-      </View>
-      {selectionMode ? (
-        <View style={styles.addIndicator}>
-          <Feather name="plus-circle" size={24} color={BrandColors.azureBlue} />
-          <ThemedText style={[styles.addText, { color: BrandColors.azureBlue }]}>
-            Tap to add
-          </ThemedText>
-        </View>
-      ) : null}
-    </Pressable>
-  );
+      </Pressable>
+    );
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: theme.backgroundRoot }]}>
@@ -296,8 +366,17 @@ export function ProductCatalog({ role, onSelectProduct, selectionMode = false }:
         )}
       </View>
 
+      {isLoadingProducts ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="small" color={BrandColors.azureBlue} />
+          <ThemedText style={[styles.loadingText, { color: theme.textSecondary }]}>
+            Loading products from Pool Brain...
+          </ThemedText>
+        </View>
+      ) : null}
+
       <FlatList
-        data={HERITAGE_CATEGORIES as unknown as HeritageCategory[]}
+        data={categories}
         renderItem={renderCategoryChip}
         keyExtractor={(item) => item}
         horizontal
@@ -426,6 +505,16 @@ export function ProductCatalog({ role, onSelectProduct, selectionMode = false }:
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.md,
+    gap: Spacing.sm,
+  },
+  loadingText: {
+    fontSize: 13,
   },
   searchContainer: {
     flexDirection: 'row',

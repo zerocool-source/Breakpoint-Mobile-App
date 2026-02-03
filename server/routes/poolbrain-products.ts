@@ -7,18 +7,36 @@ let cachedProducts: any[] = [];
 let cachedCategories: any[] = [];
 let lastProductFetch = 0;
 let lastCategoryFetch = 0;
+let poolBrainAvailable = true;
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const RETRY_AFTER_ERROR = 60 * 1000; // Retry Pool Brain after 1 minute on errors
+let lastErrorTime = 0;
 
 router.get('/products', async (req, res) => {
   try {
     const now = Date.now();
     
-    if (cachedProducts.length === 0 || now - lastProductFetch > CACHE_TTL) {
-      console.log('[Pool Brain] Fetching fresh products from API...');
-      const rawProducts = await getProducts();
-      cachedProducts = rawProducts.map(mapPoolBrainToHeritageFormat);
-      lastProductFetch = now;
-      console.log(`[Pool Brain] Fetched ${cachedProducts.length} products`);
+    const shouldFetch = 
+      cachedProducts.length === 0 || 
+      now - lastProductFetch > CACHE_TTL;
+    
+    const canRetryPoolBrain = 
+      poolBrainAvailable || 
+      now - lastErrorTime > RETRY_AFTER_ERROR;
+    
+    if (shouldFetch && canRetryPoolBrain) {
+      try {
+        console.log('[Pool Brain] Fetching fresh products from API...');
+        const rawProducts = await getProducts();
+        cachedProducts = rawProducts.map(mapPoolBrainToHeritageFormat);
+        lastProductFetch = now;
+        poolBrainAvailable = true;
+        console.log(`[Pool Brain] Fetched ${cachedProducts.length} products`);
+      } catch (apiError) {
+        console.error('[Pool Brain] API error, will use fallback:', apiError);
+        poolBrainAvailable = false;
+        lastErrorTime = now;
+      }
     }
     
     const { category, subcategory, search } = req.query;
@@ -51,14 +69,17 @@ router.get('/products', async (req, res) => {
       success: true,
       data: filtered,
       totalCount: filtered.length,
-      cachedAt: new Date(lastProductFetch).toISOString(),
+      source: poolBrainAvailable ? 'poolbrain' : 'fallback',
+      cachedAt: lastProductFetch > 0 ? new Date(lastProductFetch).toISOString() : null,
     });
   } catch (error) {
     console.error('[Pool Brain] Error fetching products:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch products from Pool Brain',
-      message: error instanceof Error ? error.message : 'Unknown error',
+    res.json({
+      success: true,
+      data: [],
+      totalCount: 0,
+      source: 'error',
+      message: 'Pool Brain API temporarily unavailable, using local catalog',
     });
   }
 });

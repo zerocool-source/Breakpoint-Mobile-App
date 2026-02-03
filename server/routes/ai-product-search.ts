@@ -479,16 +479,33 @@ RULES:
 8. For filters: include sand bags, multiport valve, unions
 9. For motors: include seal kit/go kit, hi-temp unions
 10. Calculate realistic labor hours based on scope
+11. FOR EACH LINE ITEM: Include a detailed "explanation" field that:
+    - Explains what the part does in simple terms a property manager can understand
+    - Why it's needed for this repair (safety, code compliance, efficiency)
+    - Any relevant California pool code that requires it (cite specific section numbers)
+    - What happens if it's not replaced
+
+EXPLANATION EXAMPLES:
+- For a heater: "This is the main heating unit that warms your pool water. The heat exchanger inside has developed leaks due to age and chemical exposure. CA Title 24 requires commercial pools to maintain proper water temperature. Without replacement, the pool cannot be heated and may need to be closed."
+- For a check valve: "This one-way valve prevents heated water from flowing backwards when the pump shuts off. Per NEC 680, proper valving is required to protect the heater from damage. Without it, cold water can backflow and crack the heat exchanger."
+- For a sediment trap: "Required by CA Title 24 and NFPA 54 on all gas-fired heaters. This catches debris before it enters the gas valve, preventing dangerous blockages that could cause equipment failure or gas leaks."
 
 Return a JSON object with:
 {
-  "introText": "Professional opening paragraph...",
+  "introText": "Professional opening paragraph with CA code references...",
   "sections": [
     {
       "name": "SPA",
+      "sectionExplanation": "Brief 1-2 sentence overview of what work is being done on this system",
       "laborHours": 40,
       "items": [
-        {"description": "Part name with specs", "qty": 1, "rate": 123.99, "taxable": true}
+        {
+          "description": "Part name with specs",
+          "qty": 1,
+          "rate": 123.99,
+          "taxable": true,
+          "explanation": "Detailed explanation of what this part does, why it's needed, and any code requirements"
+        }
       ]
     }
   ],

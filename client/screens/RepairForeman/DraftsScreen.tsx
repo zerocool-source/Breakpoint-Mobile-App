@@ -131,7 +131,7 @@ export default function DraftsScreen() {
       </View>
       <View style={styles.draftActions}>
         <ThemedText style={[styles.total, { color: BrandColors.azureBlue }]}>
-          ${parseFloat(item.total || '0').toLocaleString('en-US', { minimumFractionDigits: 2 })}
+          ${(parseFloat(item.total || '0') / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}
         </ThemedText>
         <View style={styles.actionButtons}>
           <Pressable

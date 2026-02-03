@@ -209,7 +209,7 @@ export default function ForemanHomeScreen() {
         </View>
         <View style={styles.estimateFooter}>
           <ThemedText style={[styles.total, { color: BrandColors.azureBlue }]}>
-            ${item.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            ${(item.total / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}
           </ThemedText>
           <ThemedText style={[styles.date, { color: theme.textSecondary }]}>
             {new Date(item.updatedAt).toLocaleDateString()}

@@ -118,7 +118,7 @@ function EstimateCard({ propertyName, amount, status, submittedDate, waitingDays
           )}
         </View>
         <ThemedText style={[styles.estimateAmount, { color: BrandColors.emerald }]}>
-          ${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+          ${(amount / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}
         </ThemedText>
         <View style={styles.submittedRow}>
           <Feather name="calendar" size={12} color={theme.textSecondary} />
@@ -161,7 +161,7 @@ function JobCard({ propertyName, jobType, amount, waitingDays, onPress }: JobCar
         </View>
         <ThemedText style={[styles.jobType, { color: theme.textSecondary }]}>{jobType}</ThemedText>
         <ThemedText style={[styles.estimateAmount, { color: BrandColors.emerald }]}>
-          ${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+          ${(amount / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}
         </ThemedText>
       </View>
     </Pressable>

@@ -66,12 +66,14 @@ export interface Estimate {
   estimateNumber: string;
   propertyId: string;
   property: Property;
+  propertyName?: string;
   technicianId: string;
-  status: 'draft' | 'sent' | 'approved' | 'declined';
+  status: 'draft' | 'sent' | 'pending_approval' | 'approved' | 'scheduled' | 'completed' | 'declined';
   items: EstimateItem[];
   subtotal: number;
   tax: number;
   total: number;
+  totalAmount?: number;
   createdAt: string;
 }
 

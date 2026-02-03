@@ -68,7 +68,10 @@ export default function EstimatesScreen() {
       <Animated.View entering={FadeInUp.delay(index * 100).springify()}>
         <EstimateCard
           estimate={item}
-          onPress={() => navigation.navigate('EstimateDetail', { estimateId: item.id })}
+          onPress={() => navigation.navigate('AceEstimateBuilder', { 
+            propertyId: item.propertyId,
+            propertyName: item.propertyName || item.property?.name,
+          })}
         />
       </Animated.View>
     ),
@@ -109,14 +112,18 @@ export default function EstimatesScreen() {
   const renderHeader = () => (
     <View style={styles.createOptionsContainer}>
       <Pressable
+        testID="button-create-ace-ai"
         onPress={() => navigation.navigate('AceEstimateBuilder')}
         style={styles.aceCreateCard}
+        accessibilityLabel="Create with Ace AI"
       >
-        <Image
-          source={require('../../../assets/images/ace-ai-button.png')}
-          style={styles.aceCardImage}
-          resizeMode="contain"
-        />
+        <View style={{ pointerEvents: 'none' }}>
+          <Image
+            source={require('../../../assets/images/ace-ai-button.png')}
+            style={styles.aceCardImage}
+            resizeMode="contain"
+          />
+        </View>
       </Pressable>
 
       <View style={styles.filterTabsContainer}>

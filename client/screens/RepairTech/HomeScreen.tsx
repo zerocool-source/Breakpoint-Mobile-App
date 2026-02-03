@@ -4,7 +4,6 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
-import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
 import { Swipeable } from 'react-native-gesture-handler';
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
@@ -653,28 +652,6 @@ export default function HomeScreen() {
     );
   };
 
-  const renderJob = useCallback(
-    ({ item, drag, isActive, getIndex }: RenderItemParams<Job>) => {
-      const index = getIndex() ?? 0;
-      return (
-        <ScaleDecorator>
-          <RepairJobCard
-            job={item}
-            isFirst={index === 0}
-            drag={drag}
-            isActive={isActive}
-            onPress={() => console.log('Job details:', item.id)}
-            onNavigate={() => handleNavigateToJob(item)}
-            onComplete={() => handleCompleteJob(item.id)}
-            onCreateEstimate={() => handleCreateEstimateFromJob(item)}
-            onAccept={() => handleAcceptJob(item.id)}
-            onDismiss={() => handleDismissJob(item.id)}
-          />
-        </ScaleDecorator>
-      );
-    },
-    [navigation, token]
-  );
 
   return (
     <BubbleBackground bubbleCount={15}>
@@ -701,18 +678,17 @@ export default function HomeScreen() {
         {jobs.length > 0 ? (
           <View style={styles.jobsContainer}>
             {jobs.map((item, index) => (
-              <ScaleDecorator key={item.id}>
-                <RepairJobCard
-                  job={item}
-                  isFirst={index === 0}
-                  onPress={() => console.log('Job details:', item.id)}
-                  onNavigate={() => handleNavigateToJob(item)}
-                  onComplete={() => handleCompleteJob(item.id)}
-                  onCreateEstimate={() => handleCreateEstimateFromJob(item)}
-                  onAccept={() => handleAcceptJob(item.id)}
-                  onDismiss={() => handleDismissJob(item.id)}
-                />
-              </ScaleDecorator>
+              <RepairJobCard
+                key={item.id}
+                job={item}
+                isFirst={index === 0}
+                onPress={() => console.log('Job details:', item.id)}
+                onNavigate={() => handleNavigateToJob(item)}
+                onComplete={() => handleCompleteJob(item.id)}
+                onCreateEstimate={() => handleCreateEstimateFromJob(item)}
+                onAccept={() => handleAcceptJob(item.id)}
+                onDismiss={() => handleDismissJob(item.id)}
+              />
             ))}
           </View>
         ) : (

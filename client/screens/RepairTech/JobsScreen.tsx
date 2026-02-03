@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, ScrollView, Pressable, Image, Platform } from 'react-native';
+import React, { useState, useCallback, useEffect } from 'react';
+import { View, StyleSheet, ScrollView, Pressable, Image, Platform, Alert, Linking, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
@@ -7,6 +7,7 @@ import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useQuery } from '@tanstack/react-query';
 
 import { ThemedText } from '@/components/ThemedText';
 import { Avatar } from '@/components/Avatar';
@@ -15,7 +16,7 @@ import { ChatFAB } from '@/components/ChatFAB';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
-import { mockJobs } from '@/lib/mockData';
+import { getLocalApiUrl, joinUrl } from '@/lib/query-client';
 import type { Job } from '@/types';
 
 interface JobDetailCardProps {
@@ -124,10 +125,32 @@ export default function JobsScreen() {
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
   const navigation = useNavigation<any>();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const { theme } = useTheme();
+  const [jobs, setJobs] = useState<Job[]>([]);
 
-  const jobs = mockJobs;
+  // Fetch jobs from API
+  const { data: jobsData, isLoading: isLoadingJobs, refetch: refetchJobs } = useQuery<Job[]>({
+    queryKey: ['/api/jobs'],
+    queryFn: async () => {
+      const apiUrl = getLocalApiUrl();
+      const response = await fetch(joinUrl(apiUrl, '/api/jobs'), {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!response.ok) throw new Error('Failed to fetch jobs');
+      return response.json();
+    },
+    enabled: !!token,
+  });
+
+  useEffect(() => {
+    if (jobsData) {
+      setJobs(jobsData);
+    }
+  }, [jobsData]);
 
   const handleChatPress = () => {
     if (Platform.OS !== 'web') {
@@ -136,22 +159,95 @@ export default function JobsScreen() {
     navigation.navigate('Chat');
   };
 
-  const handleNavigate = (job: Job) => {
+  const handleNavigateToJob = async (job: Job) => {
+    const address = job.property?.address;
+    if (!address) {
+      Alert.alert('No Address', 'This job does not have an address to navigate to.');
+      return;
+    }
     if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+    const encodedAddress = encodeURIComponent(address);
+    let url = '';
+    if (Platform.OS === 'ios') {
+      url = `maps://app?daddr=${encodedAddress}`;
+    } else if (Platform.OS === 'android') {
+      url = `google.navigation:q=${encodedAddress}`;
+    } else {
+      url = `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}`;
+    }
+    try {
+      const canOpen = await Linking.canOpenURL(url);
+      if (canOpen) {
+        await Linking.openURL(url);
+      } else {
+        const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}`;
+        await Linking.openURL(webUrl);
+      }
+    } catch (error) {
+      Alert.alert('Navigation Error', 'Could not open maps application.');
     }
   };
 
-  const handleDetails = (job: Job) => {
+  const handleCompleteJob = (jobId: string) => {
     if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+    setJobs(prev => prev.filter(j => j.id !== jobId));
+  };
+
+  const handleAcceptJob = async (jobId: string) => {
+    try {
+      const apiUrl = getLocalApiUrl();
+      const response = await fetch(joinUrl(apiUrl, `/api/jobs/${jobId}/accept`), {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!response.ok) throw new Error('Failed to accept job');
+      refetchJobs();
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to accept job. Please try again.');
     }
   };
 
-  const handleComplete = (job: Job) => {
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    }
+  const handleDismissJob = async (jobId: string) => {
+    Alert.alert(
+      'Dismiss Job',
+      'Are you sure you want to dismiss this job?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Dismiss', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const apiUrl = getLocalApiUrl();
+              const response = await fetch(joinUrl(apiUrl, `/api/jobs/${jobId}/dismiss`), {
+                method: 'PATCH',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json',
+                },
+              });
+              if (!response.ok) throw new Error('Failed to dismiss job');
+              refetchJobs();
+              if (Platform.OS !== 'web') {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+              }
+            } catch (error) {
+              Alert.alert('Error', 'Failed to dismiss job.');
+            }
+          }
+        }
+      ]
+    );
   };
 
   const handleViewHistory = (job: Job) => {
@@ -201,21 +297,36 @@ export default function JobsScreen() {
             </View>
           </View>
 
-          {jobs.map((job, index) => (
-            <Animated.View 
-              key={job.id} 
-              entering={FadeInDown.delay(100 + index * 50).springify()}
-            >
-              <JobDetailCard
-                job={job}
-                isFirst={index === 0}
-                onNavigate={() => handleNavigate(job)}
-                onDetails={() => handleDetails(job)}
-                onComplete={() => handleComplete(job)}
-                onViewHistory={() => handleViewHistory(job)}
-              />
-            </Animated.View>
-          ))}
+          {isLoadingJobs ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={BrandColors.azureBlue} />
+              <ThemedText style={styles.loadingText}>Loading jobs...</ThemedText>
+            </View>
+          ) : jobs.length > 0 ? (
+            jobs.map((item, index) => (
+              <Animated.View 
+                key={item.id} 
+                entering={FadeInDown.delay(100 + index * 50).springify()}
+              >
+                <JobDetailCard
+                  job={item}
+                  isFirst={index === 0}
+                  onNavigate={() => handleNavigateToJob(item)}
+                  onDetails={() => console.log('View job details:', item.id)}
+                  onComplete={() => handleCompleteJob(item.id)}
+                  onViewHistory={() => handleViewHistory(item)}
+                />
+              </Animated.View>
+            ))
+          ) : (
+            <View style={styles.emptyContainer}>
+              <Feather name="check-circle" size={48} color={BrandColors.emerald} />
+              <ThemedText style={styles.emptyTitle}>All Caught Up!</ThemedText>
+              <ThemedText style={[styles.emptyText, { color: theme.textSecondary }]}>
+                No jobs scheduled for today
+              </ThemedText>
+            </View>
+          )}
         </View>
       </ScrollView>
 
@@ -262,6 +373,29 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   pageSubtitle: {
+    fontSize: 14,
+    marginTop: Spacing.xs,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing['2xl'],
+  },
+  loadingText: {
+    marginTop: Spacing.md,
+    fontSize: 16,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing['2xl'],
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: Spacing.md,
+  },
+  emptyText: {
     fontSize: 14,
     marginTop: Spacing.xs,
   },

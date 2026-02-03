@@ -533,15 +533,6 @@ export default function HomeScreen() {
           </View>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(250).springify()}>
-          <View style={styles.todaysJobsHeader}>
-            <ThemedText style={styles.sectionTitle}>Today's Jobs</ThemedText>
-            <View style={[styles.reorderBadge, { borderColor: theme.border }]}>
-              <Feather name="menu" size={14} color={theme.textSecondary} />
-              <ThemedText style={[styles.reorderText, { color: theme.textSecondary }]}>Drag to reorder</ThemedText>
-            </View>
-          </View>
-        </Animated.View>
       </View>
     </View>
   );
@@ -697,39 +688,6 @@ export default function HomeScreen() {
         alwaysBounceVertical={true}
       >
         {renderHeader()}
-        {jobs.length > 0 ? (
-          <View style={styles.jobsContainer}>
-            {jobs.map((item, index) => (
-              <RepairJobCard
-                key={item.id}
-                job={item}
-                isFirst={index === 0}
-                onPress={() => console.log('View job details:', item.id)}
-                onNavigate={() => handleNavigateToJob(item)}
-                onComplete={() => handleCompleteJob(item.id)}
-                onAccept={() => handleAcceptJob(item.id)}
-                onDismiss={() => handleDismissJob(item.id)}
-              />
-            ))}
-          </View>
-        ) : (
-          <View style={styles.emptyJobsContainer}>
-            {isLoadingJobs ? (
-              <>
-                <ActivityIndicator size="large" color={BrandColors.azureBlue} />
-                <ThemedText style={styles.emptyJobsTitle}>Loading Jobs...</ThemedText>
-              </>
-            ) : (
-              <>
-                <Feather name="check-circle" size={48} color={BrandColors.emerald} />
-                <ThemedText style={styles.emptyJobsTitle}>All Caught Up!</ThemedText>
-                <ThemedText style={[styles.emptyJobsText, { color: theme.textSecondary }]}>
-                  No jobs scheduled for today
-                </ThemedText>
-              </>
-            )}
-          </View>
-        )}
       </ScrollView>
       <ChatFAB
         onPress={() => navigation.navigate('Chat')}

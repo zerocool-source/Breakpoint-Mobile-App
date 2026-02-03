@@ -660,7 +660,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ${finalTitle},
           ${description || ''},
           ${JSON.stringify(finalItems)},
-          ${finalPhotos.length > 0 ? finalPhotos : sql`NULL`},
+          ${finalPhotos.length > 0 ? sql`ARRAY[${sql.join(finalPhotos.map(p => sql`${p}`), sql`,`)}]::text[]` : sql`NULL`},
           ${Math.round((subtotal || 0) * 100)},
           ${discountType || 'percent'},
           ${discountValue || 0},

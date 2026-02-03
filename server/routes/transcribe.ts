@@ -10,8 +10,7 @@ import { join } from "path";
 const router = Router();
 
 const openai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 async function convertToWav(audioBuffer: Buffer): Promise<Buffer> {

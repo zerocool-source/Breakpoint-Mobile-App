@@ -117,12 +117,17 @@ export default function EstimatesScreen() {
         style={styles.aceCreateCard}
         accessibilityLabel="Create with Ace AI"
       >
-        <View style={{ pointerEvents: 'none' }}>
-          <Image
-            source={require('../../../assets/images/ace-ai-button.png')}
-            style={styles.aceCardImage}
-            resizeMode="contain"
-          />
+        <Image
+          source={require('../../../assets/images/ace-ai-button.png')}
+          style={styles.aceCardImage}
+          resizeMode="cover"
+        />
+        <View style={styles.aceOverlay}>
+          <View style={styles.aceIconRow}>
+            <Feather name="zap" size={24} color="#fff" />
+            <ThemedText style={styles.aceOverlayTitle}>Create with Ace AI</ThemedText>
+          </View>
+          <ThemedText style={styles.aceOverlaySubtitle}>AI-powered estimate builder</ThemedText>
         </View>
       </Pressable>
 
@@ -210,14 +215,41 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   aceCreateCard: {
+    width: '100%',
+    height: 140,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: BorderRadius.lg,
     overflow: 'hidden',
+    backgroundColor: BrandColors.azureBlue,
   },
   aceCardImage: {
+    position: 'absolute',
     width: '100%',
-    height: 140,
+    height: '100%',
+  },
+  aceOverlay: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 120, 212, 0.7)',
+  },
+  aceIconRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  aceOverlayTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  aceOverlaySubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginTop: Spacing.xs,
   },
   aceCardContent: {
     flex: 1,

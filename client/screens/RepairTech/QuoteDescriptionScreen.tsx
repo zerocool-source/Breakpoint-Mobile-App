@@ -155,7 +155,9 @@ export default function QuoteDescriptionScreen() {
   };
 
   const generateDescription = async () => {
+    console.log('[Generate] Called - lineItems:', lineItems.length, 'voiceInput:', voiceInput.trim().length);
     if (lineItems.length === 0 && !voiceInput.trim()) {
+      console.log('[Generate] Early return - no items or voice input');
       return;
     }
 
@@ -206,6 +208,8 @@ Property: ${propertyName}
 Write 3-5 paragraphs explaining the work in a way that clearly communicates the scope, value, and any legal requirements. Start with "Dear HOA Manager,"`;
 
       const apiUrl = getLocalApiUrl();
+      console.log('[Generate] Making API call to:', joinUrl(apiUrl, '/api/ai-product-search'));
+      console.log('[Generate] Prompt length:', prompt.length);
       const response = await fetch(joinUrl(apiUrl, '/api/ai-product-search'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -217,15 +221,21 @@ Write 3-5 paragraphs explaining the work in a way that clearly communicates the 
         }),
       });
 
-      if (!response.ok) throw new Error('Generation failed');
+      console.log('[Generate] Response status:', response.status);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[Generate] API error:', errorText);
+        throw new Error('Generation failed');
+      }
 
       const data = await response.json();
+      console.log('[Generate] Response data:', data);
       if (data.description) {
         setDescription(data.description);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
     } catch (error) {
-      console.error('Failed to generate description:', error);
+      console.error('[Generate] Failed to generate description:', error);
     } finally {
       setIsGenerating(false);
     }
@@ -353,29 +363,31 @@ Write 3-5 paragraphs explaining the work in a way that clearly communicates the 
             </ThemedText>
           </View>
 
-          {voiceInput ? (
-            <View style={styles.voiceInputDisplay}>
-              <ThemedText style={styles.voiceInputLabel}>Your instructions:</ThemedText>
-              <TextInput
-                style={styles.voiceInputText}
-                value={voiceInput}
-                onChangeText={setVoiceInput}
-                multiline
-                placeholder="Edit your voice input here..."
-                placeholderTextColor={ESTIMATE_COLORS.textSlate400}
-              />
+          <View style={styles.voiceInputDisplay}>
+            <ThemedText style={styles.voiceInputLabel}>
+              {Platform.OS === 'web' ? 'Type your instructions:' : 'Or type your instructions:'}
+            </ThemedText>
+            <TextInput
+              style={styles.voiceInputText}
+              value={voiceInput}
+              onChangeText={setVoiceInput}
+              multiline
+              placeholder="E.g., Replace the main pump and filter system. Include compliance requirements..."
+              placeholderTextColor={ESTIMATE_COLORS.textSlate400}
+            />
+            {voiceInput.trim().length > 0 ? (
               <Pressable 
                 onPress={() => setVoiceInput('')}
                 style={styles.clearVoiceButton}
               >
                 <Feather name="x" size={16} color={ESTIMATE_COLORS.textSlate400} />
               </Pressable>
-            </View>
-          ) : null}
+            ) : null}
+          </View>
 
           <Pressable
             onPress={generateDescription}
-            style={[styles.generateButton, isGenerating && styles.generateButtonDisabled]}
+            style={[styles.generateButton, (isGenerating || (lineItems.length === 0 && !voiceInput.trim())) && styles.generateButtonDisabled]}
             disabled={isGenerating || (lineItems.length === 0 && !voiceInput.trim())}
           >
             {isGenerating ? (

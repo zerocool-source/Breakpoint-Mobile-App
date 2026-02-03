@@ -43,6 +43,13 @@ Breakpoint Commercial Pool Systems is a mobile-first field service management ap
     - **Heritage Products Catalog**: Over 1,457 pool products with role-based pricing visibility and search/filtering capabilities.
     - **Ace AI Assistant**: AI-powered estimate creation with voice input, personalized self-learning based on user interactions, and web-enhanced product search. Includes a Quote Description Screen with HOA-friendly/professional language toggles and California Pool Code references.
     - **Pool Regulations Database**: Stores California pool codes with layman's explanations for integration into AI-generated quotes.
+    - **Estimate Templates System**: Database table (`estimate_templates`) storing example estimates that the AI uses as reference for format and pricing. Templates include intro text, line items organized by section (SPA, POOL, WADER), labor rates, and closing terms.
+
+### AI Endpoints
+- `GET /api/ai-product-search/templates` - Retrieve estimate templates for AI reference
+- `POST /api/ai-product-search/generate-estimate` - Generate professional estimates using templates
+- `POST /api/ai-product-search/web-search` - Search for real product information and pricing
+- `POST /api/ai-product-search/web-info` - Get product specifications and compatibility info
 
 ## External Dependencies
 - **Database**: PostgreSQL

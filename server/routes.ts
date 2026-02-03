@@ -26,13 +26,24 @@ const photoStorage = multer.diskStorage({
 
 const photoUpload = multer({
   storage: photoStorage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  limits: { fileSize: 20 * 1024 * 1024 }, // 20MB limit for high-res photos
   fileFilter: (req, file, cb) => {
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-    if (allowedTypes.includes(file.mimetype)) {
+    // Accept all common image formats including iPhone HEIC/HEIF
+    const allowedTypes = [
+      'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
+      'image/heic', 'image/heif', 'image/heic-sequence', 'image/heif-sequence',
+      'image/tiff', 'image/bmp', 'image/svg+xml',
+      'application/octet-stream' // Fallback for unrecognized types
+    ];
+    // Also check file extension for HEIC files that may have wrong mime type
+    const ext = path.extname(file.originalname).toLowerCase();
+    const allowedExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic', '.heif', '.tiff', '.bmp', '.svg'];
+    
+    if (allowedTypes.includes(file.mimetype) || allowedExts.includes(ext)) {
       cb(null, true);
     } else {
-      cb(new Error('Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed.'));
+      console.log('[Photo Upload] Rejected file type:', file.mimetype, 'ext:', ext);
+      cb(new Error(`Invalid file type: ${file.mimetype}. Supported: JPEG, PNG, GIF, WebP, HEIC, HEIF, TIFF, BMP.`));
     }
   }
 });

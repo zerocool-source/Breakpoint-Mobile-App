@@ -907,16 +907,52 @@ export default function AceEstimateBuilderScreen() {
       const apiUrl = getLocalApiUrl();
       const formData = new FormData();
       
+      // Map file extensions to proper MIME types
+      const getMimeType = (filename: string): string => {
+        const ext = filename.split('.').pop()?.toLowerCase() || '';
+        const mimeTypes: Record<string, string> = {
+          'jpg': 'image/jpeg',
+          'jpeg': 'image/jpeg',
+          'png': 'image/png',
+          'gif': 'image/gif',
+          'webp': 'image/webp',
+          'heic': 'image/heic',
+          'heif': 'image/heif',
+          'tiff': 'image/tiff',
+          'tif': 'image/tiff',
+          'bmp': 'image/bmp',
+        };
+        return mimeTypes[ext] || 'image/jpeg';
+      };
+      
       for (const photo of photosToUpload) {
         const filename = photo.uri.split('/').pop() || `photo-${Date.now()}.jpg`;
-        const match = /\.(\w+)$/.exec(filename);
-        const type = match ? `image/${match[1]}` : 'image/jpeg';
+        const type = getMimeType(filename);
         
-        formData.append('photos', {
-          uri: photo.uri,
-          name: filename,
-          type,
-        } as any);
+        if (Platform.OS === 'web') {
+          // On web, fetch the blob and create a File object
+          try {
+            const response = await fetch(photo.uri);
+            const blob = await response.blob();
+            const file = new File([blob], filename, { type });
+            formData.append('photos', file);
+          } catch (e) {
+            console.error('[Photo Upload] Failed to fetch blob for web:', e);
+            // Fallback: try base64 data URI approach
+            formData.append('photos', {
+              uri: photo.uri,
+              name: filename,
+              type,
+            } as any);
+          }
+        } else {
+          // On native (iOS/Android), use the React Native FormData format
+          formData.append('photos', {
+            uri: photo.uri,
+            name: filename,
+            type,
+          } as any);
+        }
       }
       
       const headers: Record<string, string> = {};
@@ -924,7 +960,7 @@ export default function AceEstimateBuilderScreen() {
         headers['Authorization'] = `Bearer ${authToken}`;
       }
       
-      console.log('[Photo Upload] Uploading', photosToUpload.length, 'photos...');
+      console.log('[Photo Upload] Uploading', photosToUpload.length, 'photos on', Platform.OS);
       const response = await fetch(joinUrl(apiUrl, '/api/photos/upload'), {
         method: 'POST',
         headers,

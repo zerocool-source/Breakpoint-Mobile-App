@@ -156,6 +156,8 @@ export default function AceEstimateBuilderScreen() {
 
   const [showAceModal, setShowAceModal] = useState(false);
   const [showSendConfirmModal, setShowSendConfirmModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [submittedEstimateNumber, setSubmittedEstimateNumber] = useState('');
   const [messages, setMessages] = useState<AceMessage[]>([]);
   
   // Initialize with personalized greeting
@@ -904,6 +906,7 @@ export default function AceEstimateBuilderScreen() {
     }
 
     setIsSubmitting(true);
+    console.log('[Estimate Submit] Starting submission, sendToOffice:', sendToOffice);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     try {
@@ -1009,17 +1012,17 @@ export default function AceEstimateBuilderScreen() {
       }
 
       const result = await response.json();
+      console.log('[Estimate Submit] Server response:', result);
       
       // Update local copy with server ID
-      const updatedEstimate = { ...localEstimate, id: result.estimate?.id || estimateNumber };
+      const updatedEstimate = { ...localEstimate, id: result.estimate?.id || estimateNumber, status: 'pending_approval' };
       await storage.addEstimate(updatedEstimate as any);
       
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert(
-        'Estimate Sent!',
-        `Estimate ${estimateNumber} has been sent to the office for approval.`,
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
-      );
+      
+      // Show custom success modal (works on all platforms including web)
+      setSubmittedEstimateNumber(estimateNumber);
+      setShowSuccessModal(true);
     } catch (error) {
       console.error('Error saving estimate:', error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -1554,11 +1557,11 @@ export default function AceEstimateBuilderScreen() {
             <View style={styles.sendConfirmIconContainer}>
               <Feather name="send" size={32} color={ESTIMATE_COLORS.primary} />
             </View>
-            <ThemedText style={styles.sendConfirmTitle}>Send to Office</ThemedText>
+            <ThemedText style={styles.sendConfirmTitle}>Submit to Office Admin</ThemedText>
             <ThemedText style={styles.sendConfirmMessage}>
-              This estimate will be sent to the office for review. A copy will be saved to your estimates for future reference.
+              This estimate will be submitted to the office admin for review and approval. A copy will be saved to your estimates.
             </ThemedText>
-            <ThemedText style={styles.sendConfirmQuestion}>Do you want to send?</ThemedText>
+            <ThemedText style={styles.sendConfirmQuestion}>Ready to submit?</ThemedText>
             <View style={styles.sendConfirmButtons}>
               <Pressable
                 onPress={() => setShowSendConfirmModal(false)}
@@ -1573,9 +1576,36 @@ export default function AceEstimateBuilderScreen() {
                 }}
                 style={styles.sendConfirmYesBtn}
               >
-                <ThemedText style={styles.sendConfirmYesText}>Yes, Send</ThemedText>
+                <ThemedText style={styles.sendConfirmYesText}>Submit</ThemedText>
               </Pressable>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={showSuccessModal} animationType="fade" transparent onRequestClose={() => {}}>
+        <View style={styles.sendConfirmOverlay}>
+          <View style={styles.sendConfirmModal}>
+            <View style={[styles.sendConfirmIconContainer, { backgroundColor: '#E8F5E9' }]}>
+              <Feather name="check-circle" size={32} color="#4CAF50" />
+            </View>
+            <ThemedText style={styles.sendConfirmTitle}>Submitted to Office Admin</ThemedText>
+            <ThemedText style={styles.sendConfirmMessage}>
+              Estimate {submittedEstimateNumber} has been submitted to the office for review and approval.
+            </ThemedText>
+            <ThemedText style={[styles.sendConfirmQuestion, { color: '#4CAF50' }]}>
+              You will be notified when the admin responds.
+            </ThemedText>
+            <Pressable
+              testID="success-ok-button"
+              onPress={() => {
+                setShowSuccessModal(false);
+                navigation.goBack();
+              }}
+              style={[styles.sendConfirmYesBtn, { width: '100%', backgroundColor: '#4CAF50' }]}
+            >
+              <ThemedText style={styles.sendConfirmYesText}>OK</ThemedText>
+            </Pressable>
           </View>
         </View>
       </Modal>

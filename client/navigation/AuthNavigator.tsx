@@ -6,6 +6,7 @@ import LoginScreen from '@/screens/LoginScreen';
 import RootStackNavigator from '@/navigation/RootStackNavigator';
 import ServiceTechStackNavigator from '@/navigation/ServiceTechStackNavigator';
 import SupervisorStackNavigator from '@/navigation/SupervisorStackNavigator';
+import RepairForemanStackNavigator from '@/navigation/RepairForemanStackNavigator';
 import { useAuth } from '@/context/AuthContext';
 
 export default function AuthNavigator() {
@@ -41,6 +42,10 @@ export default function AuthNavigator() {
     return <SupervisorStackNavigator />;
   }
 
-  // Repair Tech and other roles use the default navigator
+  if (selectedRole === 'repair_foreman') {
+    return <RepairForemanStackNavigator />;
+  }
+
+  // Repair Tech uses the default navigator
   return <RootStackNavigator />;
 }

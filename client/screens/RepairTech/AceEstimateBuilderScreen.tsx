@@ -153,6 +153,7 @@ export default function AceEstimateBuilderScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [showAceModal, setShowAceModal] = useState(false);
+  const [showSendConfirmModal, setShowSendConfirmModal] = useState(false);
   const [messages, setMessages] = useState<AceMessage[]>([]);
   
   // Initialize with personalized greeting
@@ -1417,7 +1418,17 @@ export default function AceEstimateBuilderScreen() {
                 </ThemedText>
               </Pressable>
               <Pressable
-                onPress={() => handleSubmit(true)}
+                onPress={() => {
+                  if (!selectedProperty) {
+                    Alert.alert('Property Required', 'Please select a property for this estimate.');
+                    return;
+                  }
+                  if (lineItems.length === 0) {
+                    Alert.alert('Items Required', 'Please add at least one item to the estimate.');
+                    return;
+                  }
+                  setShowSendConfirmModal(true);
+                }}
                 disabled={isSubmitting}
                 style={styles.saveAndSendButton}
               >
@@ -1485,6 +1496,38 @@ export default function AceEstimateBuilderScreen() {
             selectionMode={true}
             onSelectProduct={handleAddProduct}
           />
+        </View>
+      </Modal>
+
+      <Modal visible={showSendConfirmModal} animationType="fade" transparent onRequestClose={() => setShowSendConfirmModal(false)}>
+        <View style={styles.sendConfirmOverlay}>
+          <View style={styles.sendConfirmModal}>
+            <View style={styles.sendConfirmIconContainer}>
+              <Feather name="send" size={32} color={ESTIMATE_COLORS.primary} />
+            </View>
+            <ThemedText style={styles.sendConfirmTitle}>Send to Office</ThemedText>
+            <ThemedText style={styles.sendConfirmMessage}>
+              This estimate will be sent to the office for review. A copy will be saved to your estimates for future reference.
+            </ThemedText>
+            <ThemedText style={styles.sendConfirmQuestion}>Do you want to send?</ThemedText>
+            <View style={styles.sendConfirmButtons}>
+              <Pressable
+                onPress={() => setShowSendConfirmModal(false)}
+                style={styles.sendConfirmNoBtn}
+              >
+                <ThemedText style={styles.sendConfirmNoText}>No</ThemedText>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setShowSendConfirmModal(false);
+                  handleSubmit(true);
+                }}
+                style={styles.sendConfirmYesBtn}
+              >
+                <ThemedText style={styles.sendConfirmYesText}>Yes, Send</ThemedText>
+              </Pressable>
+            </View>
+          </View>
         </View>
       </Modal>
 
@@ -2539,6 +2582,78 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: ESTIMATE_COLORS.textDark,
+  },
+  sendConfirmOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.xl,
+  },
+  sendConfirmModal: {
+    backgroundColor: ESTIMATE_COLORS.bgWhite,
+    borderRadius: 16,
+    padding: Spacing.xl,
+    width: '100%',
+    maxWidth: 340,
+    alignItems: 'center',
+  },
+  sendConfirmIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: ESTIMATE_COLORS.bgSlate100,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  sendConfirmTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: ESTIMATE_COLORS.textDark,
+    marginBottom: Spacing.sm,
+  },
+  sendConfirmMessage: {
+    fontSize: 14,
+    color: ESTIMATE_COLORS.textSlate500,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: Spacing.md,
+  },
+  sendConfirmQuestion: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: ESTIMATE_COLORS.textDark,
+    marginBottom: Spacing.lg,
+  },
+  sendConfirmButtons: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    width: '100%',
+  },
+  sendConfirmNoBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 10,
+    backgroundColor: ESTIMATE_COLORS.bgSlate100,
+    alignItems: 'center',
+  },
+  sendConfirmNoText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: ESTIMATE_COLORS.textSlate500,
+  },
+  sendConfirmYesBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 10,
+    backgroundColor: ESTIMATE_COLORS.primary,
+    alignItems: 'center',
+  },
+  sendConfirmYesText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
   },
   discountModal: {
     backgroundColor: ESTIMATE_COLORS.bgWhite,

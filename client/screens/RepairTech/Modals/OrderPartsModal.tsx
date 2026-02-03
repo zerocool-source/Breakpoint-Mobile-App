@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -8,14 +8,25 @@ import {
   ScrollView,
   useWindowDimensions,
   Platform,
+  Switch,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { Audio } from 'expo-av';
 
 import { ThemedText } from '@/components/ThemedText';
 import { useTheme } from '@/hooks/useTheme';
+import { useAuth } from '@/context/AuthContext';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
+import { getLocalApiUrl, joinUrl } from '@/lib/query-client';
+
+interface PartItem {
+  id: string;
+  name: string;
+  quantity: number;
+}
 
 interface OrderPartsModalProps {
   visible: boolean;
@@ -23,31 +34,174 @@ interface OrderPartsModalProps {
   onSubmit: (data: any) => void;
 }
 
+type UrgencyLevel = 'Low' | 'Normal' | 'High';
+
 export function OrderPartsModal({ visible, onClose, onSubmit }: OrderPartsModalProps) {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
+  const { token } = useAuth();
   const { height: windowHeight } = useWindowDimensions();
 
   const [property, setProperty] = useState('');
-  const [partName, setPartName] = useState('');
-  const [quantity, setQuantity] = useState('1');
-  const [urgency, setUrgency] = useState('Normal');
+  const [parts, setParts] = useState<PartItem[]>([{ id: '1', name: '', quantity: 1 }]);
+  const [urgency, setUrgency] = useState<UrgencyLevel>('Normal');
   const [notes, setNotes] = useState('');
+  const [deliverToProperty, setDeliverToProperty] = useState(false);
+  const [showUrgencyPicker, setShowUrgencyPicker] = useState(false);
+  
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [activeVoicePartId, setActiveVoicePartId] = useState<string | null>(null);
+  const recordingRef = useRef<Audio.Recording | null>(null);
+
+  const urgencyOptions: UrgencyLevel[] = ['Low', 'Normal', 'High'];
+  
+  const getUrgencyColor = (level: UrgencyLevel) => {
+    switch (level) {
+      case 'High': return BrandColors.danger;
+      case 'Low': return BrandColors.emerald;
+      default: return BrandColors.azureBlue;
+    }
+  };
+
+  const addPart = () => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    setParts([...parts, { id: Date.now().toString(), name: '', quantity: 1 }]);
+  };
+
+  const removePart = (id: string) => {
+    if (parts.length > 1) {
+      if (Platform.OS !== 'web') {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+      setParts(parts.filter(p => p.id !== id));
+    }
+  };
+
+  const updatePartName = (id: string, name: string) => {
+    setParts(parts.map(p => p.id === id ? { ...p, name } : p));
+  };
+
+  const updatePartQuantity = (id: string, delta: number) => {
+    setParts(parts.map(p => {
+      if (p.id === id) {
+        const newQty = Math.max(1, p.quantity + delta);
+        return { ...p, quantity: newQty };
+      }
+      return p;
+    }));
+  };
+
+  const startRecording = async (partId: string) => {
+    try {
+      const permission = await Audio.requestPermissionsAsync();
+      if (!permission.granted) {
+        return;
+      }
+
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+
+      const { recording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
+      
+      recordingRef.current = recording;
+      setIsRecording(true);
+      setActiveVoicePartId(partId);
+      
+      if (Platform.OS !== 'web') {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      }
+    } catch (error) {
+      console.error('Failed to start recording:', error);
+    }
+  };
+
+  const stopRecording = async () => {
+    if (!recordingRef.current || !activeVoicePartId) return;
+
+    setIsRecording(false);
+    setIsTranscribing(true);
+
+    try {
+      await recordingRef.current.stopAndUnloadAsync();
+      const uri = recordingRef.current.getURI();
+      recordingRef.current = null;
+
+      if (uri) {
+        const formData = new FormData();
+        formData.append('audio', {
+          uri,
+          type: 'audio/m4a',
+          name: 'recording.m4a',
+        } as any);
+
+        const apiUrl = getLocalApiUrl();
+        const response = await fetch(joinUrl(apiUrl, '/api/transcribe'), {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+          body: formData,
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.text) {
+            updatePartName(activeVoicePartId, data.text);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to transcribe:', error);
+    } finally {
+      setIsTranscribing(false);
+      setActiveVoicePartId(null);
+    }
+  };
 
   const handleSubmit = () => {
+    const validParts = parts.filter(p => p.name.trim());
+    if (validParts.length === 0) return;
+
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
-    onSubmit({ property, partName, quantity, urgency, notes });
+    onSubmit({ 
+      property, 
+      parts: validParts, 
+      urgency, 
+      notes,
+      deliverToProperty,
+    });
+    resetForm();
+    onClose();
+  };
+
+  const resetForm = () => {
+    setProperty('');
+    setParts([{ id: '1', name: '', quantity: 1 }]);
+    setUrgency('Normal');
+    setNotes('');
+    setDeliverToProperty(false);
+  };
+
+  const handleClose = () => {
+    resetForm();
     onClose();
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
       <View style={styles.overlay}>
         <View style={[styles.container, { backgroundColor: theme.surface, maxHeight: windowHeight * 0.9 }]}>
           <View style={styles.header}>
-            <Pressable onPress={onClose} style={styles.cancelButton}>
+            <Pressable onPress={handleClose} style={styles.cancelButton}>
               <Feather name="chevron-left" size={20} color={BrandColors.azureBlue} />
               <ThemedText style={styles.cancelText}>Cancel</ThemedText>
             </Pressable>
@@ -73,48 +227,129 @@ export function OrderPartsModal({ visible, onClose, onSubmit }: OrderPartsModalP
             </View>
 
             <View style={styles.field}>
-              <ThemedText style={[styles.label, { color: theme.textSecondary }]}>Part Name/Description</ThemedText>
-              <TextInput
-                style={[styles.input, { backgroundColor: theme.backgroundRoot, borderColor: theme.border, color: theme.text }]}
-                placeholder="Enter part name or description"
-                placeholderTextColor={theme.textSecondary}
-                value={partName}
-                onChangeText={setPartName}
-              />
-            </View>
-
-            <View style={styles.field}>
-              <ThemedText style={[styles.label, { color: theme.textSecondary }]}>Quantity</ThemedText>
-              <View style={[styles.quantityField, { backgroundColor: theme.backgroundRoot, borderColor: theme.border }]}>
-                <TextInput
-                  style={[styles.quantityInput, { color: theme.text }]}
-                  value={quantity}
-                  onChangeText={setQuantity}
-                  keyboardType="number-pad"
-                />
-                <View style={styles.quantityButtons}>
-                  <Pressable
-                    onPress={() => setQuantity(String(Math.max(1, parseInt(quantity) - 1)))}
-                    style={styles.quantityButton}
-                  >
-                    <Feather name="minus" size={16} color={theme.textSecondary} />
-                  </Pressable>
-                  <Pressable
-                    onPress={() => setQuantity(String(parseInt(quantity) + 1))}
-                    style={styles.quantityButton}
-                  >
-                    <Feather name="plus" size={16} color={theme.textSecondary} />
-                  </Pressable>
-                </View>
+              <View style={styles.sectionHeader}>
+                <ThemedText style={[styles.label, { color: theme.textSecondary }]}>Parts ({parts.length})</ThemedText>
+                <Pressable onPress={addPart} style={[styles.addButton, { backgroundColor: BrandColors.azureBlue }]}>
+                  <Feather name="plus" size={16} color="#FFFFFF" />
+                  <ThemedText style={styles.addButtonText}>Add Part</ThemedText>
+                </Pressable>
               </View>
+
+              {parts.map((part, index) => (
+                <View key={part.id} style={[styles.partCard, { backgroundColor: theme.backgroundRoot, borderColor: theme.border }]}>
+                  <View style={styles.partHeader}>
+                    <ThemedText style={[styles.partNumber, { color: theme.textSecondary }]}>Part {index + 1}</ThemedText>
+                    {parts.length > 1 ? (
+                      <Pressable onPress={() => removePart(part.id)} style={styles.removeButton}>
+                        <Feather name="x" size={18} color={BrandColors.danger} />
+                      </Pressable>
+                    ) : null}
+                  </View>
+                  
+                  <View style={styles.partInputRow}>
+                    <TextInput
+                      style={[styles.partNameInput, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }]}
+                      placeholder="Enter part name or description..."
+                      placeholderTextColor={theme.textSecondary}
+                      value={part.name}
+                      onChangeText={(text) => updatePartName(part.id, text)}
+                      multiline
+                      numberOfLines={3}
+                      textAlignVertical="top"
+                    />
+                    <Pressable
+                      onPressIn={() => startRecording(part.id)}
+                      onPressOut={stopRecording}
+                      style={[
+                        styles.voiceButton,
+                        { backgroundColor: isRecording && activeVoicePartId === part.id ? BrandColors.danger : BrandColors.azureBlue }
+                      ]}
+                    >
+                      {isTranscribing && activeVoicePartId === part.id ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      ) : (
+                        <Feather 
+                          name={isRecording && activeVoicePartId === part.id ? "mic-off" : "mic"} 
+                          size={20} 
+                          color="#FFFFFF" 
+                        />
+                      )}
+                    </Pressable>
+                  </View>
+
+                  <View style={styles.quantityRow}>
+                    <ThemedText style={[styles.quantityLabel, { color: theme.textSecondary }]}>Qty:</ThemedText>
+                    <View style={[styles.quantityField, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                      <Pressable
+                        onPress={() => updatePartQuantity(part.id, -1)}
+                        style={styles.quantityButton}
+                      >
+                        <Feather name="minus" size={16} color={theme.textSecondary} />
+                      </Pressable>
+                      <ThemedText style={[styles.quantityValue, { color: theme.text }]}>{part.quantity}</ThemedText>
+                      <Pressable
+                        onPress={() => updatePartQuantity(part.id, 1)}
+                        style={styles.quantityButton}
+                      >
+                        <Feather name="plus" size={16} color={theme.textSecondary} />
+                      </Pressable>
+                    </View>
+                  </View>
+                </View>
+              ))}
             </View>
 
             <View style={styles.field}>
               <ThemedText style={[styles.label, { color: theme.textSecondary }]}>Urgency</ThemedText>
-              <Pressable style={[styles.selectField, { backgroundColor: theme.backgroundRoot, borderColor: theme.border }]}>
-                <ThemedText style={{ color: theme.text }}>{urgency}</ThemedText>
+              <Pressable 
+                style={[styles.selectField, { backgroundColor: theme.backgroundRoot, borderColor: theme.border }]}
+                onPress={() => setShowUrgencyPicker(!showUrgencyPicker)}
+              >
+                <View style={styles.urgencyDisplay}>
+                  <View style={[styles.urgencyDot, { backgroundColor: getUrgencyColor(urgency) }]} />
+                  <ThemedText style={{ color: theme.text }}>{urgency}</ThemedText>
+                </View>
                 <Feather name="chevron-down" size={18} color={theme.textSecondary} />
               </Pressable>
+              
+              {showUrgencyPicker ? (
+                <View style={[styles.urgencyPicker, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                  {urgencyOptions.map((option) => (
+                    <Pressable
+                      key={option}
+                      style={[
+                        styles.urgencyOption,
+                        urgency === option && { backgroundColor: theme.backgroundRoot }
+                      ]}
+                      onPress={() => {
+                        setUrgency(option);
+                        setShowUrgencyPicker(false);
+                        if (Platform.OS !== 'web') {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        }
+                      }}
+                    >
+                      <View style={[styles.urgencyDot, { backgroundColor: getUrgencyColor(option) }]} />
+                      <ThemedText style={{ color: theme.text }}>{option}</ThemedText>
+                    </Pressable>
+                  ))}
+                </View>
+              ) : null}
+            </View>
+
+            <View style={styles.field}>
+              <View style={[styles.deliveryRow, { backgroundColor: theme.backgroundRoot, borderColor: theme.border }]}>
+                <View style={styles.deliveryInfo}>
+                  <Feather name="truck" size={20} color={BrandColors.azureBlue} />
+                  <ThemedText style={[styles.deliveryText, { color: theme.text }]}>Deliver to Property</ThemedText>
+                </View>
+                <Switch
+                  value={deliverToProperty}
+                  onValueChange={setDeliverToProperty}
+                  trackColor={{ false: theme.border, true: BrandColors.azureBlue }}
+                  thumbColor="#FFFFFF"
+                />
+              </View>
             </View>
 
             <View style={styles.field}>
@@ -134,14 +369,19 @@ export function OrderPartsModal({ visible, onClose, onSubmit }: OrderPartsModalP
 
           <View style={[styles.footer, { paddingBottom: insets.bottom + Spacing.md, backgroundColor: theme.surface }]}>
             <Pressable
-              style={[styles.submitButton, { backgroundColor: BrandColors.vividTangerine }]}
+              style={[
+                styles.submitButton, 
+                { backgroundColor: BrandColors.vividTangerine },
+                parts.every(p => !p.name.trim()) && styles.submitButtonDisabled
+              ]}
               onPress={handleSubmit}
+              disabled={parts.every(p => !p.name.trim())}
             >
               <ThemedText style={styles.submitButtonText}>Submit Order</ThemedText>
             </Pressable>
             <Pressable
               style={[styles.cancelActionButton, { borderColor: theme.border }]}
-              onPress={onClose}
+              onPress={handleClose}
             >
               <View style={[styles.handle, { backgroundColor: theme.textSecondary }]} />
               <ThemedText style={styles.cancelActionText}>Cancel</ThemedText>
@@ -197,6 +437,12 @@ const styles = StyleSheet.create({
   field: {
     marginBottom: Spacing.lg,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+  },
   label: {
     fontSize: 14,
     fontWeight: '500',
@@ -209,6 +455,85 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     fontSize: 15,
   },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.sm,
+    gap: 4,
+  },
+  addButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  partCard: {
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    padding: Spacing.md,
+    marginBottom: Spacing.sm,
+  },
+  partHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+  },
+  partNumber: {
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+  },
+  removeButton: {
+    padding: Spacing.xs,
+  },
+  partInputRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  partNameInput: {
+    flex: 1,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.sm,
+    borderWidth: 1,
+    fontSize: 15,
+    minHeight: 80,
+  },
+  voiceButton: {
+    width: 48,
+    height: 48,
+    borderRadius: BorderRadius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quantityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  quantityLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  quantityField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: BorderRadius.sm,
+    borderWidth: 1,
+  },
+  quantityButton: {
+    padding: Spacing.sm,
+  },
+  quantityValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    paddingHorizontal: Spacing.md,
+    minWidth: 40,
+    textAlign: 'center',
+  },
   selectField: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -218,25 +543,46 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.sm,
     borderWidth: 1,
   },
-  quantityField: {
+  urgencyDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  urgencyDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  urgencyPicker: {
+    marginTop: Spacing.xs,
+    borderRadius: BorderRadius.sm,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  urgencyOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+  },
+  deliveryRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
+    paddingVertical: Spacing.md,
     borderRadius: BorderRadius.sm,
     borderWidth: 1,
   },
-  quantityInput: {
-    fontSize: 16,
-    flex: 1,
-    paddingVertical: Spacing.sm,
-  },
-  quantityButtons: {
+  deliveryInfo: {
     flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
   },
-  quantityButton: {
-    padding: Spacing.sm,
+  deliveryText: {
+    fontSize: 15,
+    fontWeight: '500',
   },
   textArea: {
     paddingHorizontal: Spacing.md,
@@ -257,6 +603,9 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     alignItems: 'center',
     marginBottom: Spacing.sm,
+  },
+  submitButtonDisabled: {
+    opacity: 0.5,
   },
   submitButtonText: {
     color: '#FFFFFF',

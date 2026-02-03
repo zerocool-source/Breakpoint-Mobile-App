@@ -17,6 +17,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
 import { getLocalApiUrl, joinUrl } from '@/lib/query-client';
+import { safeApiRequest, checkNetworkConnection, getErrorMessage } from '@/lib/apiHelper';
 import type { Job } from '@/types';
 
 interface JobDetailCardProps {
@@ -198,22 +199,32 @@ export default function JobsScreen() {
   };
 
   const handleAcceptJob = async (jobId: string) => {
-    try {
-      const apiUrl = getLocalApiUrl();
-      const response = await fetch(joinUrl(apiUrl, `/api/jobs/${jobId}/accept`), {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      if (!response.ok) throw new Error('Failed to accept job');
+    const isConnected = await checkNetworkConnection();
+    if (!isConnected) {
+      Alert.alert('No Connection', 'Please check your internet connection and try again.');
+      return;
+    }
+
+    const result = await safeApiRequest(`/api/jobs/${jobId}/accept`, {
+      method: 'PATCH',
+      showAlerts: false,
+    });
+
+    if (result.success) {
       refetchJobs();
       if (Platform.OS !== 'web') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to accept job. Please try again.');
+    } else {
+      if (result.status === 401) {
+        Alert.alert('Session Expired', 'Please log in again to continue.');
+      } else if (result.status === 403) {
+        Alert.alert('Access Denied', 'You don\'t have permission to accept this job.');
+      } else if (result.status && result.status >= 500) {
+        Alert.alert('Service Unavailable', 'The server is temporarily unavailable. Please try again in a moment.');
+      } else {
+        Alert.alert('Error', result.error || 'Failed to accept job. Please try again.');
+      }
     }
   };
 
@@ -227,22 +238,30 @@ export default function JobsScreen() {
           text: 'Dismiss', 
           style: 'destructive',
           onPress: async () => {
-            try {
-              const apiUrl = getLocalApiUrl();
-              const response = await fetch(joinUrl(apiUrl, `/api/jobs/${jobId}/dismiss`), {
-                method: 'PATCH',
-                headers: {
-                  'Authorization': `Bearer ${token}`,
-                  'Content-Type': 'application/json',
-                },
-              });
-              if (!response.ok) throw new Error('Failed to dismiss job');
+            const isConnected = await checkNetworkConnection();
+            if (!isConnected) {
+              Alert.alert('No Connection', 'Please check your internet connection and try again.');
+              return;
+            }
+
+            const result = await safeApiRequest(`/api/jobs/${jobId}/dismiss`, {
+              method: 'PATCH',
+              showAlerts: false,
+            });
+
+            if (result.success) {
               refetchJobs();
               if (Platform.OS !== 'web') {
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
               }
-            } catch (error) {
-              Alert.alert('Error', 'Failed to dismiss job.');
+            } else {
+              if (result.status === 401) {
+                Alert.alert('Session Expired', 'Please log in again to continue.');
+              } else if (result.status && result.status >= 500) {
+                Alert.alert('Service Unavailable', 'The server is temporarily unavailable. Please try again.');
+              } else {
+                Alert.alert('Error', result.error || 'Failed to dismiss job.');
+              }
             }
           }
         }

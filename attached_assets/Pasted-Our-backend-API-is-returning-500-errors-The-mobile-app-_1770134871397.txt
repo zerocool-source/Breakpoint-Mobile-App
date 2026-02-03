@@ -1,0 +1,51 @@
+Our backend API is returning 500 errors. The mobile app needs to handle these gracefully and also make sure it's sending correct requests. Please audit and fix the mobile app's API integration:
+
+1. API ERROR HANDLING — Search the entire client/ codebase for API calls (fetch, axios, or any HTTP client). For EVERY API call:
+   - Wrap in try/catch
+   - Check response.ok or response.status before parsing JSON
+   - If status is 500, show a user-friendly error message like "Service temporarily unavailable, please try again"
+   - If status is 401, redirect to login
+   - If status is 403, show "Access denied" message
+   - Never let the raw error JSON bubble up to the user
+   - Add a global API error handler/interceptor if we're using axios
+
+2. API BASE URL — Check that the mobile app points to the correct API URL:
+   - Look for the API base URL configuration (likely in a config file, .env, or constants file)
+   - Make sure it points to the correct Replit URL for apiV2
+   - Make sure it uses HTTPS, not HTTP
+   - If there's both a dev and prod URL, make sure the right one is active
+
+3. AUTH TOKEN HANDLING — Check that:
+   - The JWT token is stored securely (AsyncStorage or SecureStore)
+   - The token is included in ALL authenticated API requests as "Authorization: Bearer TOKEN"
+   - If a token is expired or invalid, the app handles the 401 gracefully and redirects to login
+   - The token refresh logic works (if applicable)
+
+4. AI CHAT FEATURE — If the mobile app has a poolbrain/AI chat feature that calls the API:
+   - Make sure it calls the BACKEND route (e.g., /api/ai/chat), NOT the Anthropic API directly
+   - The mobile app should NEVER have the Anthropic API key — it should go through the backend
+   - Add loading states while waiting for AI responses
+   - Add timeout handling (AI responses can take 10-30 seconds)
+   - Show a retry button if the AI call fails
+
+5. SERVICE JOB ACCEPT/DISMISS — The recent commit "Add ability to accept or dismiss service jobs with visual fe..." needs to be verified:
+   - Check the accept/dismiss API calls send the correct payload
+   - Verify the UI updates correctly after accepting or dismissing
+   - Handle the case where the API returns an error
+
+6. OFFLINE HANDLING — Add basic offline detection:
+```typescript
+   import NetInfo from '@react-native-community/netinfo';
+   
+   // Before API calls, check connectivity
+   const netState = await NetInfo.fetch();
+   if (!netState.isConnected) {
+     // Show offline message instead of making the call
+     Alert.alert('No Connection', 'Please check your internet connection');
+     return;
+   }
+```
+
+7. SCROLLING FIX — The recent commit mentions "Improve scrolling functionality on the home screen for all..." — verify this works on both iOS and Android, and that FlatList/ScrollView performance is optimized (use keyExtractor, getItemLayout where possible).
+
+Fix all issues and show me what changed.

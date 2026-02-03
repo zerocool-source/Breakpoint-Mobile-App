@@ -8,6 +8,7 @@ import transcribeRouter from "./routes/transcribe";
 import aiProductSearchRouter from "./routes/ai-product-search";
 import aiLearningRouter from "./routes/ai-learning";
 import poolRegulationsRouter from "./routes/pool-regulations";
+import poolbrainProductsRouter from "./routes/poolbrain-products";
 
 // Render API base URLs for proxy
 const RENDER_API_URL = process.env.RENDER_API_URL || "https://breakpoint-api-v2.onrender.com";
@@ -123,6 +124,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/ai-product-search", aiProductSearchRouter);
   app.use("/api/ai-learning", aiLearningRouter);
   app.use("/api/pool-regulations", poolRegulationsRouter);
+  app.use("/api/poolbrain", poolbrainProductsRouter);
 
   app.get("/api/properties", authMiddleware, async (req: AuthenticatedRequest, res) => {
     try {

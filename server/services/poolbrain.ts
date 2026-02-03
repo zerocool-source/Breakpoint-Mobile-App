@@ -1,7 +1,11 @@
 // Using global fetch (Node 18+)
 
 const POOLBRAIN_API_BASE = 'https://prodapi.poolbrain.com';
+// Try Heritage API key first (from Pool Brain integration), then fallback to POOLBRAIN_API_KEY
+const HERITAGE_API_KEY = process.env.HERITAGE_API_KEY;
 const POOLBRAIN_API_KEY = process.env.POOLBRAIN_API_KEY;
+const API_KEY = HERITAGE_API_KEY || POOLBRAIN_API_KEY;
+const HERITAGE_ACCOUNT_ID = '68532'; // Heritage Pool Supply Corona branch
 
 export interface PoolBrainProduct {
   id?: number;
@@ -76,30 +80,32 @@ export interface PoolBrainApiResponse<T> {
 }
 
 async function makePoolBrainRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  if (!POOLBRAIN_API_KEY) {
-    throw new Error('POOLBRAIN_API_KEY is not configured');
+  if (!API_KEY) {
+    throw new Error('HERITAGE_API_KEY or POOLBRAIN_API_KEY is not configured');
   }
 
   const url = `${POOLBRAIN_API_BASE}${endpoint}`;
   
-  console.log(`[Pool Brain] Making request to: ${url}`);
-  console.log(`[Pool Brain] Using API key: ${POOLBRAIN_API_KEY.substring(0, 8)}...`);
+  console.log(`[Heritage/Pool Brain] Making request to: ${url}`);
+  console.log(`[Heritage/Pool Brain] Using API key: ${API_KEY.substring(0, 8)}...`);
+  console.log(`[Heritage/Pool Brain] Account ID: ${HERITAGE_ACCOUNT_ID}`);
   
   const response = await fetch(url, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'Authorization': `Bearer ${POOLBRAIN_API_KEY}`,
-      'X-API-Key': POOLBRAIN_API_KEY,
+      'Authorization': `Bearer ${API_KEY}`,
+      'X-API-Key': API_KEY,
+      'X-Account-ID': HERITAGE_ACCOUNT_ID,
       ...options.headers,
     },
   });
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error(`Pool Brain API error: ${response.status} - ${errorText}`);
-    throw new Error(`Pool Brain API error: ${response.status}`);
+    console.error(`Heritage/Pool Brain API error: ${response.status} - ${errorText}`);
+    throw new Error(`Heritage/Pool Brain API error: ${response.status} - ${errorText}`);
   }
 
   return response.json() as Promise<T>;

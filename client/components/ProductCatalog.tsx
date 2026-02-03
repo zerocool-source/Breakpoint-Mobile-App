@@ -398,53 +398,56 @@ export function ProductCatalog({ role, onSelectProduct, selectionMode = false }:
       ) : null}
 
       {serviceAvailable ? (
-        <FlatList
-          data={categories}
-        renderItem={renderCategoryChip}
-        keyExtractor={(item) => item}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.categoryList}
-        contentContainerStyle={styles.categoryListContent}
-      />
+        <>
+          <FlatList
+            data={categories}
+            renderItem={renderCategoryChip}
+            keyExtractor={(item) => item}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.categoryList}
+            contentContainerStyle={styles.categoryListContent}
+          />
 
-      {selectedCategory && subcategories.length > 0 ? (
-        <FlatList
-          data={subcategories}
-          renderItem={renderSubcategoryChip}
-          keyExtractor={(item) => item}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.subcategoryList}
-          contentContainerStyle={styles.categoryListContent}
-        />
-      ) : null}
+          {selectedCategory && subcategories.length > 0 ? (
+            <FlatList
+              data={subcategories}
+              renderItem={renderSubcategoryChip}
+              keyExtractor={(item) => item}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.subcategoryList}
+              contentContainerStyle={styles.categoryListContent}
+            />
+          ) : null}
 
-      <View style={styles.resultsHeader}>
-        <ThemedText style={[styles.resultsCount, { color: theme.textSecondary }]}>
-          {filteredProducts.length} products
-        </ThemedText>
-        {!showPricing ? (
-          <View style={styles.noPricingBadge}>
-            <Feather name="eye-off" size={12} color={theme.textSecondary} />
-            <ThemedText style={[styles.noPricingText, { color: theme.textSecondary }]}>
-              Pricing hidden
+          <View style={styles.resultsHeader}>
+            <ThemedText style={[styles.resultsCount, { color: theme.textSecondary }]}>
+              {filteredProducts.length} products
             </ThemedText>
+            {!showPricing ? (
+              <View style={styles.noPricingBadge}>
+                <Feather name="eye-off" size={12} color={theme.textSecondary} />
+                <ThemedText style={[styles.noPricingText, { color: theme.textSecondary }]}>
+                  Pricing hidden
+                </ThemedText>
+              </View>
+            ) : null}
           </View>
-        ) : null}
-      </View>
 
-      <FlatList
-        data={filteredProducts}
-        renderItem={renderProduct}
-        keyExtractor={(item) => item.sku}
-        contentContainerStyle={[
-          styles.productList,
-          { paddingBottom: insets.bottom + 20 },
-        ]}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      />
+          <FlatList
+            data={filteredProducts}
+            renderItem={renderProduct}
+            keyExtractor={(item) => item.sku}
+            contentContainerStyle={[
+              styles.productList,
+              { paddingBottom: insets.bottom + 20 },
+            ]}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          />
+        </>
+      ) : null}
 
       <Modal
         visible={quantityModalVisible}
@@ -538,6 +541,38 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 13,
+  },
+  serviceUnavailable: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.xl,
+    gap: Spacing.md,
+  },
+  serviceUnavailableTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: Spacing.md,
+  },
+  serviceUnavailableText: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
+    gap: Spacing.sm,
+    marginTop: Spacing.md,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
   },
   searchContainer: {
     flexDirection: 'row',

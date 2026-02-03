@@ -222,6 +222,7 @@ export default function ForemanHomeScreen() {
   return (
     <ThemedView style={styles.container}>
       <ScrollView
+        style={styles.scrollView}
         contentContainerStyle={[
           styles.content,
           { paddingTop: headerHeight + Spacing.md, paddingBottom: insets.bottom + 100 },
@@ -231,6 +232,8 @@ export default function ForemanHomeScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
         showsVerticalScrollIndicator={true}
+        bounces={true}
+        alwaysBounceVertical={true}
       >
         <View style={styles.greeting}>
           <ThemedText style={styles.greetingText}>Good morning,</ThemedText>
@@ -404,8 +407,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  scrollView: {
+    flex: 1,
+  },
   content: {
     paddingHorizontal: Spacing.md,
+    flexGrow: 1,
   },
   greeting: {
     marginBottom: Spacing.lg,

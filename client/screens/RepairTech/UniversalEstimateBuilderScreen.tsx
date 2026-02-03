@@ -21,6 +21,7 @@ import * as ImagePicker from 'expo-image-picker';
 
 import { ThemedText } from '@/components/ThemedText';
 import { useTheme } from '@/hooks/useTheme';
+import { useAuth } from '@/context/AuthContext';
 import { ProductCatalog } from '@/components/ProductCatalog';
 import { HeritageProduct } from '@/lib/heritageProducts';
 import { BorderRadius, Spacing } from '@/constants/theme';
@@ -50,6 +51,7 @@ export default function UniversalEstimateBuilderScreen() {
   const navigation = useNavigation();
   const route = useRoute<RouteParams>();
   const { theme } = useTheme();
+  const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
 
@@ -245,19 +247,19 @@ export default function UniversalEstimateBuilderScreen() {
         estimateNumber,
         propertyId: selectedProp?.id || '',
         propertyName: selectedProperty,
+        title: (techNotes || customerNote)?.split('\n')[0]?.slice(0, 100) || `Field Estimate - ${selectedProperty}`,
         estimateDate: estimateDate.toISOString(),
         expirationDate: expirationDate.toISOString(),
         description: techNotes || customerNote,
-        lineItems: lineItems.map(item => ({
+        items: lineItems.map((item, index) => ({
+          lineNumber: index + 1,
+          productService: item.product.name,
           sku: item.product.sku,
-          name: item.product.name,
           description: item.description,
           quantity: item.quantity,
           rate: item.rate,
           amount: item.quantity * item.rate,
           taxable: item.taxable,
-          manufacturer: item.product.manufacturer,
-          category: item.product.category,
         })),
         subtotal,
         discountType,
@@ -265,11 +267,15 @@ export default function UniversalEstimateBuilderScreen() {
         discountAmount,
         taxRate: salesTaxRate,
         taxAmount: salesTaxAmount,
-        total: totalAmount,
+        totalAmount,
         woRequired,
         woReceived,
         woNumber,
         sendToOffice,
+        sourceType: 'repair_tech',
+        createdByTechId: user?.id || null,
+        createdByTechName: user?.name || null,
+        status: sendToOffice ? 'needs_review' : 'draft',
       };
 
       const apiUrl = getLocalApiUrl();

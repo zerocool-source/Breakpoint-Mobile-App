@@ -545,9 +545,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         estimateNumber,
         propertyId,
         propertyName,
+        title,
         estimateDate,
         expirationDate,
         description,
+        items,
         lineItems,
         subtotal,
         discountType,
@@ -555,17 +557,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         discountAmount,
         taxRate,
         taxAmount,
+        totalAmount,
         total,
         woRequired,
         woReceived,
         woNumber,
         sendToOffice,
+        sourceType,
+        createdByTechId,
+        createdByTechName,
+        status: requestStatus,
       } = req.body;
 
       const user = req.user!;
       const now = new Date();
 
-      const status = sendToOffice ? 'pending_approval' : 'draft';
+      const finalItems = items || lineItems || [];
+      const finalTotal = totalAmount || total || 0;
+      const status = requestStatus || (sendToOffice ? 'needs_review' : 'draft');
+      const finalTitle = title || 'Pool Repair Estimate';
 
       const result = await db.execute(sql`
         INSERT INTO estimates (
@@ -573,7 +583,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           title, description, items, subtotal, discount_type, discount_value, discount_amount,
           sales_tax_rate, sales_tax_amount, total_amount, status,
           created_by_tech_id, created_by_tech_name, repair_tech_id, repair_tech_name,
-          wo_required, wo_received, wo_number,
+          wo_required, wo_received, wo_number, source_type,
           created_at, reported_date, sent_for_approval_at
         ) VALUES (
           gen_random_uuid(),
@@ -582,24 +592,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ${estimateNumber},
           ${estimateDate ? new Date(estimateDate) : now},
           ${expirationDate ? new Date(expirationDate) : null},
-          ${'Pool Repair Estimate'},
+          ${finalTitle},
           ${description || ''},
-          ${JSON.stringify(lineItems || [])},
+          ${JSON.stringify(finalItems)},
           ${Math.round((subtotal || 0) * 100)},
           ${discountType || 'percent'},
           ${discountValue || 0},
           ${Math.round((discountAmount || 0) * 100)},
           ${taxRate || 9},
           ${Math.round((taxAmount || 0) * 100)},
-          ${Math.round((total || 0) * 100)},
+          ${Math.round(finalTotal * 100)},
           ${status},
-          ${user.id},
-          ${user.name || 'Technician'},
-          ${user.id},
-          ${user.name || 'Technician'},
+          ${createdByTechId || user.id},
+          ${createdByTechName || user.name || 'Technician'},
+          ${createdByTechId || user.id},
+          ${createdByTechName || user.name || 'Technician'},
           ${woRequired || false},
           ${woReceived || false},
           ${woNumber || null},
+          ${sourceType || 'repair_tech'},
           ${now},
           ${now},
           ${sendToOffice ? now : null}

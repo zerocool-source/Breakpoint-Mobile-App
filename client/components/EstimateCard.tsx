@@ -63,10 +63,10 @@ export function EstimateCard({ estimate, onPress }: EstimateCardProps) {
         <View>
           <ThemedText style={styles.estimateNumber}>{estimate.estimateNumber}</ThemedText>
           <ThemedText style={styles.propertyName} numberOfLines={1}>
-            {estimate.property.name}
+            {estimate.propertyName || estimate.property?.name || 'Unknown Property'}
           </ThemedText>
         </View>
-        <Badge variant={estimate.status as 'draft' | 'sent' | 'approved' | 'declined'} />
+        <Badge variant={estimate.status as any} />
       </View>
 
       <View style={styles.footer}>
@@ -76,7 +76,7 @@ export function EstimateCard({ estimate, onPress }: EstimateCardProps) {
             {formatDate(estimate.createdAt)}
           </ThemedText>
         </View>
-        <ThemedText style={styles.total}>{formatCurrency(estimate.total)}</ThemedText>
+        <ThemedText style={styles.total}>{formatCurrency((estimate.totalAmount || estimate.total || 0) / 100)}</ThemedText>
       </View>
     </AnimatedPressable>
   );

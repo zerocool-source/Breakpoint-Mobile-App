@@ -588,14 +588,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/estimates", authMiddleware, async (req: AuthenticatedRequest, res) => {
     try {
-      const userEstimates = await db.query.estimates.findMany({
-        where: eq(estimates.technicianId, req.user!.id),
-        orderBy: [desc(estimates.createdAt)],
-        with: {
-          property: true,
-        },
-      });
-      res.json(userEstimates);
+      const userId = req.user!.id;
+      const result = await db.execute(sql`
+        SELECT 
+          id, estimate_number as "estimateNumber", property_id as "propertyId", 
+          property_name as "propertyName", title, description, status,
+          total_amount as "totalAmount", created_at as "createdAt",
+          repair_tech_id as "repairTechId", repair_tech_name as "repairTechName",
+          created_by_tech_id as "createdByTechId", created_by_tech_name as "createdByTechName"
+        FROM estimates 
+        WHERE repair_tech_id = ${userId} OR created_by_tech_id = ${userId}
+        ORDER BY created_at DESC
+      `);
+      res.json(result.rows);
     } catch (error) {
       console.error("Error fetching estimates:", error);
       res.status(500).json({ error: "Failed to fetch estimates" });

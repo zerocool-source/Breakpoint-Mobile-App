@@ -3,7 +3,7 @@ import { View, StyleSheet, ViewStyle } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { BrandColors, BorderRadius, Spacing, Typography, Shadows } from '@/constants/theme';
 
-type BadgeVariant = 'urgent' | 'high' | 'normal' | 'low' | 'completed' | 'draft' | 'sent' | 'approved' | 'declined' | 'residential' | 'commercial' | 'municipal' | 'info' | 'success' | 'warning' | 'error';
+type BadgeVariant = 'urgent' | 'high' | 'normal' | 'low' | 'completed' | 'draft' | 'sent' | 'approved' | 'declined' | 'residential' | 'commercial' | 'municipal' | 'info' | 'success' | 'warning' | 'error' | 'needs_review' | 'pending_approval' | 'scheduled' | 'in_progress' | 'pending';
 type BadgeSize = 'small' | 'medium' | 'large';
 
 interface BadgeProps {
@@ -31,6 +31,11 @@ const variantColors: Record<BadgeVariant, { bg: string; text: string }> = {
   success: { bg: BrandColors.emerald, text: '#FFFFFF' },
   warning: { bg: BrandColors.vividTangerine, text: '#FFFFFF' },
   error: { bg: BrandColors.danger, text: '#FFFFFF' },
+  needs_review: { bg: BrandColors.vividTangerine, text: '#FFFFFF' },
+  pending_approval: { bg: BrandColors.vividTangerine, text: '#FFFFFF' },
+  scheduled: { bg: BrandColors.azureBlue, text: '#FFFFFF' },
+  in_progress: { bg: BrandColors.tropicalTeal, text: '#FFFFFF' },
+  pending: { bg: '#FEF3C7', text: '#D97706' },
 };
 
 const defaultLabels: Record<BadgeVariant, string> = {
@@ -50,6 +55,11 @@ const defaultLabels: Record<BadgeVariant, string> = {
   success: 'Success',
   warning: 'Warning',
   error: 'Error',
+  needs_review: 'Needs Review',
+  pending_approval: 'Pending',
+  scheduled: 'Scheduled',
+  in_progress: 'In Progress',
+  pending: 'Pending',
 };
 
 const sizePadding: Record<BadgeSize, { h: number; v: number }> = {
@@ -65,8 +75,8 @@ const sizeFontSize: Record<BadgeSize, number> = {
 };
 
 export function Badge({ variant, label, style, size = 'medium', outlined = false }: BadgeProps) {
-  const colors = variantColors[variant];
-  const displayLabel = label || defaultLabels[variant];
+  const colors = variantColors[variant] || variantColors.info;
+  const displayLabel = label || defaultLabels[variant] || variant;
   const padding = sizePadding[size];
   const fontSize = sizeFontSize[size];
 

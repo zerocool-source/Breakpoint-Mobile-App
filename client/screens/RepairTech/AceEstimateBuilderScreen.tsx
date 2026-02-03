@@ -158,6 +158,11 @@ export default function AceEstimateBuilderScreen() {
   const [showSendConfirmModal, setShowSendConfirmModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [submittedEstimateNumber, setSubmittedEstimateNumber] = useState('');
+  const [showValidationError, setShowValidationError] = useState(false);
+  const [validationErrorMessage, setValidationErrorMessage] = useState('');
+  const [showDraftSavedModal, setShowDraftSavedModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorModalMessage, setErrorModalMessage] = useState('');
   const [messages, setMessages] = useState<AceMessage[]>([]);
   
   // Initialize with personalized greeting
@@ -943,11 +948,13 @@ export default function AceEstimateBuilderScreen() {
 
   const handleSubmit = async (sendToOffice: boolean) => {
     if (!selectedProperty) {
-      Alert.alert('Property Required', 'Please select a property for this estimate.');
+      setValidationErrorMessage('Please select a property for this estimate.');
+      setShowValidationError(true);
       return;
     }
     if (lineItems.length === 0) {
-      Alert.alert('Items Required', 'Please add at least one item to the estimate.');
+      setValidationErrorMessage('Please add at least one item to the estimate.');
+      setShowValidationError(true);
       return;
     }
 
@@ -1006,14 +1013,10 @@ export default function AceEstimateBuilderScreen() {
       await storage.addEstimate(localEstimate as any);
       console.log('Estimate saved locally:', estimateNumber);
 
-      // If just saving draft (not sending to office), we're done - navigate back
+      // If just saving draft (not sending to office), we're done - show success modal
       if (!sendToOffice) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        Alert.alert(
-          'Draft Saved!',
-          `Estimate ${estimateNumber} has been saved as a draft.`,
-          [{ text: 'OK', onPress: () => navigation.goBack() }]
-        );
+        setShowDraftSavedModal(true);
         return;
       }
       
@@ -1089,11 +1092,8 @@ export default function AceEstimateBuilderScreen() {
     } catch (error) {
       console.error('Error saving estimate:', error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(
-        'Error',
-        'Failed to send estimate to office. The draft has been saved locally. Please try again when connected.',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
-      );
+      setErrorModalMessage('Failed to send estimate to office. The draft has been saved locally. Please try again when connected.');
+      setShowErrorModal(true);
     } finally {
       setIsSubmitting(false);
     }
@@ -1535,11 +1535,13 @@ export default function AceEstimateBuilderScreen() {
               <Pressable
                 onPress={() => {
                   if (!selectedProperty) {
-                    Alert.alert('Property Required', 'Please select a property for this estimate.');
+                    setValidationErrorMessage('Please select a property for this estimate.');
+                    setShowValidationError(true);
                     return;
                   }
                   if (lineItems.length === 0) {
-                    Alert.alert('Items Required', 'Please add at least one item to the estimate.');
+                    setValidationErrorMessage('Please add at least one item to the estimate.');
+                    setShowValidationError(true);
                     return;
                   }
                   setShowSendConfirmModal(true);
@@ -1666,6 +1668,72 @@ export default function AceEstimateBuilderScreen() {
                 navigation.goBack();
               }}
               style={[styles.sendConfirmYesBtn, { width: '100%', backgroundColor: '#4CAF50' }]}
+            >
+              <ThemedText style={styles.sendConfirmYesText}>OK</ThemedText>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={showValidationError} animationType="fade" transparent onRequestClose={() => setShowValidationError(false)}>
+        <View style={styles.sendConfirmOverlay}>
+          <View style={styles.sendConfirmModal}>
+            <View style={[styles.sendConfirmIconContainer, { backgroundColor: '#FFF3E0' }]}>
+              <Feather name="alert-circle" size={32} color="#FF9800" />
+            </View>
+            <ThemedText style={styles.sendConfirmTitle}>Missing Information</ThemedText>
+            <ThemedText style={styles.sendConfirmMessage}>
+              {validationErrorMessage}
+            </ThemedText>
+            <Pressable
+              onPress={() => setShowValidationError(false)}
+              style={[styles.sendConfirmYesBtn, { width: '100%', backgroundColor: '#FF9800' }]}
+            >
+              <ThemedText style={styles.sendConfirmYesText}>OK</ThemedText>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={showDraftSavedModal} animationType="fade" transparent onRequestClose={() => {}}>
+        <View style={styles.sendConfirmOverlay}>
+          <View style={styles.sendConfirmModal}>
+            <View style={[styles.sendConfirmIconContainer, { backgroundColor: '#E3F2FD' }]}>
+              <Feather name="save" size={32} color={ESTIMATE_COLORS.primary} />
+            </View>
+            <ThemedText style={styles.sendConfirmTitle}>Draft Saved!</ThemedText>
+            <ThemedText style={styles.sendConfirmMessage}>
+              Estimate {estimateNumber} has been saved as a draft.
+            </ThemedText>
+            <Pressable
+              onPress={() => {
+                setShowDraftSavedModal(false);
+                navigation.goBack();
+              }}
+              style={[styles.sendConfirmYesBtn, { width: '100%', backgroundColor: ESTIMATE_COLORS.primary }]}
+            >
+              <ThemedText style={styles.sendConfirmYesText}>OK</ThemedText>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={showErrorModal} animationType="fade" transparent onRequestClose={() => {}}>
+        <View style={styles.sendConfirmOverlay}>
+          <View style={styles.sendConfirmModal}>
+            <View style={[styles.sendConfirmIconContainer, { backgroundColor: '#FFEBEE' }]}>
+              <Feather name="x-circle" size={32} color="#F44336" />
+            </View>
+            <ThemedText style={styles.sendConfirmTitle}>Error</ThemedText>
+            <ThemedText style={styles.sendConfirmMessage}>
+              {errorModalMessage}
+            </ThemedText>
+            <Pressable
+              onPress={() => {
+                setShowErrorModal(false);
+                navigation.goBack();
+              }}
+              style={[styles.sendConfirmYesBtn, { width: '100%', backgroundColor: '#F44336' }]}
             >
               <ThemedText style={styles.sendConfirmYesText}>OK</ThemedText>
             </Pressable>

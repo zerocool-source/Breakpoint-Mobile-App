@@ -76,23 +76,26 @@ export function ProductCatalog({ role, onSelectProduct, selectionMode = false }:
     queryFn: async () => {
       const apiUrl = getLocalApiUrl();
       const response = await fetch(joinUrl(apiUrl, '/api/poolbrain/products'));
-      if (!response.ok) throw new Error('Failed to fetch products');
-      return response.json();
+      const data = await response.json();
+      if (!response.ok || data.serviceAvailable === false) {
+        throw new Error(data.message || 'Product catalog service temporarily unavailable');
+      }
+      return data;
     },
     staleTime: 5 * 60 * 1000,
-    retry: 2,
+    retry: 1,
   });
 
   const products: PoolBrainProduct[] = poolBrainData?.data ?? [];
-  const usingPoolBrain = products.length > 0;
+  const serviceAvailable = poolBrainData?.serviceAvailable !== false && products.length > 0;
 
   const categories = useMemo(() => {
-    if (usingPoolBrain) {
+    if (serviceAvailable) {
       const cats = [...new Set(products.map(p => p.category))].filter(Boolean).sort();
       return cats;
     }
     return HERITAGE_CATEGORIES as unknown as string[];
-  }, [products, usingPoolBrain]);
+  }, [products, serviceAvailable]);
 
   const startVoiceSearch = async () => {
     if (Platform.OS === 'web') {
@@ -168,7 +171,7 @@ export function ProductCatalog({ role, onSelectProduct, selectionMode = false }:
 
   const subcategories = useMemo(() => {
     if (!selectedCategory) return [];
-    if (usingPoolBrain) {
+    if (serviceAvailable) {
       const subs = products
         .filter(p => p.category === selectedCategory)
         .map(p => p.subcategory)
@@ -176,12 +179,12 @@ export function ProductCatalog({ role, onSelectProduct, selectionMode = false }:
       return [...new Set(subs)].sort();
     }
     return getSubcategories(selectedCategory as HeritageCategory);
-  }, [selectedCategory, products, usingPoolBrain]);
+  }, [selectedCategory, products, serviceAvailable]);
 
   const filteredProducts = useMemo(() => {
     let prods: (HeritageProduct | PoolBrainProduct)[];
     
-    if (usingPoolBrain) {
+    if (serviceAvailable) {
       prods = [...products];
       if (selectedCategory) {
         prods = prods.filter(p => p.category === selectedCategory);
@@ -208,7 +211,7 @@ export function ProductCatalog({ role, onSelectProduct, selectionMode = false }:
     }
 
     return prods;
-  }, [selectedCategory, selectedSubcategory, search, products, usingPoolBrain]);
+  }, [selectedCategory, selectedSubcategory, search, products, serviceAvailable]);
 
   const handleProductPress = useCallback((product: HeritageProduct | PoolBrainProduct) => {
     if (selectionMode && onSelectProduct) {
@@ -375,8 +378,28 @@ export function ProductCatalog({ role, onSelectProduct, selectionMode = false }:
         </View>
       ) : null}
 
-      <FlatList
-        data={categories}
+      {!isLoadingProducts && (productsError || !serviceAvailable) ? (
+        <View style={styles.serviceUnavailable}>
+          <Feather name="alert-circle" size={48} color={BrandColors.danger} />
+          <ThemedText style={styles.serviceUnavailableTitle}>
+            Service Temporarily Unavailable
+          </ThemedText>
+          <ThemedText style={[styles.serviceUnavailableText, { color: theme.textSecondary }]}>
+            {productsError?.message || 'Product catalog is currently unavailable. Please try again later.'}
+          </ThemedText>
+          <Pressable
+            style={[styles.retryButton, { backgroundColor: BrandColors.azureBlue }]}
+            onPress={() => window.location.reload()}
+          >
+            <Feather name="refresh-cw" size={16} color="#fff" />
+            <ThemedText style={styles.retryButtonText}>Retry</ThemedText>
+          </Pressable>
+        </View>
+      ) : null}
+
+      {serviceAvailable ? (
+        <FlatList
+          data={categories}
         renderItem={renderCategoryChip}
         keyExtractor={(item) => item}
         horizontal

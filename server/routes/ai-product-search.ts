@@ -1,7 +1,6 @@
 import { Router, Request, Response } from "express";
 import express from "express";
 import OpenAI from "openai";
-import { HERITAGE_PRODUCTS } from "../../client/lib/heritageProducts";
 import { db } from "../db";
 import { sql } from "drizzle-orm";
 import { poolRegulations } from "../../shared/schema";
@@ -9,9 +8,11 @@ import { getProducts, mapPoolBrainToHeritageFormat } from "../services/poolbrain
 
 let cachedPoolBrainProducts: any[] = [];
 let lastPoolBrainFetch = 0;
+let poolBrainAvailable = false;
+let lastApiError = '';
 const POOL_BRAIN_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
 
-async function getProductCatalog(): Promise<any[]> {
+async function getProductCatalog(): Promise<{ products: any[], available: boolean, error?: string }> {
   try {
     const now = Date.now();
     if (cachedPoolBrainProducts.length === 0 || now - lastPoolBrainFetch > POOL_BRAIN_CACHE_TTL) {
@@ -20,16 +21,24 @@ async function getProductCatalog(): Promise<any[]> {
       if (rawProducts.length > 0) {
         cachedPoolBrainProducts = rawProducts.map(mapPoolBrainToHeritageFormat);
         lastPoolBrainFetch = now;
+        poolBrainAvailable = true;
+        lastApiError = '';
         console.log(`[AI Search] Using ${cachedPoolBrainProducts.length} Pool Brain products`);
-        return cachedPoolBrainProducts;
+        return { products: cachedPoolBrainProducts, available: true };
+      } else {
+        poolBrainAvailable = false;
+        lastApiError = 'Pool Brain API returned no products';
+        return { products: [], available: false, error: lastApiError };
       }
     } else if (cachedPoolBrainProducts.length > 0) {
-      return cachedPoolBrainProducts;
+      return { products: cachedPoolBrainProducts, available: true };
     }
-  } catch (error) {
-    console.error('[AI Search] Pool Brain fetch failed, using static catalog:', error);
+  } catch (error: any) {
+    console.error('[AI Search] Pool Brain fetch failed:', error?.message || error);
+    poolBrainAvailable = false;
+    lastApiError = error?.message || 'Pool Brain API connection failed';
   }
-  return HERITAGE_PRODUCTS;
+  return { products: [], available: false, error: lastApiError };
 }
 
 const router = Router();
@@ -219,7 +228,19 @@ Write 2-4 paragraphs that clearly communicate the scope of work with technical a
       return res.status(400).json({ error: "Description is required" });
     }
 
-    const products = await getProductCatalog();
+    const catalogResult = await getProductCatalog();
+    
+    // If product catalog is unavailable, return service unavailable
+    if (!catalogResult.available || catalogResult.products.length === 0) {
+      return res.status(503).json({ 
+        error: "Product catalog service temporarily unavailable",
+        message: catalogResult.error || "Unable to connect to product database. Please try again later.",
+        serviceAvailable: false,
+        matches: [],
+      });
+    }
+    
+    const products = catalogResult.products;
     const productList = products.map((p: any) => ({
       sku: p.sku,
       name: p.name,

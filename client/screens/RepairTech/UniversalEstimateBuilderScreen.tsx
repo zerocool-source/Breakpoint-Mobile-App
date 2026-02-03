@@ -195,6 +195,52 @@ export default function UniversalEstimateBuilderScreen() {
       const { storage } = await import('@/lib/storage');
       const authToken = await storage.getAuthToken();
       
+      // Create local estimate first (always save locally)
+      const localEstimate = {
+        id: estimateNumber,
+        estimateNumber,
+        propertyId: selectedProp?.id || '',
+        propertyName: selectedProperty,
+        estimateDate: estimateDate.toISOString(),
+        expirationDate: expirationDate.toISOString(),
+        description: techNotes || customerNote,
+        lineItems: lineItems.map(item => ({
+          sku: item.product.sku,
+          name: item.product.name,
+          description: item.description,
+          quantity: item.quantity,
+          rate: item.rate,
+          amount: item.quantity * item.rate,
+          taxable: item.taxable,
+        })),
+        subtotal,
+        discountType,
+        discountValue,
+        discountAmount,
+        taxRate: salesTaxRate,
+        taxAmount: salesTaxAmount,
+        total: totalAmount,
+        status: sendToOffice ? 'pending_approval' : 'draft',
+        sentToOffice: sendToOffice,
+        createdAt: new Date().toISOString(),
+      };
+      
+      // Save locally first
+      await storage.addEstimate(localEstimate as any);
+      console.log('Estimate saved locally:', estimateNumber);
+
+      // If just saving draft (not sending to office), we're done - navigate back
+      if (!sendToOffice) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Alert.alert(
+          'Draft Saved!',
+          `Estimate ${estimateNumber} has been saved as a draft.`,
+          [{ text: 'OK', onPress: () => navigation.goBack() }]
+        );
+        return;
+      }
+      
+      // If sending to office, also sync to server
       const estimateData = {
         estimateNumber,
         propertyId: selectedProp?.id || '',
@@ -241,17 +287,21 @@ export default function UniversalEstimateBuilderScreen() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to save estimate');
+        const errorText = await response.text();
+        console.error('Server error:', response.status, errorText);
+        throw new Error(`Server error: ${response.status}`);
       }
 
       const result = await response.json();
       
+      // Update local copy with server ID
+      const updatedEstimate = { ...localEstimate, id: result.estimate?.id || estimateNumber };
+      await storage.addEstimate(updatedEstimate as any);
+      
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert(
-        sendToOffice ? 'Estimate Sent!' : 'Estimate Saved!',
-        sendToOffice 
-          ? `Estimate ${estimateNumber} has been sent to the office for approval.`
-          : `Estimate ${estimateNumber} has been saved as a draft. You can edit it later.`,
+        'Estimate Sent!',
+        `Estimate ${estimateNumber} has been sent to the office for approval.`,
         [{ text: 'OK', onPress: () => navigation.goBack() }]
       );
     } catch (error) {
@@ -259,8 +309,8 @@ export default function UniversalEstimateBuilderScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
         'Error',
-        'Failed to save estimate. Please try again.',
-        [{ text: 'OK' }]
+        'Failed to send estimate to office. The draft has been saved locally. Please try again when connected.',
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
       );
     } finally {
       setIsSubmitting(false);

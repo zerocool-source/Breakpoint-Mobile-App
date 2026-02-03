@@ -2,9 +2,26 @@ import { Router, Request, Response } from "express";
 import express from "express";
 import OpenAI from "openai";
 import { db } from "../db";
-import { sql } from "drizzle-orm";
-import { poolRegulations } from "../../shared/schema";
+import { sql, eq } from "drizzle-orm";
+import { poolRegulations, estimateTemplates } from "../../shared/schema";
 import { getProducts, mapPoolBrainToHeritageFormat } from "../services/poolbrain";
+
+// Get estimate templates for AI reference
+async function getEstimateTemplates(category?: string): Promise<any[]> {
+  try {
+    if (category) {
+      return await db.query.estimateTemplates.findMany({
+        where: eq(estimateTemplates.category, category),
+      });
+    }
+    return await db.query.estimateTemplates.findMany({
+      where: eq(estimateTemplates.isActive, true),
+    });
+  } catch (error) {
+    console.error("Error fetching estimate templates:", error);
+    return [];
+  }
+}
 
 let cachedPoolBrainProducts: any[] = [];
 let lastPoolBrainFetch = 0;
@@ -407,6 +424,139 @@ If this is a heater part (tube bundle, refractory, heat exchanger), mention any 
   } catch (error) {
     console.error("Web info search error:", error);
     res.status(500).json({ error: "Failed to fetch web info" });
+  }
+});
+
+// Get estimate templates for AI to learn from
+router.get("/templates", async (req: Request, res: Response) => {
+  try {
+    const { category } = req.query;
+    const templates = await getEstimateTemplates(category as string);
+    res.json({ templates });
+  } catch (error) {
+    console.error("Error fetching templates:", error);
+    res.status(500).json({ error: "Failed to fetch templates" });
+  }
+});
+
+// Generate estimate with AI using templates as reference
+router.post("/generate-estimate", express.json(), async (req: Request, res: Response) => {
+  try {
+    const { workDescription, propertyName, category } = req.body;
+
+    if (!workDescription) {
+      return res.status(400).json({ error: "Work description is required" });
+    }
+
+    // Get relevant templates for reference
+    const templates = await getEstimateTemplates(category || 'equipment_room');
+    const templateContext = templates.length > 0 ? templates[0] : null;
+
+    // Build the AI prompt with template reference
+    const systemPrompt = `You are an expert commercial pool repair estimator for Breakpoint Commercial Pool Systems. You create professional estimates that follow exact company standards.
+
+${templateContext ? `REFERENCE TEMPLATE FORMAT:
+Opening paragraph style:
+"${templateContext.introText}"
+
+Line item format - organize by SECTION (SPA, POOL, WADER, etc.) with items like:
+${templateContext.lineItemsJson}
+
+Closing terms:
+"${templateContext.termsText}"
+
+Labor rate: $${templateContext.laborRate}/hour
+` : ''}
+
+RULES:
+1. ONLY use real products from known manufacturers: Pentair, Hayward, Jandy, Raypak, Century, Zodiac
+2. Include accurate part descriptions with size/specs (e.g., "PVC 2\" 90 Slip SCH 40", "Motor 2 hp 1 ph VS Century")
+3. Use realistic current market prices - research actual costs
+4. Group items by system/area (SPA, POOL, WADER, etc.)
+5. Include all necessary fittings, pipes, gaskets, and accessories
+6. Reference California codes: CA Title 22, Title 24, NEC Article 680, VGB standards
+7. For heaters: include vent kit, gas fittings, sediment trap
+8. For filters: include sand bags, multiport valve, unions
+9. For motors: include seal kit/go kit, hi-temp unions
+10. Calculate realistic labor hours based on scope
+
+Return a JSON object with:
+{
+  "introText": "Professional opening paragraph...",
+  "sections": [
+    {
+      "name": "SPA",
+      "laborHours": 40,
+      "items": [
+        {"description": "Part name with specs", "qty": 1, "rate": 123.99, "taxable": true}
+      ]
+    }
+  ],
+  "totalLaborHours": 168,
+  "laborRate": 150.00,
+  "termsText": "Closing terms...",
+  "notes": "Any additional notes"
+}`;
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: `Create a detailed estimate for:
+Property: ${propertyName || 'Commercial Property'}
+Work Description: ${workDescription}
+
+Provide accurate real-world pricing and complete parts lists.` },
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.3,
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) {
+      return res.status(500).json({ error: "No response from AI" });
+    }
+
+    const estimateData = JSON.parse(content);
+    res.json({ estimate: estimateData, templateUsed: templateContext?.name || null });
+  } catch (error) {
+    console.error("Estimate generation error:", error);
+    res.status(500).json({ error: "Failed to generate estimate" });
+  }
+});
+
+// Web search for real product information
+router.post("/web-search", express.json(), async (req: Request, res: Response) => {
+  try {
+    const { query, searchType } = req.body;
+
+    if (!query) {
+      return res.status(400).json({ error: "Search query is required" });
+    }
+
+    // Use GPT-4 with web browsing capability for real data
+    const searchPrompt = searchType === 'pricing' 
+      ? `Search for current 2024-2025 pricing on commercial pool equipment: ${query}. Include manufacturer, model, and typical distributor pricing. Only provide verified real prices from actual suppliers like SOS Pool, Pool Corp, Heritage Pool Supply, or manufacturer websites.`
+      : `Search for technical specifications and installation requirements for: ${query}. Include model numbers, dimensions, compatibility requirements, and installation notes from manufacturer documentation.`;
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { 
+          role: "system", 
+          content: `You are a commercial pool equipment specialist with access to current market data. Provide accurate, real-world information only. Do not make up prices or specifications. If you don't know something specific, say so rather than guessing. Reference known suppliers: SOS Pool (sospool.com), Heritage Pool Supply, Pool Corp (poolcorp.com), Pentair, Hayward, Raypak, Jandy.` 
+        },
+        { role: "user", content: searchPrompt },
+      ],
+      temperature: 0.2,
+      max_tokens: 1000,
+    });
+
+    const result = response.choices[0]?.message?.content?.trim() || "";
+    res.json({ result, query });
+  } catch (error) {
+    console.error("Web search error:", error);
+    res.status(500).json({ error: "Failed to perform web search" });
   }
 });
 

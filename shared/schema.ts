@@ -140,6 +140,24 @@ export const sessions = pgTable("sessions", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+// Estimate templates for AI learning - stores example estimates that the AI uses as reference
+export const estimateTemplates = pgTable("estimate_templates", {
+  id: varchar("id", { length: 36 })
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  category: text("category").notNull(), // e.g., "equipment_room", "heater", "filter", "motor"
+  description: text("description").notNull(),
+  introText: text("intro_text"), // Opening paragraph explaining scope
+  lineItemsJson: text("line_items_json").notNull(), // JSON array of line items with descriptions, qtys, rates
+  laborHours: integer("labor_hours"),
+  laborRate: decimal("labor_rate", { precision: 10, scale: 2 }),
+  termsText: text("terms_text"), // Closing terms/conditions
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 export const usersRelations = relations(users, ({ many }) => ({
   jobs: many(jobs),
   assignments: many(assignments),

@@ -44,10 +44,21 @@ Breakpoint Commercial Pool Systems is a mobile-first field service management ap
     - **Ace AI Assistant**: AI-powered estimate creation with voice input, personalized self-learning based on user interactions, and web-enhanced product search. Includes a Quote Description Screen with HOA-friendly/professional language toggles and California Pool Code references.
     - **Pool Regulations Database**: Stores California pool codes with layman's explanations for integration into AI-generated quotes.
     - **Estimate Templates System**: Database table (`estimate_templates`) storing example estimates that the AI uses as reference for format and pricing. Templates include intro text, line items organized by section (SPA, POOL, WADER), labor rates, and closing terms.
+    - **Commercial Pool Repair Knowledge Base**: Comprehensive database with 30+ repair types, 9 California pool codes (Title 22, Title 24, NEC 680, VGB Act), and 8 labor rate categories ($115-$165/hr). AI uses this to generate detailed, professional estimates with proper code citations.
+
+### AI Estimate Generation Features
+- **Complete Parts Lists**: Every estimate includes ALL required components (15-20 items per job):
+  - Heater installs: vent kit, gas valve, sediment trap, flex connector, nipples, elbows, unions
+  - Filter installs: sand media (calculated by size), multiport valve, sight glass, pressure gauge
+  - Pump installs: seal kit, go-kit, unions, electrical connections
+- **Real-World Pricing**: Actual 2024-2025 commercial pool equipment prices (e.g., Raypak 267: $4,899, TR140C: $3,299)
+- **California Code Citations**: Each line item explanation references specific codes (NEC 680, CA Title 22/24, VGB, NFPA 54)
+- **Automatic Payment Terms**: Deposit requirements (10% for $500-$10K, 35% over $10K) included in every estimate
+- **Labor Rate Database**: 8 service categories with proper hourly rates by facility type
 
 ### AI Endpoints
 - `GET /api/ai-product-search/templates` - Retrieve estimate templates for AI reference
-- `POST /api/ai-product-search/generate-estimate` - Generate professional estimates using templates
+- `POST /api/ai-product-search/generate-estimate` - Generate professional estimates using knowledge base
 - `POST /api/ai-product-search/web-search` - Search for real product information and pricing
 - `POST /api/ai-product-search/web-info` - Get product specifications and compatibility info
 

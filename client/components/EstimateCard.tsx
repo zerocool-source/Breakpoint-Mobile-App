@@ -76,7 +76,7 @@ export function EstimateCard({ estimate, onPress }: EstimateCardProps) {
             {formatDate(estimate.createdAt)}
           </ThemedText>
         </View>
-        <ThemedText style={styles.total}>{formatCurrency((estimate.totalAmount || estimate.total || 0) / 100)}</ThemedText>
+        <ThemedText style={styles.total}>{formatCurrency(estimate.totalAmount || estimate.total || 0)}</ThemedText>
       </View>
     </AnimatedPressable>
   );

@@ -6,10 +6,40 @@ import { HeaderButton } from '@react-navigation/elements';
 import RepairForemanTabNavigator from '@/navigation/RepairForemanTabNavigator';
 import AceEstimateBuilderScreen from '@/screens/RepairTech/AceEstimateBuilderScreen';
 import QuoteDescriptionScreen from '@/screens/RepairTech/QuoteDescriptionScreen';
+import EstimatePrintView from '@/screens/RepairForeman/EstimatePrintView';
 import ChatConversationScreen from '@/screens/shared/ChatConversationScreen';
 import type { ChatChannel } from '@/screens/shared/ChatChannelsScreen';
 import { useScreenOptions } from '@/hooks/useScreenOptions';
 import { useTheme } from '@/hooks/useTheme';
+
+interface EstimateLineItem {
+  sku: string;
+  name: string;
+  description: string;
+  quantity: number;
+  rate: number;
+  amount: number;
+  taxable: boolean;
+}
+
+interface EstimateData {
+  estimateNumber: string;
+  propertyName: string;
+  propertyAddress?: string;
+  estimateDate: string;
+  expirationDate: string;
+  description: string;
+  lineItems: EstimateLineItem[];
+  subtotal: number;
+  discountType: 'percent' | 'fixed';
+  discountValue: number;
+  discountAmount: number;
+  taxRate: number;
+  taxAmount: number;
+  total: number;
+  woNumber?: string;
+  techName?: string;
+}
 
 export type RepairForemanStackParamList = {
   ForemanMain: undefined;
@@ -23,6 +53,9 @@ export type RepairForemanStackParamList = {
     lineItems: any[]; 
     currentDescription: string; 
     propertyName: string;
+  };
+  EstimatePrintView: {
+    estimate: EstimateData;
   };
   ChatConversation: { channel: ChatChannel };
 };
@@ -51,6 +84,14 @@ export default function RepairForemanStackNavigator() {
       <Stack.Screen
         name="QuoteDescription"
         component={QuoteDescriptionScreen}
+        options={{
+          headerShown: false,
+          presentation: 'card',
+        }}
+      />
+      <Stack.Screen
+        name="EstimatePrintView"
+        component={EstimatePrintView}
         options={{
           headerShown: false,
           presentation: 'card',

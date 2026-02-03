@@ -9,6 +9,7 @@ import QueueScreen from '@/screens/RepairTech/QueueScreen';
 import EstimatesScreen from '@/screens/RepairTech/EstimatesScreen';
 import JobsScreen from '@/screens/RepairTech/JobsScreen';
 import ProductsScreen from '@/screens/RepairTech/ProductsScreen';
+import ChatChannelsWrapper from '@/screens/RepairTech/ChatChannelsWrapper';
 import ProfileScreen from '@/screens/RepairTech/ProfileScreen';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, Spacing } from '@/constants/theme';
@@ -19,6 +20,7 @@ export type RepairTechTabParamList = {
   Products: undefined;
   Estimates: undefined;
   Jobs: undefined;
+  Chat: undefined;
   Profile: undefined;
 };
 
@@ -105,6 +107,15 @@ export default function RepairTechTabNavigator() {
         options={{
           tabBarIcon: ({ color, size }) => (
             <Feather name="clipboard" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Chat"
+        component={ChatChannelsWrapper}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="message-circle" size={size} color={color} />
           ),
         }}
       />

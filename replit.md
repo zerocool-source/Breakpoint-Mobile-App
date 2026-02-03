@@ -6,7 +6,7 @@
 ### Changelog
 | Version | Date | Features Added |
 |---------|------|----------------|
-| v1.2.2 | Feb 2026 | Expanded product catalog to 1,457 products (3.2x increase), added new categories (Accessories, Chemical Controller, Electrical, Service), Products screen is now purely for product lookup |
+| v1.2.2 | Feb 2026 | Expanded product catalog to 1,457 products (3.2x increase), added new categories (Accessories, Chemical Controller, Electrical, Service), Products screen is now purely for product lookup, added Chat tab for Repair Tech role, pool regulations database (33 California codes) |
 | v1.2.1 | Feb 2026 | Quote descriptions now use mixed HOA-friendly + professional language by default (addressed to "Dear HOA Manager"), local estimate storage for offline access, improved navigation for estimate builder |
 | v1.2.0 | Feb 2026 | Ace AI Estimate Builder with voice input, personalized self-learning, web-enhanced product search, HOA-friendly quote descriptions with California pool code references |
 | v1.1.0 | Feb 2026 | Local authentication system, dual-backend architecture, firstName/lastName user fields |
@@ -54,12 +54,13 @@ Breakpoint Commercial Pool Systems is a mobile-first field service management ap
 - **Authentication**: JWT tokens, bcrypt hashing, secure storage, role-based access for Service Technician, Repair Technician, and Supervisor.
 - **User Roles**:
     - **Service Technician**: Home screen with assignments and route, Property Detail with checklists and quick actions, Emergency reporting, Truck inventory, Chat with property channels, and "Road to Success" training tracker (Training tab).
-    - **Repair Technician**: Home screen with jobs, Queue for managing repair tasks, Estimates, Jobs list. Includes swipeable job cards and product catalog for estimates.
+    - **Repair Technician**: Home screen with jobs, Queue for managing repair tasks, Estimates, Jobs list, Chat. Includes swipeable job cards and product catalog for estimates.
         - **Two-Tier Job System**:
             - **Approved Repairs**: Pre-approved work orders with green/emerald styling. Shows "Execute Job" and "Navigate" buttons.
             - **Assessments**: Jobs requiring estimate creation with teal styling. Shows "Create Estimate" (links to Ace AI) and "Navigate" buttons.
         - **Database**: `jobs` table with `job_type` column ('approved_repair' | 'assessment')
         - **Navigate Button**: Opens device maps with property address (iOS Maps, Google Maps on Android/web)
+        - **Chat Tab**: Office & Dispatch messaging with message-circle icon. Uses shared ChatChannelsScreen with role="repairTech".
     - **Supervisor**: Team dashboard with activity ticker, metrics, and Team Tracker. Assignment management, QC inspections with detailed checklists, Real-time "Who's On" tech tracking, Truck inspection with damage marking, Supportive actions documentation, and Roster management.
 - **Core Features**:
     - **Chat System**: Office communication, direct messages, urgent alerts, and property-specific channels.

@@ -13,6 +13,8 @@ import UniversalEstimateBuilderScreen from '@/screens/RepairTech/UniversalEstima
 import QuoteDescriptionScreen from '@/screens/RepairTech/QuoteDescriptionScreen';
 import RepairHistoryScreen from '@/screens/RepairTech/RepairHistoryScreen';
 import AdminChatScreen from '@/screens/RepairTech/AdminChatScreen';
+import ChatConversationScreen from '@/screens/shared/ChatConversationScreen';
+import type { ChatChannel } from '@/screens/shared/ChatChannelsScreen';
 import { useScreenOptions } from '@/hooks/useScreenOptions';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors } from '@/constants/theme';
@@ -21,6 +23,7 @@ export type RootStackParamList = {
   Main: undefined;
   ReportIssue: undefined;
   Chat: undefined;
+  ChatConversation: { channel: ChatChannel };
   CreateEstimate: undefined;
   AceEstimateBuilder: { updatedDescription?: string; propertyId?: string; propertyName?: string; jobTitle?: string } | undefined;
   UniversalEstimateBuilder: { mode?: 'manual' | 'ace' };
@@ -121,6 +124,14 @@ export default function RootStackNavigator() {
       <Stack.Screen
         name="AdminChat"
         component={AdminChatScreen}
+        options={{
+          headerShown: false,
+          presentation: 'card',
+        }}
+      />
+      <Stack.Screen
+        name="ChatConversation"
+        component={ChatConversationScreen}
         options={{
           headerShown: false,
           presentation: 'card',

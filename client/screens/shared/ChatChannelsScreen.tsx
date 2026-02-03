@@ -136,7 +136,7 @@ function ChannelCard({ channel, onPress, index }: ChannelCardProps) {
 }
 
 interface ChatChannelsScreenProps {
-  role: 'serviceTech' | 'supervisor';
+  role: 'serviceTech' | 'supervisor' | 'repairTech';
 }
 
 export default function ChatChannelsScreen({ role = 'serviceTech' }: ChatChannelsScreenProps) {
@@ -194,7 +194,7 @@ export default function ChatChannelsScreen({ role = 'serviceTech' }: ChatChannel
       <View style={[styles.header, { paddingTop: insets.top + Spacing.md }]}>
         <ThemedText style={styles.headerTitle}>Messages</ThemedText>
         <ThemedText style={[styles.headerSubtitle, { color: theme.textSecondary }]}>
-          {role === 'supervisor' ? 'Team & Property Chats' : 'Office & Property Chats'}
+          {role === 'supervisor' ? 'Team & Property Chats' : role === 'repairTech' ? 'Office & Dispatch Chats' : 'Office & Property Chats'}
         </ThemedText>
       </View>
 

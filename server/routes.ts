@@ -1116,6 +1116,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/repair-requests - Get repair requests (filtered by technicianId if provided)
+  app.get("/api/repair-requests", authMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      const technicianId = req.query.technicianId as string | undefined;
+      const status = req.query.status as string | undefined;
+      const limit = parseInt(req.query.limit as string) || 50;
+
+      let query = `
+        SELECT id, entry_type as "entryType", issue_title as "issueTitle", 
+               property_id as "propertyId", property_name as "propertyName",
+               technician_id as "technicianId", technician_name as "technicianName",
+               scheduled_date as "scheduledDate", status, notes, created_at as "createdAt"
+        FROM tech_ops_entries 
+        WHERE entry_type = 'repair_request'
+      `;
+      
+      const params: any[] = [];
+      let paramIndex = 1;
+      
+      if (technicianId) {
+        query += ` AND technician_id = $${paramIndex}`;
+        params.push(technicianId);
+        paramIndex++;
+      }
+      
+      if (status) {
+        query += ` AND status = $${paramIndex}`;
+        params.push(status);
+        paramIndex++;
+      }
+      
+      query += ` ORDER BY created_at DESC LIMIT $${paramIndex}`;
+      params.push(limit);
+
+      const result = await db.execute(sql.raw(query));
+      res.json({ items: result.rows || [] });
+    } catch (error) {
+      console.error("Error fetching repair requests:", error);
+      res.status(500).json({ error: "Failed to fetch repair requests" });
+    }
+  });
+
+  // POST /api/repair-requests - Create a new repair request
+  app.post("/api/repair-requests", authMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { title, propertyId, propertyName, notes, jobType, technicianId, scheduledDate } = req.body;
+
+      if (!title || !propertyId || !propertyName) {
+        return res.status(400).json({ error: "title, propertyId, and propertyName are required" });
+      }
+
+      const newEntry = await db.insert(techOps).values({
+        id: crypto.randomUUID(),
+        entryType: 'repair_request' as any,
+        issueTitle: title,
+        propertyId,
+        propertyName,
+        notes: notes || '',
+        technicianId: technicianId || req.user!.id,
+        technicianName: req.user!.name,
+        status: 'pending' as any,
+        scheduledDate: scheduledDate ? new Date(scheduledDate) : null,
+      }).returning();
+
+      res.status(201).json(newEntry[0]);
+    } catch (error) {
+      console.error("Error creating repair request:", error);
+      res.status(500).json({ error: "Failed to create repair request" });
+    }
+  });
+
   // GET /api/tech-ops - Get all tech ops entries (admin/supervisor view)
   app.get("/api/tech-ops", authMiddleware, async (req: AuthenticatedRequest, res) => {
     try {

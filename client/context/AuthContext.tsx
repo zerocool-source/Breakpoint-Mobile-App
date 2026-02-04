@@ -138,8 +138,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       let res: Response;
       if (isRepairRole) {
-        // Use /api/tech/login for repair technicians and foremen (supports email OR phone)
-        res = await authApiRequest('POST', '/api/tech/login', { identifier, password });
+        // Use /api/auth/tech/login for repair technicians and foremen (supports email OR phone)
+        res = await authApiRequest('POST', '/api/auth/tech/login', { identifier, password });
       } else {
         // Use standard auth endpoint for other roles
         res = await authApiRequest('POST', '/api/auth/login', { email: identifier, password });

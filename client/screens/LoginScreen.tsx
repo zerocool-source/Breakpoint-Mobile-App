@@ -254,15 +254,19 @@ export default function LoginScreen({ onBack }: LoginScreenProps) {
           ) : null}
 
           <View style={styles.inputWrapper}>
-            <ThemedText style={styles.label}>Email</ThemedText>
+            <ThemedText style={styles.label}>
+              {selectedRole === 'repair_tech' || selectedRole === 'repair_foreman' ? 'Email or Phone' : 'Email'}
+            </ThemedText>
             <Animated.View style={[styles.inputContainer, emailBorderStyle]}>
               <TextInput
                 style={styles.input}
-                placeholder="Enter your email"
+                placeholder={selectedRole === 'repair_tech' || selectedRole === 'repair_foreman' 
+                  ? "Enter email or phone number" 
+                  : "Enter your email"}
                 placeholderTextColor={BrandColors.textSecondary}
                 value={email}
                 onChangeText={setEmail}
-                keyboardType="email-address"
+                keyboardType={selectedRole === 'repair_tech' || selectedRole === 'repair_foreman' ? "default" : "email-address"}
                 autoCapitalize="none"
                 autoCorrect={false}
                 onFocus={() => { emailFocus.value = withSpring(1); }}

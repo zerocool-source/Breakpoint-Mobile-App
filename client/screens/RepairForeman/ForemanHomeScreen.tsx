@@ -100,12 +100,12 @@ export default function ForemanHomeScreen() {
 
   const technicianId = user?.technicianId;
   
-  // Fetch tech jobs from /api/tech/:id/jobs endpoint
+  // Fetch tech jobs from /api/auth/tech/:id/jobs endpoint
   const { data: techJobsData, refetch: refetchTechJobs } = useQuery<{ items: any[] }>({
-    queryKey: ['/api/tech/jobs', technicianId],
+    queryKey: ['/api/auth/tech/jobs', technicianId],
     queryFn: async () => {
       if (!technicianId) return { items: [] };
-      const response = await fetch(`${getApiUrl()}/api/tech/${technicianId}/jobs`, {
+      const response = await fetch(`${getApiUrl()}/api/auth/tech/${technicianId}/jobs`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',

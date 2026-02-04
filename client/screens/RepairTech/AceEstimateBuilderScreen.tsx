@@ -1089,78 +1089,23 @@ export default function AceEstimateBuilderScreen() {
     if (photosToUpload.length === 0) return [];
     
     try {
-      const apiUrl = getLocalApiUrl();
-      const formData = new FormData();
+      const { uploadPhotos: uploadPhotosHelper } = await import('@/lib/apiHelper');
       
-      // Map file extensions to proper MIME types
-      const getMimeType = (filename: string): string => {
-        const ext = filename.split('.').pop()?.toLowerCase() || '';
-        const mimeTypes: Record<string, string> = {
-          'jpg': 'image/jpeg',
-          'jpeg': 'image/jpeg',
-          'png': 'image/png',
-          'gif': 'image/gif',
-          'webp': 'image/webp',
-          'heic': 'image/heic',
-          'heif': 'image/heif',
-          'tiff': 'image/tiff',
-          'tif': 'image/tiff',
-          'bmp': 'image/bmp',
-        };
-        return mimeTypes[ext] || 'image/jpeg';
-      };
+      console.log('[Photo Upload] Uploading', photosToUpload.length, 'photos using base64');
       
-      for (const photo of photosToUpload) {
-        const filename = photo.uri.split('/').pop() || `photo-${Date.now()}.jpg`;
-        const type = getMimeType(filename);
-        
-        if (Platform.OS === 'web') {
-          // On web, fetch the blob and create a File object
-          try {
-            const response = await fetch(photo.uri);
-            const blob = await response.blob();
-            const file = new File([blob], filename, { type });
-            formData.append('photos', file);
-          } catch (e) {
-            console.error('[Photo Upload] Failed to fetch blob for web:', e);
-            // Fallback: try base64 data URI approach
-            formData.append('photos', {
-              uri: photo.uri,
-              name: filename,
-              type,
-            } as any);
-          }
-        } else {
-          // On native (iOS/Android), use the React Native FormData format
-          formData.append('photos', {
-            uri: photo.uri,
-            name: filename,
-            type,
-          } as any);
-        }
+      const result = await uploadPhotosHelper(
+        photosToUpload.map(photo => ({
+          uri: photo.uri,
+          mimeType: 'image/jpeg',
+        }))
+      );
+      
+      if (result.errors.length > 0) {
+        console.warn('[Photo Upload] Some photos failed:', result.errors);
       }
       
-      const headers: Record<string, string> = {};
-      if (authToken) {
-        headers['Authorization'] = `Bearer ${authToken}`;
-      }
-      
-      console.log('[Photo Upload] Uploading', photosToUpload.length, 'photos on', Platform.OS);
-      const response = await fetch(joinUrl(apiUrl, '/api/photos/upload'), {
-        method: 'POST',
-        headers,
-        body: formData,
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[Photo Upload] Server error:', response.status, errorText);
-        throw new Error('Failed to upload photos');
-      }
-      
-      const result = await response.json();
-      console.log('[Photo Upload] Success:', result);
-      return result.photos.map((p: any) => p.url);
+      console.log('[Photo Upload] Success:', result.urls.length, 'uploaded');
+      return result.urls;
     } catch (error) {
       console.error('[Photo Upload] Error:', error);
       throw error;

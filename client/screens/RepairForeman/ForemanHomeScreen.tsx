@@ -6,6 +6,7 @@ import {
   Pressable,
   RefreshControl,
   FlatList,
+  Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -245,9 +246,10 @@ export default function ForemanHomeScreen() {
           onPress={handleNewEstimate}
         >
           <View style={styles.newEstimateContent}>
-            <View style={styles.newEstimateIcon}>
-              <Feather name="mic" size={28} color="#fff" />
-            </View>
+            <Image
+              source={require('../../../assets/images/ace-avatar.png')}
+              style={styles.aceAvatar}
+            />
             <View style={styles.newEstimateText}>
               <ThemedText style={styles.newEstimateTitle}>New Estimate</ThemedText>
               <ThemedText style={styles.newEstimateSubtitle}>
@@ -445,6 +447,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  aceAvatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
   },
   newEstimateText: {
     gap: 2,

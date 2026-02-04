@@ -118,7 +118,7 @@ export default function EstimatesScreen() {
         accessibilityLabel="Create with Ace AI"
       >
         <Image
-          source={require('../../../assets/images/ace-ai-button.png')}
+          source={require('../../../assets/images/ace-avatar.png')}
           style={styles.aceCardImage}
           resizeMode="cover"
         />

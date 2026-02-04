@@ -7,6 +7,7 @@ import {
   RefreshControl,
   FlatList,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,15 +22,30 @@ import { BubbleBackground } from '@/components/BubbleBackground';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/context/AuthContext';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
+import { getApiUrl } from '@/lib/query-client';
 
 interface EstimatePreview {
   id: string;
   estimateNumber: string;
   propertyName: string;
-  status: 'draft' | 'sent' | 'approved' | 'rejected';
-  total: number;
+  status: 'draft' | 'sent' | 'approved' | 'rejected' | 'needs_review' | 'pending';
+  totalAmount: number;
   createdAt: string;
-  updatedAt: string;
+  sentAt?: string;
+  approvedAt?: string;
+  rejectedAt?: string;
+  rejectionReason?: string;
+}
+
+interface ForemanEstimatesResponse {
+  estimates: EstimatePreview[];
+  stats: {
+    drafts: number;
+    sent: number;
+    approved: number;
+    rejected: number;
+    totalApprovedAmount: number;
+  };
 }
 
 interface AssignedJob {
@@ -94,39 +110,11 @@ const priorityConfig = {
   low: { label: 'Low', color: BrandColors.azureBlue, bg: 'rgba(0,120,212,0.15)' },
 };
 
-const mockEstimates: EstimatePreview[] = [
-  {
-    id: '1',
-    estimateNumber: 'EST-2026-0042',
-    propertyName: 'Sunset Valley HOA',
-    status: 'draft',
-    total: 2450.00,
-    createdAt: '2026-02-03T10:00:00Z',
-    updatedAt: '2026-02-03T10:30:00Z',
-  },
-  {
-    id: '2',
-    estimateNumber: 'EST-2026-0041',
-    propertyName: 'Marina Bay Apartments',
-    status: 'sent',
-    total: 5680.00,
-    createdAt: '2026-02-02T14:00:00Z',
-    updatedAt: '2026-02-02T16:00:00Z',
-  },
-  {
-    id: '3',
-    estimateNumber: 'EST-2026-0040',
-    propertyName: 'Hilltop Country Club',
-    status: 'approved',
-    total: 12340.00,
-    createdAt: '2026-02-01T09:00:00Z',
-    updatedAt: '2026-02-02T11:00:00Z',
-  },
-];
-
-const statusConfig = {
+const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
   draft: { label: 'Draft', color: BrandColors.azureBlue, bg: 'rgba(0,120,212,0.15)' },
   sent: { label: 'Sent', color: BrandColors.vividTangerine, bg: 'rgba(255,128,0,0.15)' },
+  needs_review: { label: 'Pending', color: BrandColors.vividTangerine, bg: 'rgba(255,128,0,0.15)' },
+  pending: { label: 'Pending', color: BrandColors.vividTangerine, bg: 'rgba(255,128,0,0.15)' },
   approved: { label: 'Approved', color: BrandColors.emerald, bg: 'rgba(34,214,154,0.15)' },
   rejected: { label: 'Rejected', color: '#FF3B30', bg: 'rgba(255,59,48,0.15)' },
 };
@@ -134,20 +122,40 @@ const statusConfig = {
 export default function ForemanHomeScreen() {
   const navigation = useNavigation<any>();
   const { theme } = useTheme();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const insets = useSafeAreaInsets();
   const headerHeight = useHeaderHeight();
   const [refreshing, setRefreshing] = useState(false);
   const [jobs, setJobs] = useState<AssignedJob[]>(mockAssignedJobs);
 
+  const { data: estimatesData, isLoading: estimatesLoading, refetch: refetchEstimates } = useQuery<ForemanEstimatesResponse>({
+    queryKey: ['/api/foreman/estimates'],
+    queryFn: async () => {
+      const response = await fetch(`${getApiUrl()}/api/foreman/estimates`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!response.ok) throw new Error('Failed to fetch estimates');
+      return response.json();
+    },
+    enabled: !!token,
+  });
+
+  const estimates = estimatesData?.estimates || [];
+  const stats = estimatesData?.stats || { drafts: 0, sent: 0, approved: 0, rejected: 0, totalApprovedAmount: 0 };
+  const totalEarnings = stats.totalApprovedAmount / 100;
+
   const firstName = user?.name?.split(' ')[0] || 'Foreman';
   const pendingJobs = jobs.filter(j => j.status === 'pending');
   const acceptedJobs = jobs.filter(j => j.status === 'accepted' || j.status === 'in_progress');
 
-  const onRefresh = useCallback(() => {
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1000);
-  }, []);
+    await refetchEstimates();
+    setRefreshing(false);
+  }, [refetchEstimates]);
 
   const handleNewEstimate = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -190,17 +198,19 @@ export default function ForemanHomeScreen() {
   };
 
   const renderEstimateCard = ({ item }: { item: EstimatePreview }) => {
-    const config = statusConfig[item.status];
+    const config = statusConfig[item.status] || statusConfig.draft;
+    const amount = (item.totalAmount || 0) / 100;
+    const displayDate = item.approvedAt || item.sentAt || item.createdAt;
     return (
       <Pressable
         style={[styles.estimateCard, { backgroundColor: theme.surface }]}
         onPress={() => handleEstimatePress(item)}
       >
         <View style={styles.estimateHeader}>
-          <View>
-            <ThemedText style={styles.estimateNumber}>{item.estimateNumber}</ThemedText>
-            <ThemedText style={[styles.propertyName, { color: theme.textSecondary }]}>
-              {item.propertyName}
+          <View style={{ flex: 1 }}>
+            <ThemedText style={styles.estimateNumber}>{item.estimateNumber || 'New Estimate'}</ThemedText>
+            <ThemedText style={[styles.propertyName, { color: theme.textSecondary }]} numberOfLines={1}>
+              {item.propertyName || 'No property'}
             </ThemedText>
           </View>
           <View style={[styles.statusBadge, { backgroundColor: config.bg }]}>
@@ -211,11 +221,19 @@ export default function ForemanHomeScreen() {
         </View>
         <View style={styles.estimateFooter}>
           <ThemedText style={[styles.total, { color: BrandColors.azureBlue }]}>
-            ${(item.total / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            ${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
           </ThemedText>
-          <ThemedText style={[styles.date, { color: theme.textSecondary }]}>
-            {new Date(item.updatedAt).toLocaleDateString()}
-          </ThemedText>
+          <View style={styles.dateRow}>
+            {item.status === 'approved' && item.approvedAt ? (
+              <ThemedText style={[styles.date, { color: BrandColors.emerald }]}>
+                Approved {new Date(item.approvedAt).toLocaleDateString()}
+              </ThemedText>
+            ) : (
+              <ThemedText style={[styles.date, { color: theme.textSecondary }]}>
+                {displayDate ? new Date(displayDate).toLocaleDateString() : ''}
+              </ThemedText>
+            )}
+          </View>
         </View>
       </Pressable>
     );
@@ -357,6 +375,36 @@ export default function ForemanHomeScreen() {
           </>
         )}
 
+        <View style={[styles.earningsCard, { backgroundColor: BrandColors.emerald }]}>
+          <View style={styles.earningsContent}>
+            <View>
+              <ThemedText style={styles.earningsLabel}>Total Approved Earnings</ThemedText>
+              <ThemedText style={styles.earningsAmount}>
+                ${totalEarnings.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              </ThemedText>
+            </View>
+            <View style={styles.earningsIconContainer}>
+              <Feather name="dollar-sign" size={32} color="rgba(255,255,255,0.9)" />
+            </View>
+          </View>
+          <View style={styles.earningsStats}>
+            <View style={styles.earningsStat}>
+              <ThemedText style={styles.earningsStatValue}>{stats.approved}</ThemedText>
+              <ThemedText style={styles.earningsStatLabel}>Approved</ThemedText>
+            </View>
+            <View style={styles.earningsStatDivider} />
+            <View style={styles.earningsStat}>
+              <ThemedText style={styles.earningsStatValue}>{stats.sent}</ThemedText>
+              <ThemedText style={styles.earningsStatLabel}>Pending</ThemedText>
+            </View>
+            <View style={styles.earningsStatDivider} />
+            <View style={styles.earningsStat}>
+              <ThemedText style={styles.earningsStatValue}>{stats.drafts}</ThemedText>
+              <ThemedText style={styles.earningsStatLabel}>Drafts</ThemedText>
+            </View>
+          </View>
+        </View>
+
         <View style={styles.statsRow}>
           <Pressable
             style={[styles.statCard, { backgroundColor: theme.surface }]}
@@ -365,7 +413,7 @@ export default function ForemanHomeScreen() {
             <View style={[styles.statIcon, { backgroundColor: 'rgba(0,120,212,0.15)' }]}>
               <Feather name="edit-3" size={20} color={BrandColors.azureBlue} />
             </View>
-            <ThemedText style={styles.statValue}>3</ThemedText>
+            <ThemedText style={styles.statValue}>{stats.drafts}</ThemedText>
             <ThemedText style={[styles.statLabel, { color: theme.textSecondary }]}>
               Drafts
             </ThemedText>
@@ -374,7 +422,7 @@ export default function ForemanHomeScreen() {
             <View style={[styles.statIcon, { backgroundColor: 'rgba(255,128,0,0.15)' }]}>
               <Feather name="send" size={20} color={BrandColors.vividTangerine} />
             </View>
-            <ThemedText style={styles.statValue}>5</ThemedText>
+            <ThemedText style={styles.statValue}>{stats.sent}</ThemedText>
             <ThemedText style={[styles.statLabel, { color: theme.textSecondary }]}>
               Sent
             </ThemedText>
@@ -383,7 +431,7 @@ export default function ForemanHomeScreen() {
             <View style={[styles.statIcon, { backgroundColor: 'rgba(34,214,154,0.15)' }]}>
               <Feather name="check-circle" size={20} color={BrandColors.emerald} />
             </View>
-            <ThemedText style={styles.statValue}>12</ThemedText>
+            <ThemedText style={styles.statValue}>{stats.approved}</ThemedText>
             <ThemedText style={[styles.statLabel, { color: theme.textSecondary }]}>
               Approved
             </ThemedText>
@@ -399,11 +447,30 @@ export default function ForemanHomeScreen() {
           </Pressable>
         </View>
 
-        {mockEstimates.map((estimate) => (
-          <View key={estimate.id}>
-            {renderEstimateCard({ item: estimate })}
+        {estimatesLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color={BrandColors.azureBlue} />
+            <ThemedText style={[styles.loadingText, { color: theme.textSecondary }]}>
+              Loading estimates...
+            </ThemedText>
           </View>
-        ))}
+        ) : estimates.length > 0 ? (
+          estimates.slice(0, 5).map((estimate) => (
+            <View key={estimate.id}>
+              {renderEstimateCard({ item: estimate })}
+            </View>
+          ))
+        ) : (
+          <View style={[styles.emptyContainer, { backgroundColor: theme.surface }]}>
+            <Feather name="file-text" size={40} color={theme.textSecondary} />
+            <ThemedText style={[styles.emptyText, { color: theme.textSecondary }]}>
+              No estimates yet
+            </ThemedText>
+            <ThemedText style={[styles.emptySubtext, { color: theme.textSecondary }]}>
+              Create your first estimate to get started
+            </ThemedText>
+          </View>
+        )}
       </ScrollView>
     </BubbleBackground>
   );
@@ -683,5 +750,87 @@ const styles = StyleSheet.create({
   },
   activeJobInfo: {
     gap: 2,
+  },
+  earningsCard: {
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.lg,
+    marginBottom: Spacing.lg,
+  },
+  earningsContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  earningsLabel: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.85)',
+    marginBottom: 4,
+  },
+  earningsAmount: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  earningsIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  earningsStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingTop: Spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.2)',
+  },
+  earningsStat: {
+    alignItems: 'center',
+  },
+  earningsStatValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  earningsStatLabel: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 2,
+  },
+  earningsStatDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  loadingContainer: {
+    padding: Spacing.xl,
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  loadingText: {
+    fontSize: 14,
+  },
+  emptyContainer: {
+    padding: Spacing.xl,
+    borderRadius: BorderRadius.md,
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  emptyText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  emptySubtext: {
+    fontSize: 13,
+    textAlign: 'center',
   },
 });

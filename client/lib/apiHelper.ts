@@ -226,3 +226,75 @@ export function showRetryAlert(
     ]
   );
 }
+
+export interface UploadPhotoResponse {
+  success: boolean;
+  url?: string;
+  filename?: string;
+  size?: number;
+  error?: string;
+}
+
+export async function uploadPhoto(
+  imageBase64: string,
+  mimeType: string = 'image/jpeg'
+): Promise<UploadPhotoResponse> {
+  const result = await safeApiRequest<UploadPhotoResponse>('/api/sync/upload-photo', {
+    method: 'POST',
+    body: {
+      imageData: imageBase64,
+      mimeType,
+    },
+    showAlerts: false,
+    timeoutMs: 30000,
+  });
+
+  if (result.success && result.data) {
+    return result.data;
+  }
+
+  return { success: false, error: result.error || 'Failed to upload photo' };
+}
+
+export async function uploadPhotos(
+  photos: { uri: string; base64?: string; mimeType?: string }[]
+): Promise<{ urls: string[]; errors: string[] }> {
+  const urls: string[] = [];
+  const errors: string[] = [];
+
+  const uploadPromises = photos.map(async (photo, index) => {
+    try {
+      let base64Data = photo.base64;
+      
+      if (!base64Data && photo.uri) {
+        const FileSystem = require('expo-file-system');
+        base64Data = await FileSystem.readAsStringAsync(photo.uri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+      }
+
+      if (!base64Data) {
+        errors.push(`Photo ${index + 1}: No image data available`);
+        return null;
+      }
+
+      const result = await uploadPhoto(base64Data, photo.mimeType || 'image/jpeg');
+      if (result.success && result.url) {
+        return result.url;
+      } else {
+        errors.push(`Photo ${index + 1}: ${result.error || 'Upload failed'}`);
+        return null;
+      }
+    } catch (error: any) {
+      errors.push(`Photo ${index + 1}: ${error.message || 'Upload error'}`);
+      return null;
+    }
+  });
+
+  const results = await Promise.all(uploadPromises);
+  results.forEach((url) => {
+    if (url) urls.push(url);
+  });
+
+  return { urls, errors };
+}

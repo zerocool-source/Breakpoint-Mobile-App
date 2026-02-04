@@ -68,7 +68,7 @@ router.post("/register", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Invalid input", details: result.error.issues });
     }
 
-    const { email, password, name, role, phone } = result.data;
+    const { email, password, name, role } = result.data;
     const [firstName, ...lastParts] = (name || '').split(' ');
     const lastName = lastParts.join(' ');
 
@@ -88,7 +88,6 @@ router.post("/register", async (req: Request, res: Response) => {
       firstName: firstName || 'User',
       lastName: lastName || '',
       role: role || 'tech',
-      phone,
     }).returning();
 
     const token = jwt.sign({ userId: newUser.id }, JWT_SECRET, { expiresIn: TOKEN_EXPIRY });
@@ -107,7 +106,6 @@ router.post("/register", async (req: Request, res: Response) => {
         email: newUser.email,
         name: fullName,
         role: newUser.role,
-        phone: newUser.phone,
       },
       token,
     });
@@ -159,7 +157,6 @@ router.post("/login", async (req: Request, res: Response) => {
         email: user.email,
         name: fullName,
         role: user.role,
-        phone: user.phone,
       },
       token,
     });
@@ -199,7 +196,6 @@ router.get("/me", authMiddleware, async (req: AuthenticatedRequest, res: Respons
       email: user.email,
       name: fullName,
       role: user.role,
-      phone: user.phone,
     });
   } catch (error) {
     console.error("Get user error:", error);

@@ -17,6 +17,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { BubbleBackground } from '@/components/BubbleBackground';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/context/AuthContext';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
@@ -221,7 +222,7 @@ export default function ForemanHomeScreen() {
   };
 
   return (
-    <ThemedView style={styles.container}>
+    <BubbleBackground bubbleCount={15}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[
@@ -404,7 +405,7 @@ export default function ForemanHomeScreen() {
           </View>
         ))}
       </ScrollView>
-    </ThemedView>
+    </BubbleBackground>
   );
 }
 

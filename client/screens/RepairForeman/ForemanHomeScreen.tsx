@@ -242,9 +242,12 @@ export default function ForemanHomeScreen() {
         </View>
 
         <Pressable
-          style={[styles.newEstimateButton, { backgroundColor: BrandColors.vividTangerine }]}
+          style={[styles.newEstimateButton, { backgroundColor: BrandColors.azureBlue }]}
           onPress={handleNewEstimate}
         >
+          <View style={styles.bubbleDecor1} />
+          <View style={styles.bubbleDecor2} />
+          <View style={styles.bubbleDecor3} />
           <View style={styles.newEstimateContent}>
             <Image
               source={require('../../../assets/images/ace-avatar.png')}
@@ -434,6 +437,34 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     borderRadius: BorderRadius.lg,
     marginBottom: Spacing.lg,
+    overflow: 'hidden',
+  },
+  bubbleDecor1: {
+    position: 'absolute',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    top: -20,
+    right: 30,
+  },
+  bubbleDecor2: {
+    position: 'absolute',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    bottom: -15,
+    right: 80,
+  },
+  bubbleDecor3: {
+    position: 'absolute',
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    top: 10,
+    right: 120,
   },
   newEstimateContent: {
     flexDirection: 'row',

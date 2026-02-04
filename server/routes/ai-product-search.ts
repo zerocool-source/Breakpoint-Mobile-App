@@ -1059,6 +1059,21 @@ Additional work beyond scope requires written authorization and will incur addit
 7. Double-check all math: qty × rate = correct amount
 8. Labor hours: Heater install=8-12hrs, Filter install=6-8hrs, Motor install=4-6hrs, Backwash drain install=8hrs, Plumbing work=varies
 
+=== CRITICAL: QUANTITY (qty) RULES ===
+The "qty" field is ESSENTIAL - it tells us HOW MANY of each item is needed!
+- If installing 3 elbows, set qty: 3
+- If need 10 bags of sand, set qty: 10  
+- If 2 unions are required, set qty: 2
+- NEVER default everything to qty:1 - calculate the ACTUAL quantity needed
+- The total for each line = qty × rate (e.g., 3 elbows × $18.75 = $56.25)
+
+Examples of correct quantities:
+- Hi-Temp Union 2" PVC: qty: 2 (heaters/filters need 2 unions)
+- Black Iron Nipple 3/4": qty: 3 (gas train typically needs 3)
+- Sand Media 50lb bag: qty: 10 (TR100 filter needs 500 lbs = 10 bags)
+- PVC 90° Elbow: qty: 4 (routing typically needs 3-5)
+- Red Head Anchor: qty: 4 (for strut mounting)
+
 Return a JSON object with:
 {
   "introText": "Professional opening paragraph referencing CA Title 22, Title 24, NEC 680, NFPA 54, VGB...",
@@ -1066,19 +1081,33 @@ Return a JSON object with:
     {
       "name": "SPA",
       "sectionExplanation": "Overview of work on this system",
-      "laborHours": 40,
+      "laborHours": 8,
       "items": [
         {
-          "description": "Exact product name with model/specs (e.g., Raypak 267 Cupro-Nickel Spa Heater 266k BTU)",
+          "description": "Raypak 267 Cupro-Nickel Spa Heater 266k BTU",
           "qty": 1,
           "rate": 4899.00,
           "taxable": true,
-          "explanation": "Detailed explanation with code reference"
+          "explanation": "Commercial spa heater with copper-nickel exchanger per CA Title 24"
+        },
+        {
+          "description": "Hi-Temp Union 2\" PVC",
+          "qty": 2,
+          "rate": 24.69,
+          "taxable": true,
+          "explanation": "Required for heater connection - inlet and outlet"
+        },
+        {
+          "description": "Black Iron Nipple 3/4\"x4\"",
+          "qty": 3,
+          "rate": 8.50,
+          "taxable": true,
+          "explanation": "Gas train connections per NFPA 54"
         }
       ]
     }
   ],
-  "totalLaborHours": 168,
+  "totalLaborHours": 8,
   "laborRate": 150.00,
   "termsText": "Include the full payment terms from above...",
   "notes": "Job-specific notes"

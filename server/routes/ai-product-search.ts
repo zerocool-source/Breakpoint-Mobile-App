@@ -463,7 +463,22 @@ Write 2-4 paragraphs that clearly communicate the scope of work with technical a
       });
     }
     
-    const products = catalogResult.products;
+    const allProducts = catalogResult.products;
+    
+    // Pre-filter products using keyword matching to reduce token count for OpenAI
+    const searchTerms = searchText.toLowerCase().split(/\s+/).filter((t: string) => t.length > 2);
+    const filteredProducts = allProducts.filter((p: any) => {
+      const searchableText = `${p.name} ${p.category} ${p.subcategory || ''} ${p.description || ''} ${p.sku}`.toLowerCase();
+      return searchTerms.some((term: string) => searchableText.includes(term));
+    });
+    
+    // Use filtered products, or if too few matches, include top products by category keywords
+    const products = filteredProducts.length >= 3 ? filteredProducts.slice(0, 100) : 
+                     filteredProducts.length > 0 ? filteredProducts :
+                     allProducts.slice(0, 100);
+    
+    console.log(`[AI Search] Filtered ${allProducts.length} products to ${products.length} for query: "${searchText}"`);
+    
     const productList = products.map((p: any) => ({
       sku: p.sku,
       name: p.name,

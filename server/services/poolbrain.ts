@@ -138,8 +138,39 @@ export async function getNormalizedProducts(options?: {
   offset?: number;
   limit?: number;
 }): Promise<NormalizedProduct[]> {
-  const rawProducts = await getProducts(options);
-  return rawProducts.map(normalizeProduct);
+  // If specific limit/offset provided, use those
+  if (options?.limit !== undefined || options?.offset !== undefined) {
+    const rawProducts = await getProducts(options);
+    return rawProducts.map(normalizeProduct);
+  }
+  
+  // Otherwise, paginate to get ALL products
+  const allProducts: PoolBrainProduct[] = [];
+  let offset = 0;
+  const batchSize = 500;
+  let hasMore = true;
+  
+  while (hasMore) {
+    const batch = await getProducts({
+      ...options,
+      offset,
+      limit: batchSize,
+    });
+    
+    if (batch.length > 0) {
+      allProducts.push(...batch);
+      offset += batch.length;
+      console.log(`[Pool Brain] Fetched ${allProducts.length} products so far...`);
+    }
+    
+    // Stop if we got fewer than requested (no more data)
+    if (batch.length < batchSize) {
+      hasMore = false;
+    }
+  }
+  
+  console.log(`[Pool Brain] Total products fetched: ${allProducts.length}`);
+  return allProducts.map(normalizeProduct);
 }
 
 export async function searchProducts(query: string): Promise<NormalizedProduct[]> {

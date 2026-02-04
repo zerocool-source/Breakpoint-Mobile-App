@@ -1137,40 +1137,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/repair-requests", authMiddleware, async (req: AuthenticatedRequest, res) => {
     try {
       const technicianId = req.query.technicianId as string | undefined;
-      const status = req.query.status as string | undefined;
-      const limit = parseInt(req.query.limit as string) || 50;
+      const statusFilter = req.query.status as string | undefined;
+      const limitNum = parseInt(req.query.limit as string) || 50;
 
-      let query = `
-        SELECT id, entry_type as "entryType", 
-               COALESCE(description, issue_type, 'Repair Request') as "issueTitle", 
-               property_id as "propertyId", property_name as "propertyName",
-               property_address as "propertyAddress",
-               technician_id as "technicianId", technician_name as "technicianName",
-               created_at as "scheduledDate", status, notes, created_at as "createdAt",
-               priority
-        FROM tech_ops_entries 
-        WHERE entry_type = 'repair_request'
-      `;
-      
-      const params: any[] = [];
-      let paramIndex = 1;
-      
-      if (technicianId) {
-        query += ` AND technician_id = $${paramIndex}`;
-        params.push(technicianId);
-        paramIndex++;
+      // Use Drizzle's sql template for parameterized queries on tech_ops_entries table
+      let result;
+      if (technicianId && statusFilter) {
+        result = await db.execute(sql`
+          SELECT id, entry_type as "entryType", 
+                 COALESCE(description, issue_type, 'Repair Request') as "issueTitle", 
+                 property_id as "propertyId", property_name as "propertyName",
+                 property_address as "propertyAddress",
+                 technician_id as "technicianId", technician_name as "technicianName",
+                 created_at as "scheduledDate", status, notes, created_at as "createdAt",
+                 priority
+          FROM tech_ops_entries 
+          WHERE entry_type = 'repair_request' 
+            AND technician_id = ${technicianId}
+            AND status = ${statusFilter}
+          ORDER BY created_at DESC 
+          LIMIT ${limitNum}
+        `);
+      } else if (technicianId) {
+        result = await db.execute(sql`
+          SELECT id, entry_type as "entryType", 
+                 COALESCE(description, issue_type, 'Repair Request') as "issueTitle", 
+                 property_id as "propertyId", property_name as "propertyName",
+                 property_address as "propertyAddress",
+                 technician_id as "technicianId", technician_name as "technicianName",
+                 created_at as "scheduledDate", status, notes, created_at as "createdAt",
+                 priority
+          FROM tech_ops_entries 
+          WHERE entry_type = 'repair_request' 
+            AND technician_id = ${technicianId}
+          ORDER BY created_at DESC 
+          LIMIT ${limitNum}
+        `);
+      } else if (statusFilter) {
+        result = await db.execute(sql`
+          SELECT id, entry_type as "entryType", 
+                 COALESCE(description, issue_type, 'Repair Request') as "issueTitle", 
+                 property_id as "propertyId", property_name as "propertyName",
+                 property_address as "propertyAddress",
+                 technician_id as "technicianId", technician_name as "technicianName",
+                 created_at as "scheduledDate", status, notes, created_at as "createdAt",
+                 priority
+          FROM tech_ops_entries 
+          WHERE entry_type = 'repair_request' 
+            AND status = ${statusFilter}
+          ORDER BY created_at DESC 
+          LIMIT ${limitNum}
+        `);
+      } else {
+        result = await db.execute(sql`
+          SELECT id, entry_type as "entryType", 
+                 COALESCE(description, issue_type, 'Repair Request') as "issueTitle", 
+                 property_id as "propertyId", property_name as "propertyName",
+                 property_address as "propertyAddress",
+                 technician_id as "technicianId", technician_name as "technicianName",
+                 created_at as "scheduledDate", status, notes, created_at as "createdAt",
+                 priority
+          FROM tech_ops_entries 
+          WHERE entry_type = 'repair_request'
+          ORDER BY created_at DESC 
+          LIMIT ${limitNum}
+        `);
       }
-      
-      if (status) {
-        query += ` AND status = $${paramIndex}`;
-        params.push(status);
-        paramIndex++;
-      }
-      
-      query += ` ORDER BY created_at DESC LIMIT $${paramIndex}`;
-      params.push(limit);
 
-      const result = await db.execute(sql.raw(query));
       res.json({ items: result.rows || [] });
     } catch (error) {
       console.error("Error fetching repair requests:", error);

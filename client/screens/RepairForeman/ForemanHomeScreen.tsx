@@ -56,28 +56,35 @@ interface AssignedJob {
   propertyName: string;
   propertyAddress: string;
   description: string;
-  priority: 'high' | 'medium' | 'low';
+  priority: 'high' | 'medium' | 'low' | 'urgent';
   scheduledTime: string;
-  status: 'pending' | 'accepted' | 'in_progress' | 'completed' | 'dismissed';
+  status: 'pending' | 'scheduled' | 'accepted' | 'in_progress' | 'completed' | 'dismissed';
   estimatedDuration: string;
   contactName?: string;
   contactPhone?: string;
 }
 
 
-const priorityConfig = {
+const priorityConfig: Record<string, { label: string; color: string; bg: string }> = {
+  urgent: { label: 'URGENT', color: '#FF3B30', bg: 'rgba(255,59,48,0.25)' },
   high: { label: 'High', color: '#FF3B30', bg: 'rgba(255,59,48,0.15)' },
   medium: { label: 'Medium', color: BrandColors.vividTangerine, bg: 'rgba(255,128,0,0.15)' },
   low: { label: 'Low', color: BrandColors.azureBlue, bg: 'rgba(0,120,212,0.15)' },
+  scheduled: { label: 'Scheduled', color: BrandColors.tropicalTeal, bg: 'rgba(0,188,212,0.15)' },
 };
+
+const defaultPriority = { label: 'Normal', color: BrandColors.azureBlue, bg: 'rgba(0,120,212,0.15)' };
 
 const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
   draft: { label: 'Draft', color: BrandColors.azureBlue, bg: 'rgba(0,120,212,0.15)' },
   sent: { label: 'Sent', color: BrandColors.vividTangerine, bg: 'rgba(255,128,0,0.15)' },
   needs_review: { label: 'Pending', color: BrandColors.vividTangerine, bg: 'rgba(255,128,0,0.15)' },
   pending: { label: 'Pending', color: BrandColors.vividTangerine, bg: 'rgba(255,128,0,0.15)' },
+  scheduled: { label: 'Scheduled', color: BrandColors.tropicalTeal, bg: 'rgba(0,188,212,0.15)' },
   approved: { label: 'Approved', color: BrandColors.emerald, bg: 'rgba(34,214,154,0.15)' },
   rejected: { label: 'Rejected', color: '#FF3B30', bg: 'rgba(255,59,48,0.15)' },
+  in_progress: { label: 'In Progress', color: BrandColors.azureBlue, bg: 'rgba(0,120,212,0.15)' },
+  completed: { label: 'Completed', color: BrandColors.emerald, bg: 'rgba(34,214,154,0.15)' },
 };
 
 const HOURLY_RATE_KEY = 'foreman_hourly_rate';
@@ -193,8 +200,9 @@ export default function ForemanHomeScreen() {
   const totalEarnings = stats.totalApprovedAmount / 100;
 
   const firstName = user?.name?.split(' ')[0] || 'Foreman';
-  const newJobs = jobs.filter(j => j.status === 'pending' && !seenJobIds.has(j.id));
-  const pendingJobs = jobs.filter(j => j.status === 'pending');
+  // Include both pending and scheduled jobs in new/pending sections
+  const newJobs = jobs.filter(j => (j.status === 'pending' || j.status === 'scheduled') && !seenJobIds.has(j.id));
+  const pendingJobs = jobs.filter(j => j.status === 'pending' || j.status === 'scheduled');
   const acceptedJobs = jobs.filter(j => j.status === 'accepted');
   const activeJob = jobs.find(j => j.id === activeJobId && j.status === 'in_progress');
 
@@ -489,7 +497,7 @@ export default function ForemanHomeScreen() {
               </View>
             </View>
             {pendingJobs.map((job) => {
-              const priority = priorityConfig[job.priority];
+              const priority = priorityConfig[job.priority] || defaultPriority;
               const time = new Date(job.scheduledTime).toLocaleTimeString('en-US', {
                 hour: 'numeric',
                 minute: '2-digit',

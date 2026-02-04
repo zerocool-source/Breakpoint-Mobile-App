@@ -564,6 +564,72 @@ ${JSON.stringify(productList, null, 2)}`
       }
     }
 
+    // Check if this is plumbing/specialty work and add manual entry items
+    let manualEntryItems: any[] = [];
+    let plumbingMessage = '';
+    
+    const lowerSearch = searchText.toLowerCase();
+    const plumbingKeywords = ['mission clamp', 'san t', 'sanitary tee', 'sanitary t', 'p-trap', 'p trap', 'ptrap', 
+      'backwash cone', 'strut', 'red head', 'redhead', 'dwv', 'cast iron', 'cone increaser', 
+      '4-90', '4 90', 'service plug', 'cleanout', 'fernco'];
+      
+      const isPlumbingWork = plumbingKeywords.some(kw => lowerSearch.includes(kw));
+      
+      if (isPlumbingWork) {
+        // Known plumbing parts with pricing
+        const knownParts: Record<string, { name: string; price: number; unit: string }> = {
+          'mission clamp': { name: '4" Mission Clamp (no-hub coupling)', price: 24.99, unit: 'each' },
+          'san t': { name: '4" Sanitary Tee (San T)', price: 38.50, unit: 'each' },
+          'sanitary tee': { name: '4" Sanitary Tee (San T)', price: 38.50, unit: 'each' },
+          'sanitary t': { name: '4" Sanitary Tee (San T)', price: 38.50, unit: 'each' },
+          'service plug': { name: '4" Threaded Service Plug', price: 12.99, unit: 'each' },
+          'p-trap': { name: '4" P-Trap', price: 42.00, unit: 'each' },
+          'p trap': { name: '4" P-Trap', price: 42.00, unit: 'each' },
+          'ptrap': { name: '4" P-Trap', price: 42.00, unit: 'each' },
+          '90': { name: '4" DWV 90° Elbow', price: 18.75, unit: 'each' },
+          '90 degree': { name: '4" DWV 90° Elbow', price: 18.75, unit: 'each' },
+          'cone increaser': { name: '4" to 5" Backwash Cone Increaser', price: 34.99, unit: 'each' },
+          'b/w cone': { name: '4" to 5" Backwash Cone Increaser', price: 34.99, unit: 'each' },
+          'strut': { name: 'Shallow Strut Channel', price: 8.50, unit: 'foot' },
+          'strut clamp': { name: '4" Strut Clamp', price: 12.00, unit: 'each' },
+          'l bracket': { name: 'Strut L-Bracket', price: 8.50, unit: 'each' },
+          'l-bracket': { name: 'Strut L-Bracket', price: 8.50, unit: 'each' },
+          'red head': { name: 'Stainless Steel Red Head Anchor 3/8"x3"', price: 4.25, unit: 'each' },
+          'redhead': { name: 'Stainless Steel Red Head Anchor 3/8"x3"', price: 4.25, unit: 'each' },
+          'anchor': { name: 'Concrete Anchor', price: 4.25, unit: 'each' },
+          'cleanout': { name: '4" Cleanout w/ Plug', price: 28.50, unit: 'each' },
+          'fernco': { name: 'Fernco Flexible Coupling 4"', price: 18.99, unit: 'each' },
+          'air gap': { name: '1" Air Gap/Siphon Break Fitting', price: 45.00, unit: 'each' },
+        };
+        
+        // Find matching parts from the description
+        for (const [keyword, part] of Object.entries(knownParts)) {
+          if (lowerSearch.includes(keyword)) {
+            // Check if we already have this part
+            if (!manualEntryItems.find(p => p.name === part.name)) {
+              manualEntryItems.push({
+                sku: `MANUAL-${keyword.replace(/\s+/g, '-').toUpperCase()}`,
+                name: part.name,
+                category: 'Plumbing',
+                subcategory: 'Drain & Backwash',
+                manufacturer: '',
+                price: part.price,
+                unit: part.unit,
+                confidence: 80,
+                reason: 'Specialty plumbing part - not in catalog, add manually',
+                isManualEntry: true,
+              });
+            }
+          }
+        }
+        
+      if (manualEntryItems.length > 0) {
+        plumbingMessage = `I found ${manualEntryItems.length} plumbing parts that aren't in our product catalog. These are specialty items you'll need to add manually to your estimate. I've included suggested pricing based on current market rates.`;
+      } else {
+        plumbingMessage = `This looks like specialty plumbing work. These parts aren't in our product catalog - you'll need to add them manually. Use the "Add Custom Item" option to add parts like mission clamps, sanitary tees, strut, anchors, etc.`;
+      }
+    }
+
     // Get frequently paired products based on learned patterns (user-specific first)
     const matchedSkus = matches.map(m => m.sku);
     const relatedProducts = await getRelatedProducts(matchedSkus, userId);
@@ -593,6 +659,8 @@ ${JSON.stringify(productList, null, 2)}`
     res.json({ 
       matches, 
       suggestions,
+      manualEntryItems,
+      plumbingMessage,
       learnedFromHistory: learnedMappings.length > 0,
     });
   } catch (error) {

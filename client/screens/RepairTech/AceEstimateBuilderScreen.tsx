@@ -580,7 +580,17 @@ export default function AceEstimateBuilderScreen() {
       const data = await response.json();
       setIsThinking(false);
 
-      if (data.matches && data.matches.length > 0) {
+      // Prioritize manual entry items (plumbing parts) when found
+      if (data.manualEntryItems && data.manualEntryItems.length > 0) {
+        // Found plumbing/specialty parts not in catalog
+        const manualItems = data.manualEntryItems.map((m: any) => ({ ...m, selected: true }));
+        
+        let messageText = data.plumbingMessage || `I found ${manualItems.length} specialty part${manualItems.length > 1 ? 's' : ''} for this work.`;
+        messageText += ' Tap to select and add them to your estimate:';
+        
+        addAceMessage(messageText, manualItems);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else if (data.matches && data.matches.length > 0) {
         const matches = data.matches.map((m: any) => ({ ...m, selected: true }));
         
         logAIInteraction(description, matches);
@@ -595,6 +605,9 @@ export default function AceEstimateBuilderScreen() {
         
         addAceMessage(messageText, matches);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else if (data.plumbingMessage) {
+        // Plumbing work detected but couldn't identify specific parts
+        addAceMessage(data.plumbingMessage);
       } else {
         addAceMessage("Hmm, I couldn't find any exact matches for that. Try describing it differently, or give me more details like the brand or type of equipment.");
       }

@@ -91,7 +91,8 @@ export function ProductCatalog({ role, onSelectProduct, selectionMode = false }:
 
   const categories = useMemo(() => {
     if (serviceAvailable) {
-      const cats = [...new Set(products.map(p => p.category))].filter(Boolean).sort();
+      // Include "Plumbing" category for specialty parts
+      const cats = [...new Set([...products.map(p => p.category), 'Plumbing'])].filter(Boolean).sort();
       return cats;
     }
     return HERITAGE_CATEGORIES as unknown as string[];
@@ -181,11 +182,31 @@ export function ProductCatalog({ role, onSelectProduct, selectionMode = false }:
     return getSubcategories(selectedCategory as HeritageCategory);
   }, [selectedCategory, products, serviceAvailable]);
 
+  // Known plumbing parts that aren't in Pool Brain catalog
+  const plumbingParts: PoolBrainProduct[] = useMemo(() => [
+    { sku: 'PLUMB-MISSION-4', heritageNumber: '', name: '4" Mission Clamp (no-hub coupling)', category: 'Plumbing', subcategory: 'Drain & Backwash', price: 24.99, cost: 15, unit: 'each', manufacturer: '', description: 'No-hub coupling for cast iron to PVC connection', productId: 0 },
+    { sku: 'PLUMB-SANT-4', heritageNumber: '', name: '4" Sanitary Tee (San T)', category: 'Plumbing', subcategory: 'Drain & Backwash', price: 38.50, cost: 22, unit: 'each', manufacturer: '', description: 'DWV sanitary tee for drain connections', productId: 0 },
+    { sku: 'PLUMB-SANT-PLUG-4', heritageNumber: '', name: '4" San T with Threaded Service Plug', category: 'Plumbing', subcategory: 'Drain & Backwash', price: 45.00, cost: 28, unit: 'each', manufacturer: '', description: 'Sanitary tee with access plug', productId: 0 },
+    { sku: 'PLUMB-PLUG-4', heritageNumber: '', name: '4" Threaded Service Plug', category: 'Plumbing', subcategory: 'Drain & Backwash', price: 12.99, cost: 7, unit: 'each', manufacturer: '', description: 'Threaded cleanout plug', productId: 0 },
+    { sku: 'PLUMB-90-4', heritageNumber: '', name: '4" DWV 90° Elbow', category: 'Plumbing', subcategory: 'Drain & Backwash', price: 18.75, cost: 10, unit: 'each', manufacturer: '', description: '90 degree elbow for drain piping', productId: 0 },
+    { sku: 'PLUMB-45-4', heritageNumber: '', name: '4" DWV 45° Elbow', category: 'Plumbing', subcategory: 'Drain & Backwash', price: 16.50, cost: 9, unit: 'each', manufacturer: '', description: '45 degree elbow for drain piping', productId: 0 },
+    { sku: 'PLUMB-PTRAP-4', heritageNumber: '', name: '4" P-Trap', category: 'Plumbing', subcategory: 'Drain & Backwash', price: 42.00, cost: 25, unit: 'each', manufacturer: '', description: 'P-trap for proper drainage', productId: 0 },
+    { sku: 'PLUMB-CONE-4-5', heritageNumber: '', name: '4" to 5" Backwash Cone Increaser', category: 'Plumbing', subcategory: 'Drain & Backwash', price: 34.99, cost: 20, unit: 'each', manufacturer: '', description: 'Backwash cone increaser for filter discharge', productId: 0 },
+    { sku: 'PLUMB-STRUT', heritageNumber: '', name: 'Shallow Strut Channel (per foot)', category: 'Plumbing', subcategory: 'Supports', price: 8.50, cost: 5, unit: 'foot', manufacturer: '', description: 'Strut channel for pipe support', productId: 0 },
+    { sku: 'PLUMB-STRUT-CLAMP-4', heritageNumber: '', name: '4" Strut Clamp', category: 'Plumbing', subcategory: 'Supports', price: 12.00, cost: 7, unit: 'each', manufacturer: '', description: 'Strut clamp for 4" pipe', productId: 0 },
+    { sku: 'PLUMB-STRUT-L', heritageNumber: '', name: 'Strut L-Bracket', category: 'Plumbing', subcategory: 'Supports', price: 8.50, cost: 5, unit: 'each', manufacturer: '', description: 'L-bracket for strut mounting', productId: 0 },
+    { sku: 'PLUMB-ANCHOR-SS', heritageNumber: '', name: 'Stainless Steel Red Head Anchor 3/8"x3"', category: 'Plumbing', subcategory: 'Supports', price: 4.25, cost: 2.50, unit: 'each', manufacturer: 'Red Head', description: 'SS concrete anchor', productId: 0 },
+    { sku: 'PLUMB-CLEANOUT-4', heritageNumber: '', name: '4" Cleanout w/ Plug', category: 'Plumbing', subcategory: 'Drain & Backwash', price: 28.50, cost: 16, unit: 'each', manufacturer: '', description: 'Cleanout fitting with plug', productId: 0 },
+    { sku: 'PLUMB-AIRGAP-1', heritageNumber: '', name: '1" Air Gap/Siphon Break Fitting', category: 'Plumbing', subcategory: 'Drain & Backwash', price: 45.00, cost: 28, unit: 'each', manufacturer: '', description: 'Air gap fitting to prevent siphon', productId: 0 },
+    { sku: 'PLUMB-FERNCO-4', heritageNumber: '', name: 'Fernco Flexible Coupling 4"', category: 'Plumbing', subcategory: 'Drain & Backwash', price: 18.99, cost: 11, unit: 'each', manufacturer: 'Fernco', description: 'Flexible rubber coupling', productId: 0 },
+  ], []);
+
   const filteredProducts = useMemo(() => {
     let prods: (HeritageProduct | PoolBrainProduct)[];
     
     if (serviceAvailable) {
-      prods = [...products];
+      // Include plumbing parts in catalog
+      prods = [...products, ...plumbingParts];
       if (selectedCategory) {
         prods = prods.filter(p => p.category === selectedCategory);
       }
@@ -211,7 +232,7 @@ export function ProductCatalog({ role, onSelectProduct, selectionMode = false }:
     }
 
     return prods;
-  }, [selectedCategory, selectedSubcategory, search, products, serviceAvailable]);
+  }, [selectedCategory, selectedSubcategory, search, products, serviceAvailable, plumbingParts]);
 
   const handleProductPress = useCallback((product: HeritageProduct | PoolBrainProduct) => {
     if (selectionMode && onSelectProduct) {

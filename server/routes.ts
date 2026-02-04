@@ -717,6 +717,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Foreman estimates dashboard with stats
+  app.get("/api/foreman/estimates", authMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      // Get all estimates for this foreman
+      const estimatesResult = await db.execute(sql`
+        SELECT 
+          id, estimate_number as "estimateNumber", property_id as "propertyId", 
+          property_name as "propertyName", title, description, status,
+          total_amount as "totalAmount", created_at as "createdAt",
+          sent_for_approval_at as "sentAt", approved_at as "approvedAt",
+          rejected_at as "rejectedAt", rejection_reason as "rejectionReason"
+        FROM estimates 
+        WHERE repair_foreman_id = ${userId} 
+           OR created_by_tech_id = ${userId}
+           OR repair_tech_id = ${userId}
+        ORDER BY created_at DESC
+        LIMIT 50
+      `);
+      
+      // Get stats
+      const statsResult = await db.execute(sql`
+        SELECT 
+          COUNT(*) FILTER (WHERE status = 'draft') as "drafts",
+          COUNT(*) FILTER (WHERE status IN ('sent', 'needs_review', 'pending')) as "sent",
+          COUNT(*) FILTER (WHERE status = 'approved') as "approved",
+          COUNT(*) FILTER (WHERE status = 'rejected') as "rejected",
+          COALESCE(SUM(total_amount) FILTER (WHERE status = 'approved'), 0) as "totalApprovedAmount"
+        FROM estimates 
+        WHERE repair_foreman_id = ${userId}
+           OR created_by_tech_id = ${userId}
+           OR repair_tech_id = ${userId}
+      `);
+      
+      const stats = statsResult.rows[0] || { drafts: 0, sent: 0, approved: 0, rejected: 0, totalApprovedAmount: 0 };
+      
+      res.json({
+        estimates: estimatesResult.rows,
+        stats: {
+          drafts: Number(stats.drafts) || 0,
+          sent: Number(stats.sent) || 0,
+          approved: Number(stats.approved) || 0,
+          rejected: Number(stats.rejected) || 0,
+          totalApprovedAmount: Number(stats.totalApprovedAmount) || 0, // in cents
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching foreman estimates:", error);
+      res.status(500).json({ error: "Failed to fetch foreman estimates" });
+    }
+  });
+
+  // Update estimate status (for admin approval)
+  app.patch("/api/estimates/:id/status", authMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const { status, rejectionReason } = req.body;
+      const now = new Date();
+      
+      let updateFields: any = { status };
+      
+      if (status === 'approved') {
+        updateFields.approved_at = now;
+        updateFields.approved_by_manager_id = req.user!.id;
+        updateFields.approved_by_manager_name = `${req.user!.firstName} ${req.user!.lastName}`;
+      } else if (status === 'rejected') {
+        updateFields.rejected_at = now;
+        updateFields.rejection_reason = rejectionReason || '';
+      } else if (status === 'sent' || status === 'needs_review') {
+        updateFields.sent_for_approval_at = now;
+      }
+      
+      await db.execute(sql`
+        UPDATE estimates 
+        SET status = ${status},
+            approved_at = ${status === 'approved' ? now : sql`approved_at`},
+            rejected_at = ${status === 'rejected' ? now : sql`rejected_at`},
+            rejection_reason = ${status === 'rejected' ? (rejectionReason || '') : sql`rejection_reason`},
+            sent_for_approval_at = ${status === 'sent' || status === 'needs_review' ? now : sql`sent_for_approval_at`}
+        WHERE id = ${id}
+      `);
+      
+      res.json({ success: true, status });
+    } catch (error) {
+      console.error("Error updating estimate status:", error);
+      res.status(500).json({ error: "Failed to update estimate status" });
+    }
+  });
+
   app.get("/api/route-stops", authMiddleware, async (req: AuthenticatedRequest, res) => {
     try {
       const today = new Date();

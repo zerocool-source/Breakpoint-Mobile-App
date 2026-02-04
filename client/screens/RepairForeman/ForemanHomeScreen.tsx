@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -15,10 +15,12 @@ import { useHeaderHeight } from '@react-navigation/elements';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useQuery } from '@tanstack/react-query';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { BubbleBackground } from '@/components/BubbleBackground';
+import { EarningsTimer } from '@/components/EarningsTimer';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/context/AuthContext';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
@@ -119,6 +121,11 @@ const statusConfig: Record<string, { label: string; color: string; bg: string }>
   rejected: { label: 'Rejected', color: '#FF3B30', bg: 'rgba(255,59,48,0.15)' },
 };
 
+const HOURLY_RATE_KEY = 'foreman_hourly_rate';
+const ACTIVE_JOB_KEY = 'foreman_active_job';
+const JOB_START_TIME_KEY = 'foreman_job_start_time';
+const NEW_JOBS_SEEN_KEY = 'foreman_seen_jobs';
+
 export default function ForemanHomeScreen() {
   const navigation = useNavigation<any>();
   const { theme } = useTheme();
@@ -127,6 +134,10 @@ export default function ForemanHomeScreen() {
   const headerHeight = useHeaderHeight();
   const [refreshing, setRefreshing] = useState(false);
   const [jobs, setJobs] = useState<AssignedJob[]>(mockAssignedJobs);
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
+  const [jobStartTime, setJobStartTime] = useState<Date | null>(null);
+  const [seenJobIds, setSeenJobIds] = useState<Set<string>>(new Set());
+  const hourlyRate = 60; // Rick's hourly rate
 
   const { data: estimatesData, isLoading: estimatesLoading, refetch: refetchEstimates } = useQuery<ForemanEstimatesResponse>({
     queryKey: ['/api/foreman/estimates'],
@@ -148,8 +159,39 @@ export default function ForemanHomeScreen() {
   const totalEarnings = stats.totalApprovedAmount / 100;
 
   const firstName = user?.name?.split(' ')[0] || 'Foreman';
+  const newJobs = jobs.filter(j => j.status === 'pending' && !seenJobIds.has(j.id));
   const pendingJobs = jobs.filter(j => j.status === 'pending');
-  const acceptedJobs = jobs.filter(j => j.status === 'accepted' || j.status === 'in_progress');
+  const acceptedJobs = jobs.filter(j => j.status === 'accepted');
+  const activeJob = jobs.find(j => j.id === activeJobId && j.status === 'in_progress');
+
+  // Load saved active job state on mount
+  useEffect(() => {
+    const loadSavedState = async () => {
+      try {
+        const [savedActiveJob, savedStartTime, savedSeenJobs] = await Promise.all([
+          AsyncStorage.getItem(ACTIVE_JOB_KEY),
+          AsyncStorage.getItem(JOB_START_TIME_KEY),
+          AsyncStorage.getItem(NEW_JOBS_SEEN_KEY),
+        ]);
+        
+        if (savedActiveJob) {
+          setActiveJobId(savedActiveJob);
+          setJobs(prev => prev.map(j => 
+            j.id === savedActiveJob ? { ...j, status: 'in_progress' as const } : j
+          ));
+        }
+        if (savedStartTime) {
+          setJobStartTime(new Date(savedStartTime));
+        }
+        if (savedSeenJobs) {
+          setSeenJobIds(new Set(JSON.parse(savedSeenJobs)));
+        }
+      } catch (e) {
+        console.error('Error loading saved state:', e);
+      }
+    };
+    loadSavedState();
+  }, []);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -174,22 +216,85 @@ export default function ForemanHomeScreen() {
     }
   };
 
-  const handleAcceptJob = (jobId: string) => {
+  const handleAcceptJob = async (jobId: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setJobs(prev => prev.map(j => 
       j.id === jobId ? { ...j, status: 'accepted' as const } : j
     ));
+    // Mark job as seen
+    const newSeenIds = new Set(seenJobIds);
+    newSeenIds.add(jobId);
+    setSeenJobIds(newSeenIds);
+    await AsyncStorage.setItem(NEW_JOBS_SEEN_KEY, JSON.stringify([...newSeenIds]));
+    
     const job = jobs.find(j => j.id === jobId);
     if (job) {
       navigation.navigate('JobDetails', { job: { ...job, status: 'accepted' } });
     }
   };
 
-  const handleDismissJob = (jobId: string) => {
+  const handleStartWork = async (jobId: string) => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    const startTime = new Date();
+    
+    // Update job status to in_progress
+    setJobs(prev => prev.map(j => 
+      j.id === jobId ? { ...j, status: 'in_progress' as const } : j
+    ));
+    setActiveJobId(jobId);
+    setJobStartTime(startTime);
+    
+    // Persist to storage
+    await Promise.all([
+      AsyncStorage.setItem(ACTIVE_JOB_KEY, jobId),
+      AsyncStorage.setItem(JOB_START_TIME_KEY, startTime.toISOString()),
+    ]);
+  };
+
+  const handleStopWork = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    
+    // Calculate final earnings for this session
+    if (jobStartTime) {
+      const elapsed = (Date.now() - jobStartTime.getTime()) / 1000;
+      const hours = elapsed / 3600;
+      const earned = (hours * hourlyRate).toFixed(2);
+      console.log(`Job completed. Earned: $${earned}`);
+    }
+    
+    // Update job status back to accepted (or completed)
+    if (activeJobId) {
+      setJobs(prev => prev.map(j => 
+        j.id === activeJobId ? { ...j, status: 'completed' as const } : j
+      ));
+    }
+    setActiveJobId(null);
+    setJobStartTime(null);
+    
+    // Clear from storage
+    await Promise.all([
+      AsyncStorage.removeItem(ACTIVE_JOB_KEY),
+      AsyncStorage.removeItem(JOB_START_TIME_KEY),
+    ]);
+  };
+
+  const handleDismissJob = async (jobId: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setJobs(prev => prev.map(j => 
       j.id === jobId ? { ...j, status: 'dismissed' as const } : j
     ));
+    // Mark as seen when dismissed
+    const newSeenIds = new Set(seenJobIds);
+    newSeenIds.add(jobId);
+    setSeenJobIds(newSeenIds);
+    await AsyncStorage.setItem(NEW_JOBS_SEEN_KEY, JSON.stringify([...newSeenIds]));
+  };
+
+  const handleMarkAllJobsSeen = async () => {
+    const newSeenIds = new Set(seenJobIds);
+    pendingJobs.forEach(job => newSeenIds.add(job.id));
+    setSeenJobIds(newSeenIds);
+    await AsyncStorage.setItem(NEW_JOBS_SEEN_KEY, JSON.stringify([...newSeenIds]));
   };
 
   const handleViewJobDetails = (job: AssignedJob) => {
@@ -256,9 +361,68 @@ export default function ForemanHomeScreen() {
         alwaysBounceVertical={true}
       >
         <View style={styles.greeting}>
-          <ThemedText style={styles.greetingText}>Good morning,</ThemedText>
-          <ThemedText style={styles.nameText}>{firstName}</ThemedText>
+          <View style={styles.greetingRow}>
+            <View>
+              <ThemedText style={styles.greetingText}>Good morning,</ThemedText>
+              <ThemedText style={styles.nameText}>{firstName}</ThemedText>
+            </View>
+            <View style={[styles.rateDisplay, { backgroundColor: 'rgba(0,120,212,0.1)' }]}>
+              <Feather name="dollar-sign" size={16} color={BrandColors.azureBlue} />
+              <ThemedText style={[styles.rateText, { color: BrandColors.azureBlue }]}>
+                ${hourlyRate}/hr
+              </ThemedText>
+            </View>
+          </View>
         </View>
+
+        {activeJob && jobStartTime ? (
+          <View style={styles.activeJobSection}>
+            <EarningsTimer 
+              hourlyRate={hourlyRate} 
+              isRunning={true} 
+              startTime={jobStartTime}
+            />
+            <View style={[styles.currentJobCard, { backgroundColor: theme.surface }]}>
+              <View style={styles.currentJobHeader}>
+                <View style={[styles.liveIndicator, { backgroundColor: BrandColors.emerald }]} />
+                <ThemedText style={styles.currentJobLabel}>Currently Working On</ThemedText>
+              </View>
+              <ThemedText style={styles.currentJobNumber}>{activeJob.jobNumber}</ThemedText>
+              <ThemedText style={styles.currentJobProperty}>{activeJob.propertyName}</ThemedText>
+              <ThemedText style={[styles.currentJobAddress, { color: theme.textSecondary }]} numberOfLines={1}>
+                {activeJob.propertyAddress}
+              </ThemedText>
+              <Pressable
+                style={[styles.stopWorkButton, { backgroundColor: '#FF3B30' }]}
+                onPress={handleStopWork}
+              >
+                <Feather name="square" size={18} color="#fff" />
+                <ThemedText style={styles.stopWorkText}>Finish Job</ThemedText>
+              </Pressable>
+            </View>
+          </View>
+        ) : null}
+
+        {newJobs.length > 0 ? (
+          <View style={[styles.newJobsAlert, { backgroundColor: 'rgba(255,59,48,0.15)' }]}>
+            <View style={styles.newJobsHeader}>
+              <View style={styles.newJobsIcon}>
+                <Feather name="alert-circle" size={20} color="#FF3B30" />
+              </View>
+              <View style={styles.newJobsContent}>
+                <ThemedText style={[styles.newJobsTitle, { color: '#FF3B30' }]}>
+                  {newJobs.length} New Job{newJobs.length > 1 ? 's' : ''} Assigned!
+                </ThemedText>
+                <ThemedText style={[styles.newJobsSubtitle, { color: theme.textSecondary }]}>
+                  Review and accept to start earning
+                </ThemedText>
+              </View>
+              <Pressable onPress={handleMarkAllJobsSeen}>
+                <Feather name="check-circle" size={20} color={theme.textSecondary} />
+              </Pressable>
+            </View>
+          </View>
+        ) : null}
 
         <Pressable
           style={[styles.newEstimateButton, { backgroundColor: BrandColors.azureBlue }]}
@@ -282,7 +446,7 @@ export default function ForemanHomeScreen() {
           <Feather name="chevron-right" size={24} color="#fff" />
         </Pressable>
 
-        {pendingJobs.length > 0 && (
+        {pendingJobs.length > 0 ? (
           <>
             <View style={styles.sectionHeader}>
               <ThemedText style={styles.sectionTitle}>Today's Jobs</ThemedText>
@@ -352,28 +516,39 @@ export default function ForemanHomeScreen() {
               );
             })}
           </>
-        )}
+        ) : null}
 
-        {acceptedJobs.length > 0 && (
+        {acceptedJobs.length > 0 ? (
           <>
             <View style={styles.sectionHeader}>
-              <ThemedText style={styles.sectionTitle}>Active Jobs</ThemedText>
+              <ThemedText style={styles.sectionTitle}>Ready to Start</ThemedText>
+              <ThemedText style={[styles.sectionSubtitle, { color: theme.textSecondary }]}>
+                Start work to track earnings
+              </ThemedText>
             </View>
             {acceptedJobs.map((job) => (
-              <Pressable
-                key={job.id}
-                style={[styles.activeJobCard, { backgroundColor: theme.surface }]}
-                onPress={() => handleViewJobDetails(job)}
-              >
-                <View style={styles.activeJobInfo}>
+              <View key={job.id} style={[styles.readyJobCard, { backgroundColor: theme.surface }]}>
+                <Pressable
+                  style={styles.readyJobInfo}
+                  onPress={() => handleViewJobDetails(job)}
+                >
                   <ThemedText style={styles.jobNumber}>{job.jobNumber}</ThemedText>
                   <ThemedText style={styles.jobPropertyName}>{job.propertyName}</ThemedText>
-                </View>
-                <Feather name="chevron-right" size={20} color={theme.textSecondary} />
-              </Pressable>
+                  <ThemedText style={[styles.jobAddress, { color: theme.textSecondary }]} numberOfLines={1}>
+                    {job.propertyAddress}
+                  </ThemedText>
+                </Pressable>
+                <Pressable
+                  style={[styles.startWorkButton, { backgroundColor: BrandColors.emerald }]}
+                  onPress={() => handleStartWork(job.id)}
+                >
+                  <Feather name="play" size={18} color="#fff" />
+                  <ThemedText style={styles.startWorkText}>Start Work</ThemedText>
+                </Pressable>
+              </View>
             ))}
           </>
-        )}
+        ) : null}
 
         <View style={[styles.earningsCard, { backgroundColor: BrandColors.emerald }]}>
           <View style={styles.earningsContent}>
@@ -832,5 +1007,127 @@ const styles = StyleSheet.create({
   emptySubtext: {
     fontSize: 13,
     textAlign: 'center',
+  },
+  greetingRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  rateDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 6,
+    borderRadius: BorderRadius.md,
+  },
+  rateText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  activeJobSection: {
+    marginBottom: Spacing.lg,
+  },
+  currentJobCard: {
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+  },
+  currentJobHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    marginBottom: Spacing.sm,
+  },
+  liveIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  currentJobLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    opacity: 0.7,
+  },
+  currentJobNumber: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  currentJobProperty: {
+    fontSize: 15,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  currentJobAddress: {
+    fontSize: 13,
+    marginTop: 2,
+  },
+  stopWorkButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.xs,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    marginTop: Spacing.md,
+  },
+  stopWorkText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  newJobsAlert: {
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+    marginBottom: Spacing.lg,
+  },
+  newJobsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  newJobsIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,59,48,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  newJobsContent: {
+    flex: 1,
+  },
+  newJobsTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  newJobsSubtitle: {
+    fontSize: 13,
+    marginTop: 2,
+  },
+  sectionSubtitle: {
+    fontSize: 12,
+    marginLeft: Spacing.xs,
+  },
+  readyJobCard: {
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+    marginBottom: Spacing.sm,
+  },
+  readyJobInfo: {
+    marginBottom: Spacing.md,
+  },
+  startWorkButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.xs,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.md,
+  },
+  startWorkText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#fff',
   },
 });

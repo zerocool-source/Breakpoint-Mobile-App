@@ -90,6 +90,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Base64 photo upload endpoint for mobile app
+  app.post("/api/sync/upload-photo", authMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { imageData, filename, mimeType = 'image/jpeg' } = req.body;
+      
+      if (!imageData) {
+        return res.status(400).json({ success: false, error: 'No image data provided' });
+      }
+
+      // Remove data URL prefix if present
+      let base64Data = imageData;
+      if (base64Data.includes('base64,')) {
+        base64Data = base64Data.split('base64,')[1];
+      }
+
+      // Validate base64
+      const buffer = Buffer.from(base64Data, 'base64');
+      if (buffer.length === 0) {
+        return res.status(400).json({ success: false, error: 'Invalid base64 image data' });
+      }
+
+      // Generate unique filename
+      const ext = mimeType === 'image/png' ? '.png' : mimeType === 'image/gif' ? '.gif' : '.jpg';
+      const uniqueFilename = filename || `photo-${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`;
+      const filepath = path.join('uploads', 'photos', uniqueFilename);
+
+      // Ensure directory exists
+      const fs = require('fs');
+      const dir = path.dirname(filepath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+
+      // Write file
+      fs.writeFileSync(filepath, buffer);
+
+      const relativeUrl = `/uploads/photos/${uniqueFilename}`;
+      console.log('[Photo Upload] Saved base64 photo:', relativeUrl, 'Size:', buffer.length);
+
+      res.status(201).json({
+        success: true,
+        url: relativeUrl,
+        filename: uniqueFilename,
+        size: buffer.length
+      });
+    } catch (error) {
+      console.error('[Photo Upload] Base64 error:', error);
+      res.status(500).json({ success: false, error: 'Failed to upload photo' });
+    }
+  });
+
   // Proxy auth requests - try local first, then Render API
   app.post("/api/proxy/auth/login", async (req, res) => {
     try {

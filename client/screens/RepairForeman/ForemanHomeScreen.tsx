@@ -98,39 +98,79 @@ export default function ForemanHomeScreen() {
   const [seenJobIds, setSeenJobIds] = useState<Set<string>>(new Set());
   const hourlyRate = 60; // Rick's hourly rate
 
-  const { data: jobsData, refetch: refetchJobs } = useQuery<any[]>({
-    queryKey: ['/api/jobs'],
+  const technicianId = user?.technicianId;
+  
+  // Fetch tech jobs from /api/tech/:id/jobs endpoint
+  const { data: techJobsData, refetch: refetchTechJobs } = useQuery<{ items: any[] }>({
+    queryKey: ['/api/tech/jobs', technicianId],
     queryFn: async () => {
-      const response = await fetch(`${getApiUrl()}/api/jobs`, {
+      if (!technicianId) return { items: [] };
+      const response = await fetch(`${getApiUrl()}/api/tech/${technicianId}/jobs`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
-      if (!response.ok) throw new Error('Failed to fetch jobs');
+      if (!response.ok) throw new Error('Failed to fetch tech jobs');
       return response.json();
     },
-    enabled: !!token,
+    enabled: !!token && !!technicianId,
   });
 
+  // Also fetch repair requests assigned to this technician
+  const { data: repairRequestsData, refetch: refetchRepairRequests } = useQuery<{ items: any[] }>({
+    queryKey: ['/api/repair-requests', user?.id],
+    queryFn: async () => {
+      const response = await fetch(`${getApiUrl()}/api/repair-requests?technicianId=${user?.id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!response.ok) throw new Error('Failed to fetch repair requests');
+      return response.json();
+    },
+    enabled: !!token && !!user?.id,
+  });
+
+  const refetchJobs = useCallback(async () => {
+    await Promise.all([refetchTechJobs(), refetchRepairRequests()]);
+  }, [refetchTechJobs, refetchRepairRequests]);
+
   useEffect(() => {
-    if (jobsData) {
-      const mappedJobs: AssignedJob[] = jobsData.map((job: any) => ({
-        id: job.id,
-        jobNumber: job.jobNumber || `WO-${job.id.substring(0, 8)}`,
-        propertyName: job.property?.name || job.propertyName || 'Unknown Property',
-        propertyAddress: job.property?.address || job.propertyAddress || '',
-        description: job.description || '',
-        priority: job.priority || 'medium',
-        scheduledTime: job.scheduledDate || job.createdAt || new Date().toISOString(),
-        status: job.status || 'pending',
-        estimatedDuration: job.estimatedDuration || '2 hours',
-        contactName: job.property?.contactName || job.contactName,
-        contactPhone: job.property?.contactPhone || job.contactPhone,
-      }));
-      setJobs(mappedJobs);
-    }
-  }, [jobsData]);
+    const techJobs = techJobsData?.items || [];
+    const repairRequests = repairRequestsData?.items || [];
+    
+    // Map tech jobs
+    const mappedTechJobs: AssignedJob[] = techJobs.map((job: any) => ({
+      id: job.id,
+      jobNumber: job.jobNumber || `WO-${job.id?.substring(0, 8) || 'NEW'}`,
+      propertyName: job.propertyName || 'Unknown Property',
+      propertyAddress: job.propertyAddress || '',
+      description: job.description || job.issueTitle || '',
+      priority: job.priority || 'medium',
+      scheduledTime: job.scheduledDate || job.createdAt || new Date().toISOString(),
+      status: job.status || 'pending',
+      estimatedDuration: job.estimatedDuration || '2 hours',
+      contactName: job.contactName,
+      contactPhone: job.contactPhone,
+    }));
+    
+    // Map repair requests  
+    const mappedRepairRequests: AssignedJob[] = repairRequests.map((req: any) => ({
+      id: req.id,
+      jobNumber: `RR-${req.id?.substring(0, 8) || 'NEW'}`,
+      propertyName: req.propertyName || 'Unknown Property',
+      propertyAddress: '',
+      description: req.issueTitle || req.notes || '',
+      priority: 'medium',
+      scheduledTime: req.scheduledDate || req.createdAt || new Date().toISOString(),
+      status: req.status || 'pending',
+      estimatedDuration: '2 hours',
+    }));
+    
+    setJobs([...mappedTechJobs, ...mappedRepairRequests]);
+  }, [techJobsData, repairRequestsData]);
 
   const { data: estimatesData, isLoading: estimatesLoading, refetch: refetchEstimates } = useQuery<ForemanEstimatesResponse>({
     queryKey: ['/api/foreman/estimates'],

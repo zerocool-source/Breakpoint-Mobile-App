@@ -10,6 +10,8 @@ export interface User {
   avatar?: string;
   county?: County;
   supervisorId?: string;
+  technicianId?: string;
+  phone?: string;
 }
 
 export interface Property {

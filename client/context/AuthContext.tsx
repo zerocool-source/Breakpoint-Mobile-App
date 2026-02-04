@@ -7,7 +7,7 @@ import type { User } from '@/types';
 export type UserRole = 'service_tech' | 'supervisor' | 'repair_tech' | 'repair_foreman';
 
 // API role types from Render API
-type ApiRole = "admin" | "supervisor" | "tech" | "repair";
+type ApiRole = "admin" | "supervisor" | "tech" | "repair" | "foreman";
 
 const mapApiRoleToAppRole = (role: ApiRole): UserRole => {
   switch (role) {
@@ -15,6 +15,8 @@ const mapApiRoleToAppRole = (role: ApiRole): UserRole => {
       return "service_tech";
     case "repair":
       return "repair_tech";
+    case "foreman":
+      return "repair_foreman";
     case "supervisor":
       return "supervisor";
     case "admin":
@@ -124,13 +126,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     checkAuth();
   }, []);
 
-  const login = useCallback(async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+  const login = useCallback(async (identifier: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
       setIsLoading(true);
       
-      console.log('[AUTH] Attempting login for:', email);
+      console.log('[AUTH] Attempting login for:', identifier);
       console.log('[AUTH] User-selected role before login:', selectedRole);
-      const res = await authApiRequest('POST', '/api/auth/login', { email, password });
+      
+      // Use tech login endpoint for repair roles (supports phone number login)
+      const isRepairRole = selectedRole === 'repair_tech' || selectedRole === 'repair_foreman';
+      
+      let res: Response;
+      if (isRepairRole) {
+        // Use /api/tech/login for repair technicians and foremen (supports email OR phone)
+        res = await authApiRequest('POST', '/api/tech/login', { identifier, password });
+      } else {
+        // Use standard auth endpoint for other roles
+        res = await authApiRequest('POST', '/api/auth/login', { email: identifier, password });
+      }
       console.log('[AUTH] Login response status:', res.status);
       
       if (!res.ok) {
@@ -146,24 +159,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       const data = await res.json();
       console.log("[AUTH] login response token exists:", !!data?.token);
-      console.log("[AUTH] login response role (from API):", data?.user?.role);
       console.log("[AUTH] api base url:", getApiUrl());
       
-      // Normalize role from API to app role
-      const normalizedRole = mapApiRoleToAppRole(data.user.role);
-      // Preserve user's selected role instead of overwriting with API role
+      // Handle response based on endpoint used
+      let normalizedUser;
+      let normalizedRole: UserRole;
+      
+      if (isRepairRole && data.technician) {
+        // Tech login endpoint response format
+        console.log("[AUTH] Tech login response role:", data.technician?.role);
+        normalizedRole = mapApiRoleToAppRole(data.technician.role);
+        const roleToUse = selectedRole || normalizedRole;
+        normalizedUser = {
+          id: data.technician.userId || data.technician.id,
+          name: data.technician.name,
+          email: data.technician.email,
+          phone: data.technician.phone,
+          role: roleToUse,
+          technicianId: data.technician.id,
+        };
+        console.log("[AUTH] Tech API role:", normalizedRole, "Using role:", roleToUse);
+      } else {
+        // Standard auth endpoint response format
+        console.log("[AUTH] login response role (from API):", data.user?.role);
+        normalizedRole = mapApiRoleToAppRole(data.user.role);
+        const roleToUse = selectedRole || normalizedRole;
+        normalizedUser = { ...data.user, role: roleToUse };
+        console.log("[AUTH] API role:", normalizedRole, "Using role:", roleToUse);
+      }
+      
       const roleToUse = selectedRole || normalizedRole;
-      const normalizedUser = { ...data.user, role: roleToUse };
-      console.log("[AUTH] API role:", normalizedRole, "Using role:", roleToUse);
       
       await storage.setAuthToken(data.token);
       await storage.setUser(normalizedUser);
       
       if (rememberMe) {
-        await storage.setSavedEmail(email);
+        await storage.setSavedEmail(identifier);
         await storage.setSavedRole(roleToUse);
         await storage.setRememberMe(true);
-        setSavedEmail(email);
+        setSavedEmail(identifier);
       }
       
       // Save the role selection
@@ -183,7 +217,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedRole]);
+  }, [selectedRole, rememberMe]);
 
   const register = useCallback(async (email: string, password: string, name: string): Promise<{ success: boolean; error?: string }> => {
     if (!selectedRole) {

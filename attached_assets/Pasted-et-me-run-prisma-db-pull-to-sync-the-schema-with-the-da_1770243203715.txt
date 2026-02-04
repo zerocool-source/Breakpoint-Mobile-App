@@ -1,0 +1,161 @@
+et me run prisma db pull to sync the schema with the database, then make my changes:
+
+Now let me set up Rick Jacobs as foreman and restart the workflow:
+
+Rick Jacobs doesn't exist. Let me create the user account and technician profile:
+
+Let me test the tech login endpoint:
+
+No properties exist yet. Let me test the repair request creation without a property (since it may be optional) and also verify the tech profile endpoint:
+
+Let me create a test property and test the repair request creation:
+
+I need to fix the repair-requests.ts to remove the non-existent creatorId field and use technicianId correctly:
+
+All the new features are working correctly. Here's what's been completed:
+
+Tech Authentication Routes (/api/tech/):
+
+POST /api/tech/login - Technicians can now log in using email OR phone number + password
+GET /api/tech/:id/profile - Get technician profile details
+GET /api/tech/:id/jobs - Get technician's assigned jobs
+Repair Request Routes (/api/repair-requests/):
+
+POST /api/repair-requests - Create repair request (stores as TechOpsEntry with entryType: repair_request)
+GET /api/repair-requests - List repair requests with optional filtering by technicianId and status
+New Foreman Account:
+
+Name: Rick Jacobs
+Email: repair.foreman@breakpointpools.com
+Phone: 9513238429
+Password: breakpoint2026
+Role: foreman
+Database Updates:
+
+Added passwordHash field to TechnicianProfile
+foreman role and repair_request entryType already existed in the database
+All endpoints have been tested successfully with Rick Jacobs' foreman account.
+
+give me the prompt to update mobile app
+
+Here's the API documentation for updating your mobile app:
+
+New Mobile App API Endpoints
+1. Technician Login
+POST /api/tech/login
+
+Authenticate technicians using email OR phone number.
+
+// Request
+{
+  "identifier": "repair.foreman@breakpointpools.com",  // email OR phone
+  "password": "breakpoint2026"
+}
+// Response (200 OK)
+{
+  "technician": {
+    "id": "ed6e7ecf-298c-404d-b1cd-38b897a869f5",
+    "userId": "4e464010-8df4-4d71-a365-df290268d071",
+    "name": "Rick Jacobs",
+    "email": "repair.foreman@breakpointpools.com",
+    "phone": "9513238429",
+    "role": "foreman",
+    "region": ""
+  },
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+2. Get Technician Profile
+GET /api/tech/:id/profile
+
+Requires: Authorization: Bearer <token>
+
+// Response (200 OK)
+{
+  "id": "ed6e7ecf-298c-404d-b1cd-38b897a869f5",
+  "userId": "4e464010-8df4-4d71-a365-df290268d071",
+  "name": "Rick Jacobs",
+  "email": "repair.foreman@breakpointpools.com",
+  "phone": "9513238429",
+  "role": "foreman",
+  "region": "",
+  "truckId": "",
+  "active": true
+}
+3. Get Technician Jobs
+GET /api/tech/:id/jobs
+
+Requires: Authorization: Bearer <token>
+
+// Response (200 OK)
+{
+  "items": [
+    {
+      "id": "uuid",
+      "propertyId": "uuid",
+      "propertyName": "Pool House",
+      "status": "pending",
+      "scheduledDate": "2026-02-05T09:00:00.000Z"
+    }
+  ]
+}
+4. Create Repair Request
+POST /api/repair-requests
+
+Requires: Authorization: Bearer <token>
+Allowed roles: tech, repair, supervisor, admin, foreman
+
+// Request
+{
+  "title": "Pump motor replacement needed",        // required
+  "propertyId": "5cb7a7cc-38b7-418b-9ffb-21cf320c2942",  // required, UUID
+  "propertyName": "Test Property",                 // required
+  "notes": "Pump is making grinding noise",        // optional
+  "jobType": "Equipment Repair",                   // optional
+  "technicianId": "uuid",                          // optional, assign to specific tech
+  "scheduledDate": "2026-02-10T09:00:00.000Z"      // optional, ISO datetime
+}
+// Response (201 Created)
+{
+  "id": "2d302ad0-249c-4a6d-9eba-d80000ae525f",
+  "entryType": "repair_request",
+  "issueTitle": "Pump motor replacement needed",
+  "propertyId": "5cb7a7cc-38b7-418b-9ffb-21cf320c2942",
+  "propertyName": "Test Property",
+  "technicianId": "4e464010-8df4-4d71-a365-df290268d071",
+  "status": "pending",
+  "createdAt": "2026-02-04T22:06:36.497Z"
+}
+5. List Repair Requests
+GET /api/repair-requests
+
+Requires: Authorization: Bearer <token>
+
+Query params:
+
+technicianId - Filter by assigned technician
+status - Filter by status (pending, in_progress, completed, cancelled)
+limit - Max results (default: 50)
+// Response (200 OK)
+{
+  "items": [
+    {
+      "id": "2d302ad0-249c-4a6d-9eba-d80000ae525f",
+      "entryType": "repair_request",
+      "issueTitle": "Pump motor replacement needed",
+      "propertyId": "5cb7a7cc-38b7-418b-9ffb-21cf320c2942",
+      "propertyName": "Test Property",
+      "technicianId": "4e464010-8df4-4d71-a365-df290268d071",
+      "technicianName": "Rick Jacobs",
+      "scheduledDate": null,
+      "status": "pending",
+      "createdAt": "2026-02-04T22:06:36.497Z"
+    }
+  ]
+}
+Test Account
+Field	Value
+Name	Rick Jacobs
+Email	repair.foreman@breakpointpools.com
+Phone	9513238429
+Password	breakpoint2026
+Role	foreman

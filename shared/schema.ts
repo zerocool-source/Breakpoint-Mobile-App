@@ -24,6 +24,7 @@ export const users = pgTable("users", {
   phone: varchar("phone", { length: 50 }),
   county: varchar("county", { length: 100 }),
   supervisorId: varchar("supervisor_id", { length: 36 }),
+  hourlyRate: decimal("hourly_rate", { precision: 8, scale: 2 }).default('60.00'),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),

@@ -64,47 +64,6 @@ interface AssignedJob {
   contactPhone?: string;
 }
 
-const mockAssignedJobs: AssignedJob[] = [
-  {
-    id: 'job-1',
-    jobNumber: 'WO-2026-0158',
-    propertyName: 'Sunset Valley HOA',
-    propertyAddress: '1250 Sunset Blvd, San Diego, CA 92101',
-    description: 'Pool pump making unusual noise. Customer reports reduced water flow.',
-    priority: 'high',
-    scheduledTime: '2026-02-03T09:00:00Z',
-    status: 'pending',
-    estimatedDuration: '2 hours',
-    contactName: 'Maria Garcia',
-    contactPhone: '(619) 555-0142',
-  },
-  {
-    id: 'job-2',
-    jobNumber: 'WO-2026-0159',
-    propertyName: 'Marina Bay Apartments',
-    propertyAddress: '450 Marina Way, San Diego, CA 92109',
-    description: 'Annual pool equipment inspection and assessment for potential upgrades.',
-    priority: 'medium',
-    scheduledTime: '2026-02-03T11:30:00Z',
-    status: 'pending',
-    estimatedDuration: '1.5 hours',
-    contactName: 'James Wilson',
-    contactPhone: '(619) 555-0198',
-  },
-  {
-    id: 'job-3',
-    jobNumber: 'WO-2026-0160',
-    propertyName: 'Hilltop Country Club',
-    propertyAddress: '8900 Hilltop Dr, La Jolla, CA 92037',
-    description: 'Chemical feeder malfunction. pH levels unstable.',
-    priority: 'high',
-    scheduledTime: '2026-02-03T14:00:00Z',
-    status: 'pending',
-    estimatedDuration: '1 hour',
-    contactName: 'Robert Chen',
-    contactPhone: '(858) 555-0234',
-  },
-];
 
 const priorityConfig = {
   high: { label: 'High', color: '#FF3B30', bg: 'rgba(255,59,48,0.15)' },
@@ -133,11 +92,45 @@ export default function ForemanHomeScreen() {
   const insets = useSafeAreaInsets();
   const headerHeight = useHeaderHeight();
   const [refreshing, setRefreshing] = useState(false);
-  const [jobs, setJobs] = useState<AssignedJob[]>(mockAssignedJobs);
+  const [jobs, setJobs] = useState<AssignedJob[]>([]);
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [jobStartTime, setJobStartTime] = useState<Date | null>(null);
   const [seenJobIds, setSeenJobIds] = useState<Set<string>>(new Set());
   const hourlyRate = 60; // Rick's hourly rate
+
+  const { data: jobsData, refetch: refetchJobs } = useQuery<any[]>({
+    queryKey: ['/api/jobs'],
+    queryFn: async () => {
+      const response = await fetch(`${getApiUrl()}/api/jobs`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!response.ok) throw new Error('Failed to fetch jobs');
+      return response.json();
+    },
+    enabled: !!token,
+  });
+
+  useEffect(() => {
+    if (jobsData) {
+      const mappedJobs: AssignedJob[] = jobsData.map((job: any) => ({
+        id: job.id,
+        jobNumber: job.jobNumber || `WO-${job.id.substring(0, 8)}`,
+        propertyName: job.property?.name || job.propertyName || 'Unknown Property',
+        propertyAddress: job.property?.address || job.propertyAddress || '',
+        description: job.description || '',
+        priority: job.priority || 'medium',
+        scheduledTime: job.scheduledDate || job.createdAt || new Date().toISOString(),
+        status: job.status || 'pending',
+        estimatedDuration: job.estimatedDuration || '2 hours',
+        contactName: job.property?.contactName || job.contactName,
+        contactPhone: job.property?.contactPhone || job.contactPhone,
+      }));
+      setJobs(mappedJobs);
+    }
+  }, [jobsData]);
 
   const { data: estimatesData, isLoading: estimatesLoading, refetch: refetchEstimates } = useQuery<ForemanEstimatesResponse>({
     queryKey: ['/api/foreman/estimates'],
@@ -195,9 +188,9 @@ export default function ForemanHomeScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await refetchEstimates();
+    await Promise.all([refetchEstimates(), refetchJobs()]);
     setRefreshing(false);
-  }, [refetchEstimates]);
+  }, [refetchEstimates, refetchJobs]);
 
   const handleNewEstimate = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);

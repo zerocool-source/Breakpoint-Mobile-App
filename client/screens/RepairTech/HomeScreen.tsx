@@ -508,7 +508,7 @@ export default function HomeScreen() {
               onPress={() => handleQuickAction('emergency')}
             />
             <QuickAction
-              customImage={require('@/assets/images/ace-avatar.png')}
+              customImage={require('../../../assets/images/ace-avatar.png')}
               label=""
               color={BrandColors.azureBlue}
               onPress={() => navigation.navigate('AceEstimateBuilder')}

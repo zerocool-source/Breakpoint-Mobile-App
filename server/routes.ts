@@ -170,6 +170,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Proxy tech login for web clients
+  app.post("/api/proxy/auth/tech/login", async (req, res) => {
+    try {
+      const localRes = await fetch(`http://localhost:5000/api/auth/tech/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(req.body),
+      });
+      
+      const data = await localRes.json();
+      res.status(localRes.status).json(data);
+    } catch (error) {
+      console.error("[Proxy] Tech login error:", error);
+      res.status(503).json({ error: "Unable to reach authentication server" });
+    }
+  });
+
   app.get("/api/proxy/auth/me", async (req, res) => {
     try {
       const authHeader = req.headers.authorization;

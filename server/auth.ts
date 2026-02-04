@@ -285,7 +285,10 @@ router.get("/tech/:id/jobs", async (req: Request, res: Response) => {
     // Get jobs assigned to this technician from tech_ops_entries
     const techOpsJobs = await db.execute(sql`
       SELECT id, property_id as "propertyId", property_name as "propertyName", 
-             status, scheduled_date as "scheduledDate", issue_title as description
+             property_address as "propertyAddress",
+             status, created_at as "scheduledDate", 
+             COALESCE(description, issue_type, 'Repair Request') as "issueTitle",
+             priority
       FROM tech_ops_entries 
       WHERE technician_id = ${id} 
         AND entry_type = 'repair_request'

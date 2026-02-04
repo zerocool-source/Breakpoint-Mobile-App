@@ -1141,10 +1141,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const limit = parseInt(req.query.limit as string) || 50;
 
       let query = `
-        SELECT id, entry_type as "entryType", issue_title as "issueTitle", 
+        SELECT id, entry_type as "entryType", 
+               COALESCE(description, issue_type, 'Repair Request') as "issueTitle", 
                property_id as "propertyId", property_name as "propertyName",
+               property_address as "propertyAddress",
                technician_id as "technicianId", technician_name as "technicianName",
-               scheduled_date as "scheduledDate", status, notes, created_at as "createdAt"
+               created_at as "scheduledDate", status, notes, created_at as "createdAt",
+               priority
         FROM tech_ops_entries 
         WHERE entry_type = 'repair_request'
       `;

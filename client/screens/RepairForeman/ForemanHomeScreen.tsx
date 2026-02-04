@@ -24,7 +24,7 @@ import { EarningsTimer } from '@/components/EarningsTimer';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/context/AuthContext';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
-import { getApiUrl } from '@/lib/query-client';
+import { getApiUrl, getAuthApiUrl } from '@/lib/query-client';
 
 interface EstimatePreview {
   id: string;
@@ -98,14 +98,15 @@ export default function ForemanHomeScreen() {
   const [seenJobIds, setSeenJobIds] = useState<Set<string>>(new Set());
   const hourlyRate = 60; // Rick's hourly rate
 
-  const technicianId = user?.technicianId;
+  // Use technicianId if set, otherwise fall back to user.id
+  const technicianId = user?.technicianId || user?.id;
   
-  // Fetch tech jobs from /api/auth/tech/:id/jobs endpoint
+  // Fetch tech jobs from /api/auth/tech/:id/jobs endpoint (uses auth API URL for local server)
   const { data: techJobsData, refetch: refetchTechJobs } = useQuery<{ items: any[] }>({
     queryKey: ['/api/auth/tech/jobs', technicianId],
     queryFn: async () => {
       if (!technicianId) return { items: [] };
-      const response = await fetch(`${getApiUrl()}/api/auth/tech/${technicianId}/jobs`, {
+      const response = await fetch(`${getAuthApiUrl()}/api/auth/tech/${technicianId}/jobs`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -121,7 +122,7 @@ export default function ForemanHomeScreen() {
   const { data: repairRequestsData, refetch: refetchRepairRequests } = useQuery<{ items: any[] }>({
     queryKey: ['/api/repair-requests', user?.id],
     queryFn: async () => {
-      const response = await fetch(`${getApiUrl()}/api/repair-requests?technicianId=${user?.id}`, {
+      const response = await fetch(`${getAuthApiUrl()}/api/repair-requests?technicianId=${user?.id}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',

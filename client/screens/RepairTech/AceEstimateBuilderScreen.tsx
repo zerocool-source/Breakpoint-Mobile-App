@@ -2882,9 +2882,11 @@ const styles = StyleSheet.create({
   },
   aceFloatingButton: {
     position: 'absolute',
-    right: Spacing.lg,
+    left: 0,
+    right: 0,
     bottom: 220,
     zIndex: 10,
+    alignItems: 'center',
   },
   aceButtonInner: {
     width: 120,

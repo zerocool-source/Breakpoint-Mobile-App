@@ -862,15 +862,36 @@ PUMPS & MOTORS (Century/Pentair):
 PLUMBING & FITTINGS:
 - PVC 2" SCH 40 pipe per foot: $3.42
 - PVC 3" SCH 40 pipe per foot: $5.89
+- PVC 4" SCH 40 pipe per foot: $8.75
 - PVC 2" 90° Elbow Slip: $7.33
 - PVC 2" 45° Elbow Slip: $6.12
 - PVC 2" Union Slip: $18.99
 - PVC 3" 90° Elbow Slip: $14.99
+- PVC 4" 90° Elbow Slip: $22.50
 - PVC 2" Tee Slip: $8.45
+- PVC 4" Tee Slip: $18.75
 - PVC 2" Coupling Slip: $3.99
 - PVC 2" Check Valve: $89.00
 - Jandy 3-Port Valve 2": $289.00
 - FlowVis Flow Meter: $189.00
+
+DRAIN & BACKWASH PLUMBING (Cast Iron/DWV):
+- 4" Mission Clamp (no-hub coupling): $24.99
+- 4" Sanitary Tee (San T): $38.50
+- 4" Sanitary Tee w/ Threaded Service Plug: $45.00
+- 4" Threaded Service Plug: $12.99
+- 4" DWV 90° Elbow: $18.75
+- 4" DWV 45° Elbow: $16.50
+- 4" to 5" Backwash Cone Increaser: $34.99
+- 4" P-Trap: $42.00
+- 4" Cleanout w/ Plug: $28.50
+- 1" Air Gap/Siphon Break Fitting: $45.00
+- Shallow Strut Channel (per foot): $8.50
+- 4" Strut Clamp: $12.00
+- Strut L-Bracket: $8.50
+- Stainless Steel Red Head Anchor 3/8"x3": $4.25
+- Concrete Anchor Kit (10-pack): $32.00
+- Fernco Flexible Coupling 4": $18.99
 
 GAS LINE COMPONENTS (REQUIRED for every heater):
 - Gas Valve 3/4": $145.00
@@ -935,6 +956,21 @@ PUMP/MOTOR INSTALLATION PACKAGE (always include ALL):
 6. Electrical connections/conduit
 7. Ground bonding wire
 
+BACKWASH DRAIN INSTALLATION PACKAGE (proper method - always include ALL):
+1. 4" Mission Clamp (no-hub coupling for cast iron connection)
+2. 4" Sanitary Tee (San T) with threaded service plug
+3. 4" DWV 90° Elbows (quantity based on routing - typically 2-4)
+4. 4" to 5" Backwash Cone Increaser
+5. 4" P-Trap (proper drainage with water seal)
+6. Shallow Strut Channel (3-5 feet depending on support needs)
+7. 4" Strut Clamp(s) for pipe support
+8. Strut L-Bracket for wall mounting
+9. Stainless Steel Red Head Anchors 3/8"x3" (2-4 pieces)
+10. Concrete chipping/removal as needed
+11. Labor: Full day (8 hours) for one technician
+
+Note on backwash drains: ALWAYS use the proper P-trap method with sanitary tee over the "cheap way" (running PVC up and around with 90s and air gap). The proper method prevents splash-out during backwash and meets plumbing code requirements.
+
 === PAYMENT TERMS (ALWAYS INCLUDE) ===
 "This estimate is valid for 60 days. Payment terms: Net 30 from date of invoice.
 
@@ -953,7 +989,7 @@ Additional work beyond scope requires written authorization and will incur addit
 5. Gas heater = MUST have complete gas train components
 6. Reference specific CA codes in explanations
 7. Double-check all math: qty × rate = correct amount
-8. Labor hours: Heater install=8-12hrs, Filter install=6-8hrs, Motor install=4-6hrs, Plumbing work=varies
+8. Labor hours: Heater install=8-12hrs, Filter install=6-8hrs, Motor install=4-6hrs, Backwash drain install=8hrs, Plumbing work=varies
 
 Return a JSON object with:
 {

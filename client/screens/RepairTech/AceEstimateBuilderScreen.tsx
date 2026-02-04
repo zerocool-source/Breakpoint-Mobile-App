@@ -2884,7 +2884,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    top: '45%',
+    top: '55%',
     zIndex: 10,
     alignItems: 'center',
   },

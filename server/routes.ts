@@ -1537,6 +1537,129 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== WEBHOOK: RECEIVE JOB ASSIGNMENTS FROM ADMIN ====================
+  // This endpoint allows the admin app to push job assignments to the mobile app's database
+
+  app.post("/api/webhook/job-assignment", async (req, res) => {
+    try {
+      const apiKey = req.headers['x-admin-api-key'] as string;
+      const expectedKey = process.env.ADMIN_WEBHOOK_KEY || process.env.MOBILE_API_KEY;
+
+      // Validate API key
+      if (!apiKey || apiKey !== expectedKey) {
+        console.error("[Webhook] Invalid or missing API key");
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const {
+        jobId,
+        jobNumber,
+        estimateId,
+        estimateNumber,
+        propertyId,
+        propertyName,
+        propertyAddress,
+        customerId,
+        customerName,
+        technicianId,
+        technicianName,
+        scheduledDate,
+        description,
+        notes,
+        totalAmount,
+        priority,
+        status,
+      } = req.body;
+
+      console.log("[Webhook] Received job assignment:", { jobNumber, technicianId, propertyName });
+
+      if (!technicianId) {
+        return res.status(400).json({ error: "technicianId is required" });
+      }
+
+      // Create job in mobile app's database
+      const [newJob] = await db.insert(jobs).values({
+        id: jobId || crypto.randomUUID(),
+        propertyId: propertyId || null,
+        assignedToId: technicianId,
+        title: description || `Repair: ${propertyName}`,
+        description: notes || description || '',
+        priority: priority || 'medium',
+        status: status || 'pending',
+        dueDate: scheduledDate ? new Date(scheduledDate) : null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }).returning();
+
+      // Also create an urgent notification so the tech sees it immediately
+      await db.insert(urgentNotifications).values({
+        title: 'New Job Assigned',
+        message: `You have been assigned a repair at ${propertyName || 'a property'}. ${description || ''}`.trim(),
+        type: 'info',
+        icon: 'briefcase',
+        targetUserId: technicianId,
+        targetRole: null,
+        propertyId: propertyId || null,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+        createdBy: null,
+      });
+
+      console.log("[Webhook] Created job and notification:", newJob.id);
+
+      res.status(201).json({
+        success: true,
+        jobId: newJob.id,
+        message: "Job assignment received and notification created"
+      });
+    } catch (error) {
+      console.error("[Webhook] Error processing job assignment:", error);
+      res.status(500).json({ error: "Failed to process job assignment" });
+    }
+  });
+
+  // GET /api/auth/tech/:id/jobs - Get jobs assigned to a specific technician
+  // This is what the ForemanHomeScreen calls
+  app.get("/api/auth/tech/:id/jobs", authMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      const technicianId = req.params.id;
+
+      // Verify the requesting user is either the tech themselves or a supervisor
+      if (req.user!.id !== technicianId && req.user!.role !== 'supervisor' && req.user!.role !== 'repair_foreman') {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+
+      const techJobs = await db.query.jobs.findMany({
+        where: and(
+          eq(jobs.assignedToId, technicianId),
+          ne(jobs.status, 'completed'),
+          ne(jobs.status, 'cancelled')
+        ),
+        orderBy: [desc(jobs.createdAt)],
+        with: {
+          property: true,
+        },
+      });
+
+      // Map to the format expected by ForemanHomeScreen
+      const mappedJobs = techJobs.map(job => ({
+        id: job.id,
+        jobNumber: `WO-${job.id.substring(0, 8)}`,
+        propertyName: job.property?.name || 'Unknown Property',
+        propertyAddress: job.property?.address || '',
+        description: job.description || job.title || '',
+        priority: job.priority || 'medium',
+        scheduledDate: job.dueDate || job.createdAt,
+        status: job.status || 'pending',
+        estimatedDuration: '2 hours',
+      }));
+
+      res.json({ items: mappedJobs });
+    } catch (error) {
+      console.error("Error fetching tech jobs:", error);
+      res.status(500).json({ error: "Failed to fetch jobs" });
+    }
+  });
+
   // ==================== ADMIN MESSAGES ROUTES ====================
 
   // GET /api/admin-messages - Get messages for current user

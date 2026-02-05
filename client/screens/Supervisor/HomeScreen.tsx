@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Pressable, ScrollView, Platform, Modal, useWindowDimensions } from 'react-native';
+import { View, StyleSheet, Pressable, ScrollView, Platform, Modal, useWindowDimensions, TextInput, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
@@ -34,6 +34,7 @@ import { useNetwork } from '@/context/NetworkContext';
 import { useBattery } from '@/context/BatteryContext';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
+import { getAuthApiUrl } from '@/lib/query-client';
 import {
   mockWeeklyMetrics,
   mockQCInspections,
@@ -458,7 +459,7 @@ function AssignmentBreakdownModal({
 export default function SupervisorHomeScreen() {
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const { theme } = useTheme();
   const { isConnected } = useNetwork();
   const { isBatterySaverEnabled } = useBattery();
@@ -472,6 +473,10 @@ export default function SupervisorHomeScreen() {
   const [showChatModal, setShowChatModal] = useState(false);
   const [showCreateAssignmentModal, setShowCreateAssignmentModal] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
+  const [showSendNotificationModal, setShowSendNotificationModal] = useState(false);
+  const [notificationTitle, setNotificationTitle] = useState('');
+  const [notificationMessage, setNotificationMessage] = useState('');
+  const [sendingNotification, setSendingNotification] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -539,6 +544,43 @@ export default function SupervisorHomeScreen() {
     }
     setSelectedTechnician(technician);
     setShowBreakdownModal(true);
+  };
+
+  const handleSendNotification = async () => {
+    if (!notificationTitle.trim() || !notificationMessage.trim()) return;
+    
+    setSendingNotification(true);
+    try {
+      const response = await fetch(`${getAuthApiUrl()}/api/notifications`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: notificationTitle.trim(),
+          message: notificationMessage.trim(),
+          type: 'urgent',
+          icon: 'alert-triangle',
+        }),
+      });
+      
+      if (!response.ok) throw new Error('Failed to send notification');
+      
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+      setShowSendNotificationModal(false);
+      setNotificationTitle('');
+      setNotificationMessage('');
+    } catch (error) {
+      console.error('Error sending notification:', error);
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
+    } finally {
+      setSendingNotification(false);
+    }
   };
 
   return (
@@ -753,10 +795,10 @@ export default function SupervisorHomeScreen() {
                   onPress={() => navigation.navigate('SupportiveActions')}
                 />
                 <QuickActionButton
-                  imageSource={myRosterIcon}
-                  label=""
-                  color={BrandColors.tropicalTeal}
-                  onPress={() => navigation.navigate('Roster')}
+                  icon="bell"
+                  label="Send Alert"
+                  color="#D32F2F"
+                  onPress={() => setShowSendNotificationModal(true)}
                 />
               </View>
             </View>
@@ -793,6 +835,72 @@ export default function SupervisorHomeScreen() {
         visible={showCreateAssignmentModal}
         onClose={() => setShowCreateAssignmentModal(false)}
       />
+
+      <Modal
+        visible={showSendNotificationModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowSendNotificationModal(false)}
+      >
+        <View style={[styles.modalOverlay, { justifyContent: 'center', alignItems: 'center' }]}>
+          <View style={[styles.sendNotificationModal, { backgroundColor: theme.surfaceElevated }]}>
+            <View style={styles.notificationModalHeader}>
+              <ThemedText style={styles.notificationModalTitle}>Send Urgent Alert</ThemedText>
+              <Pressable onPress={() => setShowSendNotificationModal(false)}>
+                <Feather name="x" size={24} color={theme.text} />
+              </Pressable>
+            </View>
+            
+            <ThemedText style={styles.inputLabel}>Alert Title</ThemedText>
+            <TextInput
+              style={[styles.notificationInput, { 
+                backgroundColor: theme.backgroundSecondary, 
+                color: theme.text,
+                borderColor: theme.border 
+              }]}
+              placeholder="e.g., Emergency at Pool Site"
+              placeholderTextColor={theme.textSecondary}
+              value={notificationTitle}
+              onChangeText={setNotificationTitle}
+            />
+            
+            <ThemedText style={styles.inputLabel}>Message</ThemedText>
+            <TextInput
+              style={[styles.notificationInput, styles.messageInput, { 
+                backgroundColor: theme.backgroundSecondary, 
+                color: theme.text,
+                borderColor: theme.border 
+              }]}
+              placeholder="Enter your message to all technicians..."
+              placeholderTextColor={theme.textSecondary}
+              value={notificationMessage}
+              onChangeText={setNotificationMessage}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+            />
+            
+            <Pressable
+              style={[
+                styles.sendButton, 
+                { backgroundColor: BrandColors.danger },
+                (!notificationTitle.trim() || !notificationMessage.trim()) && styles.sendButtonDisabled
+              ]}
+              onPress={handleSendNotification}
+              disabled={sendingNotification || !notificationTitle.trim() || !notificationMessage.trim()}
+            >
+              {sendingNotification ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <>
+                  <Feather name="send" size={18} color="#fff" />
+                  <ThemedText style={styles.sendButtonText}>Send Alert to All Techs</ThemedText>
+                </>
+              )}
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
 
       <RepairsNeededModal
         visible={showRepairsModal}
@@ -1328,6 +1436,54 @@ const styles = StyleSheet.create({
   },
   routeStatusText: {
     fontSize: 11,
+    fontWeight: '600',
+  },
+  sendNotificationModal: {
+    width: '90%',
+    maxWidth: 400,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+  },
+  notificationModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+  },
+  notificationModalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: Spacing.xs,
+  },
+  notificationInput: {
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    fontSize: 16,
+    marginBottom: Spacing.md,
+  },
+  messageInput: {
+    height: 120,
+  },
+  sendButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    marginTop: Spacing.sm,
+  },
+  sendButtonDisabled: {
+    opacity: 0.5,
+  },
+  sendButtonText: {
+    color: '#fff',
+    fontSize: 16,
     fontWeight: '600',
   },
 });

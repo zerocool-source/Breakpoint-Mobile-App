@@ -1074,6 +1074,14 @@ Examples of correct quantities:
 - PVC 90° Elbow: qty: 4 (routing typically needs 3-5)
 - Red Head Anchor: qty: 4 (for strut mounting)
 
+=== CRITICAL: PRODUCT/PART NUMBERS REQUIRED ===
+EVERY line item MUST include the product number, part number, or SKU when available:
+- Format: "Product Name (Part #XXX-YYYY)" or "Product Name - SKU: XXXXX"
+- For Pool Brain products, ALWAYS include the SKU from the catalog
+- For common parts, include manufacturer part numbers when known
+- Example: "Raypak 267 Cupro-Nickel Heater (Part #009218)" NOT just "Raypak 267 Heater"
+- Example: "Pentair TR140C Filter (Part #140316)" NOT just "Pentair TR140C Filter"
+
 Return a JSON object with:
 {
   "introText": "Professional opening paragraph referencing CA Title 22, Title 24, NEC 680, NFPA 54, VGB...",
@@ -1084,21 +1092,24 @@ Return a JSON object with:
       "laborHours": 8,
       "items": [
         {
-          "description": "Raypak 267 Cupro-Nickel Spa Heater 266k BTU",
+          "description": "Raypak 267 Cupro-Nickel Spa Heater 266k BTU (Part #009218)",
+          "partNumber": "009218",
           "qty": 1,
           "rate": 4899.00,
           "taxable": true,
           "explanation": "Commercial spa heater with copper-nickel exchanger per CA Title 24"
         },
         {
-          "description": "Hi-Temp Union 2\" PVC",
+          "description": "Hi-Temp Union 2\" PVC (Part #23-0001)",
+          "partNumber": "23-0001",
           "qty": 2,
           "rate": 24.69,
           "taxable": true,
           "explanation": "Required for heater connection - inlet and outlet"
         },
         {
-          "description": "Black Iron Nipple 3/4\"x4\"",
+          "description": "Black Iron Nipple 3/4\"x4\" (Part #BIN-3404)",
+          "partNumber": "BIN-3404",
           "qty": 3,
           "rate": 8.50,
           "taxable": true,

@@ -21,6 +21,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { BubbleBackground } from '@/components/BubbleBackground';
 import { EarningsTimer } from '@/components/EarningsTimer';
+import { NotificationBanner } from '@/components/NotificationBanner';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/context/AuthContext';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
@@ -103,6 +104,13 @@ export default function ForemanHomeScreen() {
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [jobStartTime, setJobStartTime] = useState<Date | null>(null);
   const [seenJobIds, setSeenJobIds] = useState<Set<string>>(new Set());
+  const [currentNotification, setCurrentNotification] = useState<{
+    id: string;
+    title: string;
+    message: string;
+    type: 'urgent' | 'info' | 'warning';
+    icon: string;
+  } | null>(null);
   const hourlyRate = 60; // Rick's hourly rate
 
   // Use technicianId if set, otherwise fall back to user.id
@@ -141,9 +149,40 @@ export default function ForemanHomeScreen() {
     enabled: !!token && !!user?.id,
   });
 
+  // Fetch urgent notifications from office
+  const { data: notifications, refetch: refetchNotifications } = useQuery<any[]>({
+    queryKey: ['/api/notifications'],
+    queryFn: async () => {
+      const response = await fetch(`${getAuthApiUrl()}/api/notifications`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!response.ok) throw new Error('Failed to fetch notifications');
+      return response.json();
+    },
+    enabled: !!token,
+    refetchInterval: 30000, // Poll every 30 seconds for new notifications
+  });
+
+  // Show first unread notification
+  useEffect(() => {
+    if (notifications && notifications.length > 0 && !currentNotification) {
+      const notif = notifications[0];
+      setCurrentNotification({
+        id: notif.id,
+        title: notif.title || 'Office Notification',
+        message: notif.message,
+        type: notif.type || 'info',
+        icon: notif.icon || 'bell',
+      });
+    }
+  }, [notifications, currentNotification]);
+
   const refetchJobs = useCallback(async () => {
-    await Promise.all([refetchTechJobs(), refetchRepairRequests()]);
-  }, [refetchTechJobs, refetchRepairRequests]);
+    await Promise.all([refetchTechJobs(), refetchRepairRequests(), refetchNotifications()]);
+  }, [refetchTechJobs, refetchRepairRequests, refetchNotifications]);
 
   useEffect(() => {
     const techJobs = techJobsData?.items || [];
@@ -169,15 +208,23 @@ export default function ForemanHomeScreen() {
       id: req.id,
       jobNumber: `RR-${req.id?.substring(0, 8) || 'NEW'}`,
       propertyName: req.propertyName || 'Unknown Property',
-      propertyAddress: '',
+      propertyAddress: req.propertyAddress || '',
       description: req.issueTitle || req.notes || '',
-      priority: 'medium',
+      priority: req.priority || 'medium',
       scheduledTime: req.scheduledDate || req.createdAt || new Date().toISOString(),
       status: req.status || 'pending',
       estimatedDuration: '2 hours',
     }));
     
-    setJobs([...mappedTechJobs, ...mappedRepairRequests]);
+    // Combine jobs and deduplicate by ID (same job may appear in both endpoints)
+    const allJobs = [...mappedTechJobs, ...mappedRepairRequests];
+    const uniqueJobsMap = new Map<string, AssignedJob>();
+    allJobs.forEach(job => {
+      if (!uniqueJobsMap.has(job.id)) {
+        uniqueJobsMap.set(job.id, job);
+      }
+    });
+    setJobs(Array.from(uniqueJobsMap.values()));
   }, [techJobsData, repairRequestsData]);
 
   const { data: estimatesData, isLoading: estimatesLoading, refetch: refetchEstimates } = useQuery<ForemanEstimatesResponse>({
@@ -388,6 +435,29 @@ export default function ForemanHomeScreen() {
 
   return (
     <BubbleBackground bubbleCount={15}>
+      <NotificationBanner
+        visible={!!currentNotification}
+        title={currentNotification?.title || ''}
+        message={currentNotification?.message || ''}
+        type={currentNotification?.type || 'info'}
+        icon={currentNotification?.icon || 'bell'}
+        onDismiss={async () => {
+          if (currentNotification?.id) {
+            try {
+              await fetch(`${getAuthApiUrl()}/api/notifications/${currentNotification.id}/dismiss`, {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json',
+                },
+              });
+            } catch (error) {
+              console.error('Failed to dismiss notification:', error);
+            }
+          }
+          setCurrentNotification(null);
+        }}
+      />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[

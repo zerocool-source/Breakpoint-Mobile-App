@@ -9,45 +9,68 @@ import Animated, {
   withRepeat,
   Easing,
   interpolate,
+  cancelAnimation,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const { width, height } = Dimensions.get('window');
+
+// Seeded random for consistent bubble positions (prevents flickering)
+const seededRandom = (seed: number) => {
+  const x = Math.sin(seed * 9999) * 10000;
+  return x - Math.floor(x);
+};
 
 interface BubbleProps {
   delay: number;
   size: number;
   startX: number;
   duration: number;
+  index: number;
 }
 
-function Bubble({ delay, size, startX, duration }: BubbleProps) {
+// Memoized Bubble component to prevent unnecessary re-renders
+const Bubble = React.memo(({ delay, size, startX, duration, index }: BubbleProps) => {
   const progress = useSharedValue(0);
   const wobble = useSharedValue(0);
 
   useEffect(() => {
+    // Reset values before starting
+    progress.value = 0;
+    wobble.value = 0;
+
+    // Start vertical movement animation
     progress.value = withDelay(
       delay,
       withRepeat(
         withTiming(1, { duration, easing: Easing.linear }),
         -1,
-        false
+        true // FIXED: Reset to initial value on each loop
       )
     );
+
+    // Start horizontal wobble animation
     wobble.value = withDelay(
       delay,
       withRepeat(
         withSequence(
-          withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
-          withTiming(-1, { duration: 2000, easing: Easing.inOut(Easing.ease) })
+          withTiming(1, { duration: 2000 + (index * 100), easing: Easing.inOut(Easing.ease) }),
+          withTiming(-1, { duration: 2000 + (index * 100), easing: Easing.inOut(Easing.ease) })
         ),
         -1,
         true
       )
     );
-  }, []);
+
+    // CRITICAL: Cleanup animations on unmount to prevent memory leaks
+    return () => {
+      cancelAnimation(progress);
+      cancelAnimation(wobble);
+    };
+  }, [delay, duration, index]); // FIXED: Proper dependencies
 
   const animatedStyle = useAnimatedStyle(() => {
+    'worklet';
     const translateY = interpolate(progress.value, [0, 1], [height + 50, -100]);
     const translateX = wobble.value * 12;
     const opacity = interpolate(progress.value, [0, 0.1, 0.8, 1], [0, 0.35, 0.35, 0]);
@@ -77,22 +100,33 @@ function Bubble({ delay, size, startX, duration }: BubbleProps) {
       ]}
     />
   );
-}
+});
+
+Bubble.displayName = 'LightBubble';
 
 interface LightBubbleBackgroundProps {
   children: React.ReactNode;
   bubbleCount?: number;
 }
 
-export function LightBubbleBackground({ children, bubbleCount = 12 }: LightBubbleBackgroundProps) {
+// Memoized BubbleBackground to prevent parent re-renders from recreating bubbles
+export const LightBubbleBackground = React.memo(({ children, bubbleCount = 12 }: LightBubbleBackgroundProps) => {
+  // Generate bubble configs with seeded randomness for consistency
   const bubbles = useMemo(() => {
-    const bubbleConfigs: BubbleProps[] = [];
+    const bubbleConfigs: (BubbleProps)[] = [];
     for (let i = 0; i < bubbleCount; i++) {
+      // Use seeded random based on index for consistent positions
+      const seed1 = seededRandom(i * 1);
+      const seed2 = seededRandom(i * 2);
+      const seed3 = seededRandom(i * 3);
+      const seed4 = seededRandom(i * 4);
+
       bubbleConfigs.push({
-        delay: Math.random() * 4000,
-        size: 8 + Math.random() * 24,
-        startX: Math.random() * width,
-        duration: 6000 + Math.random() * 5000,
+        index: i,
+        delay: seed1 * 4000,
+        size: 8 + seed2 * 24,
+        startX: seed3 * width,
+        duration: 6000 + seed4 * 5000,
       });
     }
     return bubbleConfigs;
@@ -107,14 +141,16 @@ export function LightBubbleBackground({ children, bubbleCount = 12 }: LightBubbl
       <View style={styles.poolEdgeLeft} />
       <View style={styles.poolEdgeRight} />
       <View style={styles.bubblesContainer}>
-        {bubbles.map((bubble, index) => (
-          <Bubble key={index} {...bubble} />
+        {bubbles.map((bubble) => (
+          <Bubble key={`light-bubble-${bubble.index}`} {...bubble} />
         ))}
       </View>
       {children}
     </LinearGradient>
   );
-}
+});
+
+LightBubbleBackground.displayName = 'LightBubbleBackground';
 
 const styles = StyleSheet.create({
   container: {

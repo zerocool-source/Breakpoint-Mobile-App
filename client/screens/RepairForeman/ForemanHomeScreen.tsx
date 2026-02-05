@@ -25,7 +25,7 @@ import { NotificationBanner } from '@/components/NotificationBanner';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/context/AuthContext';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
-import { getApiUrl, getAuthApiUrl } from '@/lib/query-client';
+import { getApiUrl, getAuthApiUrl, getTechOpsUrl } from '@/lib/query-client';
 
 interface EstimatePreview {
   id: string;
@@ -116,38 +116,66 @@ export default function ForemanHomeScreen() {
 
   // Use technicianId if set, otherwise fall back to user.id
   const technicianId = user?.technicianId || user?.id;
-  
-  // Fetch tech jobs from /api/auth/tech/:id/jobs endpoint (uses auth API URL for local server)
-  const { data: techJobsData, refetch: refetchTechJobs } = useQuery<{ items: any[] }>({
-    queryKey: ['/api/auth/tech/jobs', technicianId],
+  // Use email as the common identifier between admin and mobile app
+  const technicianEmail = user?.email;
+  const technicianName = user?.name || `${user?.firstName || ''} ${user?.lastName || ''}`.trim();
+
+  console.log('[ForemanHome] User info:', { technicianId, technicianEmail, technicianName });
+
+  // Fetch scheduled estimates from Admin App (TechOps) - these are the calendar jobs
+  const { data: techJobsData, refetch: refetchTechJobs } = useQuery<{ jobs: any[] }>({
+    queryKey: ['/api/estimates/for-tech', technicianEmail],
     queryFn: async () => {
-      if (!technicianId) return { items: [] };
-      const response = await fetch(`${getAuthApiUrl()}/api/auth/tech/${technicianId}/jobs`, {
+      if (!technicianEmail) return { jobs: [] };
+      // Call the Admin App directly - use email to match technician across systems
+      const url = `${getTechOpsUrl()}/api/estimates/for-tech?technicianEmail=${encodeURIComponent(technicianEmail)}`;
+      console.log('[ForemanHome] Fetching jobs from:', url);
+
+      const response = await fetch(url, {
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
-      if (!response.ok) throw new Error('Failed to fetch tech jobs');
+
+      if (!response.ok) {
+        console.log('[ForemanHome] Failed to fetch estimates, status:', response.status);
+        // Fallback: Try service-repairs with email
+        const fallbackUrl = `${getTechOpsUrl()}/api/service-repairs?technicianEmail=${encodeURIComponent(technicianEmail)}`;
+        const fallbackRes = await fetch(fallbackUrl, {
+          headers: { 'Content-Type': 'application/json' },
+        });
+        if (fallbackRes.ok) {
+          return fallbackRes.json();
+        }
+        return { jobs: [] };
+      }
       return response.json();
     },
-    enabled: !!token && !!technicianId,
+    enabled: !!token && !!technicianEmail,
+    refetchInterval: 30000, // Poll every 30 seconds for new assignments
   });
 
-  // Also fetch repair requests assigned to this technician
-  const { data: repairRequestsData, refetch: refetchRepairRequests } = useQuery<{ items: any[] }>({
-    queryKey: ['/api/repair-requests', user?.id],
+  // Fetch repair requests from Admin App - these are assigned repairs
+  const { data: repairRequestsData, refetch: refetchRepairRequests } = useQuery<{ requests: any[] }>({
+    queryKey: ['/api/repair-requests', technicianEmail],
     queryFn: async () => {
-      const response = await fetch(`${getAuthApiUrl()}/api/repair-requests?technicianId=${user?.id}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+      if (!technicianEmail) return { requests: [] };
+      // Call the Admin App directly - use email to match technician
+      const url = `${getTechOpsUrl()}/api/repair-requests?technicianEmail=${encodeURIComponent(technicianEmail)}&status=assigned`;
+      console.log('[ForemanHome] Fetching repair requests from:', url);
+
+      const response = await fetch(url, {
+        headers: { 'Content-Type': 'application/json' },
       });
-      if (!response.ok) throw new Error('Failed to fetch repair requests');
+
+      if (!response.ok) {
+        console.log('[ForemanHome] Failed to fetch repairs, status:', response.status);
+        return { requests: [] };
+      }
       return response.json();
     },
-    enabled: !!token && !!user?.id,
+    enabled: !!token && !!technicianEmail,
+    refetchInterval: 30000, // Poll every 30 seconds
   });
 
   // Fetch urgent notifications from office
@@ -186,10 +214,11 @@ export default function ForemanHomeScreen() {
   }, [refetchTechJobs, refetchRepairRequests, refetchNotifications]);
 
   useEffect(() => {
-    const techJobs = techJobsData?.items || [];
-    const repairRequests = repairRequestsData?.items || [];
-    
-    // Map tech jobs
+    // Handle both response formats: { jobs: [] } from admin app or { items: [] } from local
+    const techJobs = techJobsData?.jobs || techJobsData?.items || (Array.isArray(techJobsData) ? techJobsData : []);
+    const repairRequests = repairRequestsData?.requests || repairRequestsData?.items || (Array.isArray(repairRequestsData) ? repairRequestsData : []);
+
+    // Map tech jobs (from admin app's service-repair-jobs)
     const mappedTechJobs: AssignedJob[] = techJobs.map((job: any) => ({
       id: job.id,
       jobNumber: job.jobNumber || `WO-${job.id?.substring(0, 8) || 'NEW'}`,
@@ -205,16 +234,16 @@ export default function ForemanHomeScreen() {
       jobType: job.jobType || 'assigned',
     }));
     
-    // Map repair requests  
+    // Map repair requests (from admin app's repair-requests endpoint)
     const mappedRepairRequests: AssignedJob[] = repairRequests.map((req: any) => ({
       id: req.id,
       jobNumber: `RR-${req.id?.substring(0, 8) || 'NEW'}`,
-      propertyName: req.propertyName || 'Unknown Property',
-      propertyAddress: req.propertyAddress || '',
-      description: req.issueTitle || req.notes || '',
-      priority: req.priority || 'normal',
-      scheduledTime: req.scheduledDate || req.createdAt || new Date().toISOString(),
-      status: req.status || 'pending',
+      propertyName: req.propertyName || req.poolName || 'Unknown Property',
+      propertyAddress: req.propertyAddress || req.address || '',
+      description: req.issueTitle || req.description || req.notes || '',
+      priority: req.priority || 'medium',
+      scheduledTime: req.assignedDate || req.scheduledDate || req.createdAt || new Date().toISOString(),
+      status: req.status === 'assigned' ? 'pending' : (req.status || 'pending'),
       estimatedDuration: '2 hours',
       jobType: req.jobType || 'assessment',
     }));

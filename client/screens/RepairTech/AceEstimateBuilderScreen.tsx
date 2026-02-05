@@ -1192,19 +1192,12 @@ export default function AceEstimateBuilderScreen() {
         createdAt: new Date().toISOString(),
       };
       
-      // Save locally first
+      // Save locally first (as backup)
       await storage.addEstimate(localEstimate as any);
       console.log('Estimate saved locally:', estimateNumber);
 
-      // If just saving draft (not sending to office), we're done - show success modal
-      if (!sendToOffice) {
-        setIsSubmitting(false);
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        setShowDraftSavedModal(true);
-        return;
-      }
-      
-      // If sending to office, also sync to server
+      // ALWAYS save to server database (both drafts and sent estimates)
+      // This ensures admin app can see all estimates
       const estimateData = {
         estimateNumber,
         propertyId: selectedProp?.id || '',
@@ -1265,39 +1258,48 @@ export default function AceEstimateBuilderScreen() {
       console.log('[Estimate Submit] Server response:', result);
       
       // Update local copy with server ID
-      const updatedEstimate = { ...localEstimate, id: result.estimate?.id || estimateNumber, status: 'pending_approval' };
+      const finalStatus = sendToOffice ? 'pending_approval' : 'draft';
+      const updatedEstimate = { ...localEstimate, id: result.estimate?.id || estimateNumber, status: finalStatus };
       await storage.addEstimate(updatedEstimate as any);
       
-      // Log estimate finalization for AI learning
-      try {
-        await fetch(joinUrl(apiUrl, '/api/ai-product-search/log-estimate-finalized'), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: user?.id,
-            workDescription: estimateDescription,
-            lineItems: lineItems.map(item => ({
-              description: item.product?.name || item.description,
-              qty: item.quantity,
-              rate: item.rate,
-            })),
-            propertyType: selectedProperty,
-          }),
-        });
-        console.log('[AI Learning] Estimate logged for learning');
-      } catch (learnError) {
-        console.log('[AI Learning] Failed to log for learning:', learnError);
+      // Log estimate finalization for AI learning (only when sending to office)
+      if (sendToOffice) {
+        try {
+          await fetch(joinUrl(apiUrl, '/api/ai-product-search/log-estimate-finalized'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: user?.id,
+              workDescription: estimateDescription,
+              lineItems: lineItems.map(item => ({
+                description: item.product?.name || item.description,
+                qty: item.quantity,
+                rate: item.rate,
+              })),
+              propertyType: selectedProperty,
+            }),
+          });
+          console.log('[AI Learning] Estimate logged for learning');
+        } catch (learnError) {
+          console.log('[AI Learning] Failed to log for learning:', learnError);
+        }
       }
       
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       
-      // Show custom success modal (works on all platforms including web)
-      setSubmittedEstimateNumber(estimateNumber);
-      setShowSuccessModal(true);
+      // Show appropriate modal based on action
+      if (sendToOffice) {
+        // Show success modal for sent estimates
+        setSubmittedEstimateNumber(estimateNumber);
+        setShowSuccessModal(true);
+      } else {
+        // Show draft saved modal for drafts
+        setShowDraftSavedModal(true);
+      }
     } catch (error) {
       console.error('Error saving estimate:', error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      setErrorModalMessage('Failed to send estimate to office. The draft has been saved locally. Please try again when connected.');
+      setErrorModalMessage('Failed to save estimate to server. The draft has been saved locally. Please try again when connected.');
       setShowErrorModal(true);
     } finally {
       setIsSubmitting(false);

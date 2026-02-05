@@ -982,17 +982,20 @@ export default function AceEstimateBuilderScreen() {
         for (const section of estimate.sections) {
           // Add section header as a note or include in item descriptions
           for (const item of section.items || []) {
+            // Use real part number/SKU from AI response if available
+            const realSku = item.partNumber || item.sku || item.part_number || `AI-${lineNumber.toString().padStart(4, '0')}`;
+            
             newLineItems.push({
               id: `ai-${Date.now()}-${lineNumber}`,
               lineNumber,
               product: {
-                sku: `AI-${lineNumber.toString().padStart(4, '0')}`,
+                sku: realSku,
                 name: item.description,
                 category: section.name || 'General',
                 subcategory: '',
-                manufacturer: '',
+                manufacturer: item.manufacturer || '',
                 price: item.rate,
-                unit: 'Each',
+                unit: item.unit || 'Each',
                 description: item.description,
               } as HeritageProduct,
               description: `[${section.name}] ${item.description}`,

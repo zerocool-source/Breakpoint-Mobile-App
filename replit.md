@@ -62,6 +62,23 @@ Breakpoint Commercial Pool Systems is a mobile-first field service management ap
 - `POST /api/ai-product-search/web-search` - Search for real product information and pricing
 - `POST /api/ai-product-search/web-info` - Get product specifications and compatibility info
 
+### Ops/Debug Endpoints (for monitoring app health)
+- `GET /api/debug/health` - Server and database health check (heartbeat)
+- `GET /api/debug/metrics` - Server performance metrics (memory, requests, uptime)
+- `GET /api/debug/database` - Database table statistics and record counts
+- `GET /api/debug/external-apis` - External API connectivity (OpenAI, Pool Brain)
+- `GET /api/debug/users` - User accounts summary with role breakdown
+- `GET /api/debug/sessions` - Active session monitoring
+- `GET /api/debug/jobs` - Job queue statistics and recent jobs
+- `GET /api/debug/estimates` - Estimate pipeline stats and conversion rates
+- `GET /api/debug/ai-status` - AI system health and knowledge base stats
+- `GET /api/debug/errors` - Recent error log for debugging
+- `GET /api/debug/requests` - Request log with timing information
+- `GET /api/debug/notifications` - Urgent notifications monitoring
+- `GET /api/debug/full-report` - Complete system snapshot (daily health report)
+
+Full documentation available at: `docs/OPS_DEBUG_API.md`
+
 ## External Dependencies
 - **Database**: PostgreSQL
 - **ORM**: Drizzle ORM

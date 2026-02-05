@@ -57,12 +57,13 @@ interface AssignedJob {
   propertyName: string;
   propertyAddress: string;
   description: string;
-  priority: 'high' | 'medium' | 'low' | 'urgent';
+  priority: 'high' | 'medium' | 'low' | 'urgent' | 'normal';
   scheduledTime: string;
   status: 'pending' | 'scheduled' | 'accepted' | 'in_progress' | 'completed' | 'dismissed';
   estimatedDuration: string;
   contactName?: string;
   contactPhone?: string;
+  jobType: 'approved_repair' | 'assessment' | 'assigned';
 }
 
 
@@ -224,12 +225,13 @@ export default function ForemanHomeScreen() {
       propertyName: job.propertyName || 'Unknown Property',
       propertyAddress: job.propertyAddress || '',
       description: job.description || job.issueTitle || '',
-      priority: job.priority || 'medium',
+      priority: job.priority || 'normal',
       scheduledTime: job.scheduledDate || job.createdAt || new Date().toISOString(),
       status: job.status || 'pending',
       estimatedDuration: job.estimatedDuration || '2 hours',
       contactName: job.contactName,
       contactPhone: job.contactPhone,
+      jobType: job.jobType || 'assigned',
     }));
     
     // Map repair requests (from admin app's repair-requests endpoint)
@@ -243,6 +245,7 @@ export default function ForemanHomeScreen() {
       scheduledTime: req.assignedDate || req.scheduledDate || req.createdAt || new Date().toISOString(),
       status: req.status === 'assigned' ? 'pending' : (req.status || 'pending'),
       estimatedDuration: '2 hours',
+      jobType: req.jobType || 'assessment',
     }));
     
     // Combine jobs and deduplicate by ID (same job may appear in both endpoints)
@@ -281,6 +284,15 @@ export default function ForemanHomeScreen() {
   const pendingJobs = jobs.filter(j => j.status === 'pending' || j.status === 'scheduled');
   const acceptedJobs = jobs.filter(j => j.status === 'accepted');
   const activeJob = jobs.find(j => j.id === activeJobId && j.status === 'in_progress');
+  
+  // Separate urgent jobs (high priority or urgent priority) from regular jobs
+  const urgentJobs = pendingJobs.filter(j => j.priority === 'urgent' || j.priority === 'high');
+  const regularJobs = pendingJobs.filter(j => j.priority !== 'urgent' && j.priority !== 'high');
+  
+  // Categorize regular jobs by type
+  const assessmentJobs = regularJobs.filter(j => j.jobType === 'assessment');
+  const approvedRepairJobs = regularJobs.filter(j => j.jobType === 'approved_repair');
+  const assignedJobs = regularJobs.filter(j => j.jobType === 'assigned');
 
   // Load saved active job state on mount
   useEffect(() => {
@@ -587,76 +599,306 @@ export default function ForemanHomeScreen() {
           <Feather name="chevron-right" size={24} color="#fff" />
         </Pressable>
 
-        {pendingJobs.length > 0 ? (
+        {urgentJobs.length > 0 ? (
           <>
-            <View style={styles.sectionHeader}>
-              <ThemedText style={styles.sectionTitle}>Today's Jobs</ThemedText>
-              <View style={[styles.jobCountBadge, { backgroundColor: BrandColors.vividTangerine }]}>
-                <ThemedText style={styles.jobCountText}>{pendingJobs.length}</ThemedText>
+            <View style={[styles.urgentJobsSection, { backgroundColor: 'rgba(255,59,48,0.08)', borderColor: 'rgba(255,59,48,0.3)' }]}>
+              <View style={styles.sectionHeader}>
+                <View style={styles.urgentSectionTitle}>
+                  <Feather name="alert-triangle" size={18} color="#FF3B30" />
+                  <ThemedText style={[styles.sectionTitle, { color: '#FF3B30' }]}>Urgent Jobs</ThemedText>
+                </View>
+                <View style={[styles.jobCountBadge, { backgroundColor: '#FF3B30' }]}>
+                  <ThemedText style={styles.jobCountText}>{urgentJobs.length}</ThemedText>
+                </View>
               </View>
-            </View>
-            {pendingJobs.map((job) => {
-              const priority = priorityConfig[job.priority] || defaultPriority;
-              const time = new Date(job.scheduledTime).toLocaleTimeString('en-US', {
-                hour: 'numeric',
-                minute: '2-digit',
-                hour12: true,
-              });
-              return (
-                <View key={job.id} style={[styles.jobCard, { backgroundColor: theme.surface }]}>
-                  <View style={styles.jobHeader}>
-                    <View style={styles.jobTitleRow}>
-                      <ThemedText style={styles.jobNumber}>{job.jobNumber}</ThemedText>
-                      <View style={[styles.priorityBadge, { backgroundColor: priority.bg }]}>
-                        <ThemedText style={[styles.priorityText, { color: priority.color }]}>
-                          {priority.label}
+              <ThemedText style={[styles.urgentSubtitle, { color: theme.textSecondary }]}>
+                Requires immediate attention
+              </ThemedText>
+              {urgentJobs.map((job) => {
+                const priority = priorityConfig[job.priority] || defaultPriority;
+                const time = new Date(job.scheduledTime).toLocaleTimeString('en-US', {
+                  hour: 'numeric',
+                  minute: '2-digit',
+                  hour12: true,
+                });
+                return (
+                  <View key={job.id} style={[styles.jobCard, styles.urgentJobCard, { backgroundColor: theme.surface, borderColor: 'rgba(255,59,48,0.3)' }]}>
+                    <View style={styles.jobHeader}>
+                      <View style={styles.jobTitleRow}>
+                        <ThemedText style={styles.jobNumber}>{job.jobNumber}</ThemedText>
+                        <View style={[styles.priorityBadge, { backgroundColor: priority.bg }]}>
+                          <ThemedText style={[styles.priorityText, { color: priority.color }]}>
+                            {priority.label}
+                          </ThemedText>
+                        </View>
+                      </View>
+                      <ThemedText style={styles.jobPropertyName}>{job.propertyName}</ThemedText>
+                      <ThemedText style={[styles.jobAddress, { color: theme.textSecondary }]} numberOfLines={1}>
+                        {job.propertyAddress}
+                      </ThemedText>
+                    </View>
+                    <ThemedText style={[styles.jobDescription, { color: theme.textSecondary }]} numberOfLines={2}>
+                      {job.description}
+                    </ThemedText>
+                    <View style={styles.jobMeta}>
+                      <View style={styles.jobMetaItem}>
+                        <Feather name="clock" size={14} color={theme.textSecondary} />
+                        <ThemedText style={[styles.jobMetaText, { color: theme.textSecondary }]}>
+                          {time}
+                        </ThemedText>
+                      </View>
+                      <View style={styles.jobMetaItem}>
+                        <Feather name="watch" size={14} color={theme.textSecondary} />
+                        <ThemedText style={[styles.jobMetaText, { color: theme.textSecondary }]}>
+                          {job.estimatedDuration}
                         </ThemedText>
                       </View>
                     </View>
-                    <ThemedText style={styles.jobPropertyName}>{job.propertyName}</ThemedText>
-                    <ThemedText style={[styles.jobAddress, { color: theme.textSecondary }]} numberOfLines={1}>
-                      {job.propertyAddress}
-                    </ThemedText>
-                  </View>
-                  <ThemedText style={[styles.jobDescription, { color: theme.textSecondary }]} numberOfLines={2}>
-                    {job.description}
-                  </ThemedText>
-                  <View style={styles.jobMeta}>
-                    <View style={styles.jobMetaItem}>
-                      <Feather name="clock" size={14} color={theme.textSecondary} />
-                      <ThemedText style={[styles.jobMetaText, { color: theme.textSecondary }]}>
-                        {time}
-                      </ThemedText>
-                    </View>
-                    <View style={styles.jobMetaItem}>
-                      <Feather name="watch" size={14} color={theme.textSecondary} />
-                      <ThemedText style={[styles.jobMetaText, { color: theme.textSecondary }]}>
-                        {job.estimatedDuration}
-                      </ThemedText>
+                    <View style={styles.jobActions}>
+                      <Pressable
+                        style={[styles.dismissButton, { borderColor: theme.border }]}
+                        onPress={() => handleDismissJob(job.id)}
+                      >
+                        <Feather name="x" size={18} color={theme.textSecondary} />
+                        <ThemedText style={[styles.dismissText, { color: theme.textSecondary }]}>
+                          Dismiss
+                        </ThemedText>
+                      </Pressable>
+                      <Pressable
+                        style={[styles.acceptButton, { backgroundColor: BrandColors.emerald }]}
+                        onPress={() => handleAcceptJob(job.id)}
+                      >
+                        <Feather name="check" size={18} color="#fff" />
+                        <ThemedText style={styles.acceptText}>Accept</ThemedText>
+                      </Pressable>
                     </View>
                   </View>
-                  <View style={styles.jobActions}>
-                    <Pressable
-                      style={[styles.dismissButton, { borderColor: theme.border }]}
-                      onPress={() => handleDismissJob(job.id)}
-                    >
-                      <Feather name="x" size={18} color={theme.textSecondary} />
-                      <ThemedText style={[styles.dismissText, { color: theme.textSecondary }]}>
-                        Dismiss
-                      </ThemedText>
-                    </Pressable>
-                    <Pressable
-                      style={[styles.acceptButton, { backgroundColor: BrandColors.emerald }]}
-                      onPress={() => handleAcceptJob(job.id)}
-                    >
-                      <Feather name="check" size={18} color="#fff" />
-                      <ThemedText style={styles.acceptText}>Accept</ThemedText>
-                    </Pressable>
-                  </View>
-                </View>
-              );
-            })}
+                );
+              })}
+            </View>
           </>
+        ) : null}
+
+        {regularJobs.length > 0 ? (
+          <>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleRow}>
+                <Feather name="briefcase" size={18} color={BrandColors.azureBlue} />
+                <ThemedText style={styles.sectionTitle}>Jobs from Office</ThemedText>
+              </View>
+              <View style={[styles.jobCountBadge, { backgroundColor: BrandColors.azureBlue }]}>
+                <ThemedText style={styles.jobCountText}>{regularJobs.length}</ThemedText>
+              </View>
+            </View>
+
+            {assessmentJobs.length > 0 ? (
+              <View style={styles.jobCategory}>
+                <View style={styles.categoryHeader}>
+                  <View style={[styles.categoryIcon, { backgroundColor: 'rgba(255,128,0,0.15)' }]}>
+                    <Feather name="search" size={14} color={BrandColors.vividTangerine} />
+                  </View>
+                  <ThemedText style={[styles.categoryTitle, { color: theme.text }]}>Assessments</ThemedText>
+                  <ThemedText style={[styles.categoryCount, { color: theme.textSecondary }]}>({assessmentJobs.length})</ThemedText>
+                </View>
+                {assessmentJobs.map((job) => {
+                  const priority = priorityConfig[job.priority] || defaultPriority;
+                  const time = new Date(job.scheduledTime).toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true,
+                  });
+                  return (
+                    <View key={job.id} style={[styles.jobCard, { backgroundColor: theme.surface }]}>
+                      <View style={styles.jobHeader}>
+                        <View style={styles.jobTitleRow}>
+                          <ThemedText style={styles.jobNumber}>{job.jobNumber}</ThemedText>
+                          <View style={[styles.jobTypeBadge, { backgroundColor: 'rgba(255,128,0,0.15)' }]}>
+                            <ThemedText style={[styles.jobTypeText, { color: BrandColors.vividTangerine }]}>Assessment</ThemedText>
+                          </View>
+                        </View>
+                        <ThemedText style={styles.jobPropertyName}>{job.propertyName}</ThemedText>
+                        <ThemedText style={[styles.jobAddress, { color: theme.textSecondary }]} numberOfLines={1}>
+                          {job.propertyAddress}
+                        </ThemedText>
+                      </View>
+                      <ThemedText style={[styles.jobDescription, { color: theme.textSecondary }]} numberOfLines={2}>
+                        {job.description}
+                      </ThemedText>
+                      <View style={styles.jobMeta}>
+                        <View style={styles.jobMetaItem}>
+                          <Feather name="clock" size={14} color={theme.textSecondary} />
+                          <ThemedText style={[styles.jobMetaText, { color: theme.textSecondary }]}>
+                            {time}
+                          </ThemedText>
+                        </View>
+                      </View>
+                      <View style={styles.jobActions}>
+                        <Pressable
+                          style={[styles.dismissButton, { borderColor: theme.border }]}
+                          onPress={() => handleDismissJob(job.id)}
+                        >
+                          <Feather name="x" size={18} color={theme.textSecondary} />
+                          <ThemedText style={[styles.dismissText, { color: theme.textSecondary }]}>Dismiss</ThemedText>
+                        </Pressable>
+                        <Pressable
+                          style={[styles.acceptButton, { backgroundColor: BrandColors.emerald }]}
+                          onPress={() => handleAcceptJob(job.id)}
+                        >
+                          <Feather name="check" size={18} color="#fff" />
+                          <ThemedText style={styles.acceptText}>Accept</ThemedText>
+                        </Pressable>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            ) : null}
+
+            {approvedRepairJobs.length > 0 ? (
+              <View style={styles.jobCategory}>
+                <View style={styles.categoryHeader}>
+                  <View style={[styles.categoryIcon, { backgroundColor: 'rgba(34,214,154,0.15)' }]}>
+                    <Feather name="check-circle" size={14} color={BrandColors.emerald} />
+                  </View>
+                  <ThemedText style={[styles.categoryTitle, { color: theme.text }]}>Approved Repairs</ThemedText>
+                  <ThemedText style={[styles.categoryCount, { color: theme.textSecondary }]}>({approvedRepairJobs.length})</ThemedText>
+                </View>
+                {approvedRepairJobs.map((job) => {
+                  const time = new Date(job.scheduledTime).toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true,
+                  });
+                  return (
+                    <View key={job.id} style={[styles.jobCard, { backgroundColor: theme.surface }]}>
+                      <View style={styles.jobHeader}>
+                        <View style={styles.jobTitleRow}>
+                          <ThemedText style={styles.jobNumber}>{job.jobNumber}</ThemedText>
+                          <View style={[styles.jobTypeBadge, { backgroundColor: 'rgba(34,214,154,0.15)' }]}>
+                            <ThemedText style={[styles.jobTypeText, { color: BrandColors.emerald }]}>Approved</ThemedText>
+                          </View>
+                        </View>
+                        <ThemedText style={styles.jobPropertyName}>{job.propertyName}</ThemedText>
+                        <ThemedText style={[styles.jobAddress, { color: theme.textSecondary }]} numberOfLines={1}>
+                          {job.propertyAddress}
+                        </ThemedText>
+                      </View>
+                      <ThemedText style={[styles.jobDescription, { color: theme.textSecondary }]} numberOfLines={2}>
+                        {job.description}
+                      </ThemedText>
+                      <View style={styles.jobMeta}>
+                        <View style={styles.jobMetaItem}>
+                          <Feather name="clock" size={14} color={theme.textSecondary} />
+                          <ThemedText style={[styles.jobMetaText, { color: theme.textSecondary }]}>
+                            {time}
+                          </ThemedText>
+                        </View>
+                      </View>
+                      <View style={styles.jobActions}>
+                        <Pressable
+                          style={[styles.dismissButton, { borderColor: theme.border }]}
+                          onPress={() => handleDismissJob(job.id)}
+                        >
+                          <Feather name="x" size={18} color={theme.textSecondary} />
+                          <ThemedText style={[styles.dismissText, { color: theme.textSecondary }]}>Dismiss</ThemedText>
+                        </Pressable>
+                        <Pressable
+                          style={[styles.acceptButton, { backgroundColor: BrandColors.emerald }]}
+                          onPress={() => handleAcceptJob(job.id)}
+                        >
+                          <Feather name="check" size={18} color="#fff" />
+                          <ThemedText style={styles.acceptText}>Accept</ThemedText>
+                        </Pressable>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            ) : null}
+
+            {assignedJobs.length > 0 ? (
+              <View style={styles.jobCategory}>
+                <View style={styles.categoryHeader}>
+                  <View style={[styles.categoryIcon, { backgroundColor: 'rgba(0,120,212,0.15)' }]}>
+                    <Feather name="user" size={14} color={BrandColors.azureBlue} />
+                  </View>
+                  <ThemedText style={[styles.categoryTitle, { color: theme.text }]}>Assigned to You</ThemedText>
+                  <ThemedText style={[styles.categoryCount, { color: theme.textSecondary }]}>({assignedJobs.length})</ThemedText>
+                </View>
+                {assignedJobs.map((job) => {
+                  const priority = priorityConfig[job.priority] || defaultPriority;
+                  const time = new Date(job.scheduledTime).toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true,
+                  });
+                  return (
+                    <View key={job.id} style={[styles.jobCard, { backgroundColor: theme.surface }]}>
+                      <View style={styles.jobHeader}>
+                        <View style={styles.jobTitleRow}>
+                          <ThemedText style={styles.jobNumber}>{job.jobNumber}</ThemedText>
+                          <View style={[styles.priorityBadge, { backgroundColor: priority.bg }]}>
+                            <ThemedText style={[styles.priorityText, { color: priority.color }]}>
+                              {priority.label}
+                            </ThemedText>
+                          </View>
+                        </View>
+                        <ThemedText style={styles.jobPropertyName}>{job.propertyName}</ThemedText>
+                        <ThemedText style={[styles.jobAddress, { color: theme.textSecondary }]} numberOfLines={1}>
+                          {job.propertyAddress}
+                        </ThemedText>
+                      </View>
+                      <ThemedText style={[styles.jobDescription, { color: theme.textSecondary }]} numberOfLines={2}>
+                        {job.description}
+                      </ThemedText>
+                      <View style={styles.jobMeta}>
+                        <View style={styles.jobMetaItem}>
+                          <Feather name="clock" size={14} color={theme.textSecondary} />
+                          <ThemedText style={[styles.jobMetaText, { color: theme.textSecondary }]}>
+                            {time}
+                          </ThemedText>
+                        </View>
+                        <View style={styles.jobMetaItem}>
+                          <Feather name="watch" size={14} color={theme.textSecondary} />
+                          <ThemedText style={[styles.jobMetaText, { color: theme.textSecondary }]}>
+                            {job.estimatedDuration}
+                          </ThemedText>
+                        </View>
+                      </View>
+                      <View style={styles.jobActions}>
+                        <Pressable
+                          style={[styles.dismissButton, { borderColor: theme.border }]}
+                          onPress={() => handleDismissJob(job.id)}
+                        >
+                          <Feather name="x" size={18} color={theme.textSecondary} />
+                          <ThemedText style={[styles.dismissText, { color: theme.textSecondary }]}>Dismiss</ThemedText>
+                        </Pressable>
+                        <Pressable
+                          style={[styles.acceptButton, { backgroundColor: BrandColors.emerald }]}
+                          onPress={() => handleAcceptJob(job.id)}
+                        >
+                          <Feather name="check" size={18} color="#fff" />
+                          <ThemedText style={styles.acceptText}>Accept</ThemedText>
+                        </Pressable>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            ) : null}
+          </>
+        ) : null}
+
+        {pendingJobs.length === 0 ? (
+          <View style={[styles.emptyJobsContainer, { backgroundColor: theme.surface }]}>
+            <View style={[styles.emptyJobsIcon, { backgroundColor: 'rgba(0,120,212,0.1)' }]}>
+              <Feather name="inbox" size={32} color={BrandColors.azureBlue} />
+            </View>
+            <ThemedText style={styles.emptyJobsTitle}>No Jobs Assigned</ThemedText>
+            <ThemedText style={[styles.emptyJobsSubtitle, { color: theme.textSecondary }]}>
+              When the office sends you jobs, they'll appear here
+            </ThemedText>
+          </View>
         ) : null}
 
         {acceptedJobs.length > 0 ? (
@@ -1270,5 +1512,85 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#fff',
+  },
+  urgentJobsSection: {
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    padding: Spacing.md,
+    marginBottom: Spacing.lg,
+  },
+  urgentSectionTitle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  urgentSubtitle: {
+    fontSize: 13,
+    marginBottom: Spacing.md,
+  },
+  urgentJobCard: {
+    borderWidth: 1,
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  jobCategory: {
+    marginBottom: Spacing.md,
+  },
+  categoryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
+    paddingLeft: Spacing.xs,
+  },
+  categoryIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  categoryTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  categoryCount: {
+    fontSize: 13,
+  },
+  jobTypeBadge: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.sm,
+  },
+  jobTypeText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  emptyJobsContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.xl,
+    borderRadius: BorderRadius.lg,
+    marginBottom: Spacing.lg,
+  },
+  emptyJobsIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.md,
+  },
+  emptyJobsTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: Spacing.xs,
+  },
+  emptyJobsSubtitle: {
+    fontSize: 14,
+    textAlign: 'center',
   },
 });

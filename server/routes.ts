@@ -11,6 +11,7 @@ import aiProductSearchRouter from "./routes/ai-product-search";
 import aiLearningRouter from "./routes/ai-learning";
 import poolRegulationsRouter from "./routes/pool-regulations";
 import poolbrainProductsRouter from "./routes/poolbrain-products";
+import debugRouter, { trackRequest, trackError } from "./routes/debug";
 
 // Configure multer for photo uploads
 const photoStorage = multer.diskStorage({
@@ -261,6 +262,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.use((req, res, next) => {
+    const startTime = Date.now();
+    res.on('finish', () => {
+      const duration = Date.now() - startTime;
+      if (req.path.startsWith('/api/')) {
+        trackRequest(req.method, req.path, res.statusCode, duration);
+      }
+    });
+    next();
+  });
+
+  app.use("/api/debug", debugRouter);
   app.use("/api/auth", authRoutes);
   app.use("/api/transcribe", transcribeRouter);
   app.use("/api/ai-product-search", aiProductSearchRouter);

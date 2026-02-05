@@ -735,7 +735,10 @@ export default function HomeScreen() {
       <EmergencyReportModal
         visible={showEmergencyModal}
         onClose={() => setShowEmergencyModal(false)}
-        onSubmit={(data) => console.log('Emergency:', data)}
+        onSubmit={(data) => {
+          console.log('[RepairTech] Emergency submitted:', data);
+        }}
+        technicianRole="repair_technician"
       />
 
       <Modal

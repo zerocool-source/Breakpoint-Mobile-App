@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -8,6 +8,8 @@ import {
   TextInput,
   Platform,
   useWindowDimensions,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
@@ -20,7 +22,8 @@ import { BPButton } from '@/components/BPButton';
 import { BubbleBackground } from '@/components/BubbleBackground';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
-import { mockProperties } from '@/lib/mockData';
+import { getTechOpsUrl } from '@/lib/query-client';
+import { useAuth } from '@/hooks/useAuth';
 
 const EMERGENCY_TYPES = [
   { id: 'leak', label: 'Major Water Leak', icon: 'droplet' as const, color: '#0078D4' },
@@ -114,23 +117,100 @@ function EmergencyCard({ report, index }: EmergencyCardProps) {
   );
 }
 
+interface Property {
+  id: string;
+  name: string;
+  address?: string;
+}
+
 export default function EmergencyScreen() {
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
   const { theme } = useTheme();
   const { height: windowHeight } = useWindowDimensions();
-  
+  const { user, token } = useAuth();
+
   const [showModal, setShowModal] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [description, setDescription] = useState('');
   const [showPropertyPicker, setShowPropertyPicker] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [emergencyHistory, setEmergencyHistory] = useState<EmergencyReport[]>(mockEmergencyHistory);
+  const [emergencyHistory, setEmergencyHistory] = useState<EmergencyReport[]>([]);
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [loadingProperties, setLoadingProperties] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(true);
 
-  const selectedPropertyData = mockProperties.find(p => p.id === selectedProperty);
+  // Fetch properties on mount
+  useEffect(() => {
+    fetchProperties();
+    fetchEmergencyHistory();
+  }, []);
 
-  const handleSubmit = () => {
+  const fetchProperties = async () => {
+    setLoadingProperties(true);
+    try {
+      const response = await fetch(`${getTechOpsUrl()}/api/properties?limit=100`, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const propertyList = data.properties || data || [];
+        setProperties(propertyList.map((p: any) => ({
+          id: p.id,
+          name: p.name || p.poolName || 'Unknown Property',
+          address: p.address || p.propertyAddress || '',
+        })));
+      }
+    } catch (error) {
+      console.error('[ServiceTech Emergency] Failed to fetch properties:', error);
+    } finally {
+      setLoadingProperties(false);
+    }
+  };
+
+  const fetchEmergencyHistory = async () => {
+    setLoadingHistory(true);
+    try {
+      // Fetch emergencies submitted by this technician
+      const techId = user?.id || user?.technicianId;
+      const response = await fetch(`${getTechOpsUrl()}/api/emergencies?submitterRole=service_technician`, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const emergencies = Array.isArray(data) ? data : data.emergencies || [];
+        // Filter to this tech's emergencies if we have an ID
+        const filtered = techId
+          ? emergencies.filter((e: any) => e.submittedById === techId)
+          : emergencies.slice(0, 10);
+
+        setEmergencyHistory(filtered.map((e: any) => ({
+          id: e.id,
+          propertyId: e.propertyId,
+          propertyName: e.propertyName || 'Unknown Property',
+          emergencyType: e.description?.match(/\[([^\]]+)\]/)?.[1]?.toLowerCase().replace(/ /g, '_') || 'other',
+          description: e.description?.replace(/\[[^\]]+\]\s*/, '') || e.description || '',
+          timestamp: e.createdAt,
+          status: e.status === 'pending_review' ? 'reported' : e.status === 'resolved' ? 'resolved' : 'acknowledged',
+        })));
+      }
+    } catch (error) {
+      console.error('[ServiceTech Emergency] Failed to fetch history:', error);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  const selectedPropertyData = properties.find(p => p.id === selectedProperty);
+
+  const handleSubmit = async () => {
     if (!selectedProperty || !selectedType) return;
 
     if (Platform.OS !== 'web') {
@@ -139,10 +219,55 @@ export default function EmergencyScreen() {
 
     setIsSubmitting(true);
 
-    setTimeout(() => {
-      const property = mockProperties.find(p => p.id === selectedProperty);
+    try {
+      const property = properties.find(p => p.id === selectedProperty);
+      const emergencyTypeLabel = EMERGENCY_TYPES.find(t => t.id === selectedType)?.label || selectedType;
+      const fullDescription = `[${emergencyTypeLabel}] ${description}`.trim();
+
+      // Determine priority based on emergency type
+      const priorityMap: Record<string, string> = {
+        'injury': 'critical',
+        'electrical': 'critical',
+        'chemical': 'high',
+        'leak': 'high',
+        'equipment': 'normal',
+        'other': 'normal',
+      };
+
+      const emergencyData = {
+        propertyId: selectedProperty,
+        propertyName: property?.name || 'Unknown Property',
+        propertyAddress: property?.address || '',
+        submittedById: user?.id || user?.technicianId,
+        submittedByName: user?.name || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.email || 'Unknown',
+        submitterRole: 'service_technician',
+        description: fullDescription,
+        priority: priorityMap[selectedType] || 'normal',
+        status: 'pending_review',
+      };
+
+      console.log('[ServiceTech Emergency] Submitting:', emergencyData);
+
+      const response = await fetch(`${getTechOpsUrl()}/api/emergencies`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(emergencyData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('[ServiceTech Emergency] Created:', result);
+
+      // Add to local history
       const newReport: EmergencyReport = {
-        id: String(Date.now()),
+        id: result.id || String(Date.now()),
         propertyId: selectedProperty,
         propertyName: property?.name || 'Unknown Property',
         emergencyType: selectedType,
@@ -152,7 +277,6 @@ export default function EmergencyScreen() {
       };
 
       setEmergencyHistory([newReport, ...emergencyHistory]);
-      setIsSubmitting(false);
       setSelectedProperty(null);
       setSelectedType(null);
       setDescription('');
@@ -161,7 +285,22 @@ export default function EmergencyScreen() {
       if (Platform.OS !== 'web') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
-    }, 1500);
+
+      Alert.alert(
+        'Emergency Reported',
+        'Admin has been notified and will respond shortly.',
+        [{ text: 'OK' }]
+      );
+    } catch (error: any) {
+      console.error('[ServiceTech Emergency] Submit failed:', error);
+      Alert.alert(
+        'Submission Failed',
+        error.message || 'Could not submit emergency report. Please try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleOpenModal = () => {
@@ -279,29 +418,44 @@ export default function EmergencyScreen() {
 
               {showPropertyPicker ? (
                 <View style={[styles.propertyList, { borderColor: theme.border }]}>
-                  {mockProperties.map((property) => (
-                    <Pressable
-                      key={property.id}
-                      style={[
-                        styles.propertyOption,
-                        selectedProperty === property.id && { backgroundColor: BrandColors.azureBlue + '10' },
-                      ]}
-                      onPress={() => {
-                        setSelectedProperty(property.id);
-                        setShowPropertyPicker(false);
-                      }}
-                    >
-                      <ThemedText style={[
-                        styles.propertyOptionText,
-                        selectedProperty === property.id && { color: BrandColors.azureBlue, fontWeight: '600' },
-                      ]}>
-                        {property?.name ?? 'Unknown Property'}
+                  {loadingProperties ? (
+                    <View style={styles.loadingContainer}>
+                      <ActivityIndicator size="small" color={BrandColors.azureBlue} />
+                      <ThemedText style={{ marginLeft: 8, color: theme.textSecondary }}>
+                        Loading properties...
                       </ThemedText>
-                      {selectedProperty === property.id ? (
-                        <Feather name="check" size={18} color={BrandColors.azureBlue} />
-                      ) : null}
-                    </Pressable>
-                  ))}
+                    </View>
+                  ) : properties.length === 0 ? (
+                    <View style={styles.loadingContainer}>
+                      <ThemedText style={{ color: theme.textSecondary }}>
+                        No properties available
+                      </ThemedText>
+                    </View>
+                  ) : (
+                    properties.map((property) => (
+                      <Pressable
+                        key={property.id}
+                        style={[
+                          styles.propertyOption,
+                          selectedProperty === property.id && { backgroundColor: BrandColors.azureBlue + '10' },
+                        ]}
+                        onPress={() => {
+                          setSelectedProperty(property.id);
+                          setShowPropertyPicker(false);
+                        }}
+                      >
+                        <ThemedText style={[
+                          styles.propertyOptionText,
+                          selectedProperty === property.id && { color: BrandColors.azureBlue, fontWeight: '600' },
+                        ]}>
+                          {property?.name ?? 'Unknown Property'}
+                        </ThemedText>
+                        {selectedProperty === property.id ? (
+                          <Feather name="check" size={18} color={BrandColors.azureBlue} />
+                        ) : null}
+                      </Pressable>
+                    ))
+                  )}
                 </View>
               ) : null}
 
@@ -679,5 +833,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.lg,
   },
 });

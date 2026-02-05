@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -9,6 +9,7 @@ import {
   useWindowDimensions,
   Platform,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -18,12 +19,21 @@ import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
 import { ThemedText } from '@/components/ThemedText';
 import { useTheme } from '@/hooks/useTheme';
 import { BrandColors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
-import { mockProperties } from '@/lib/mockData';
+import { getTechOpsUrl } from '@/lib/query-client';
+import { useAuth } from '@/hooks/useAuth';
+
+interface Property {
+  id: string;
+  name: string;
+  address?: string;
+}
 
 interface EmergencyReportModalProps {
   visible: boolean;
   onClose: () => void;
   onSubmit: (data: any) => void;
+  technicianRole?: string; // 'repair_technician', 'service_technician', 'supervisor', etc.
+  properties?: Property[]; // Optional - will fetch if not provided
 }
 
 const EMERGENCY_TYPES = [
@@ -35,16 +45,57 @@ const EMERGENCY_TYPES = [
   { id: 'other', label: 'Other Emergency', icon: 'alert-circle' },
 ];
 
-export function EmergencyReportModal({ visible, onClose, onSubmit }: EmergencyReportModalProps) {
+export function EmergencyReportModal({
+  visible,
+  onClose,
+  onSubmit,
+  technicianRole = 'repair_technician',
+  properties: propProperties,
+}: EmergencyReportModalProps) {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const { height: windowHeight } = useWindowDimensions();
+  const { user, token } = useAuth();
 
   const [selectedProperty, setSelectedProperty] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPropertyPicker, setShowPropertyPicker] = useState(false);
+  const [properties, setProperties] = useState<Property[]>(propProperties || []);
+  const [loadingProperties, setLoadingProperties] = useState(false);
+
+  // Fetch properties when modal opens if not provided
+  useEffect(() => {
+    if (visible && !propProperties?.length) {
+      fetchProperties();
+    }
+  }, [visible, propProperties]);
+
+  const fetchProperties = async () => {
+    setLoadingProperties(true);
+    try {
+      const response = await fetch(`${getTechOpsUrl()}/api/properties?limit=100`, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const propertyList = data.properties || data || [];
+        setProperties(propertyList.map((p: any) => ({
+          id: p.id,
+          name: p.name || p.poolName || 'Unknown Property',
+          address: p.address || p.propertyAddress || '',
+        })));
+      }
+    } catch (error) {
+      console.error('[Emergency] Failed to fetch properties:', error);
+    } finally {
+      setLoadingProperties(false);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!selectedProperty || !selectedType) {
@@ -57,20 +108,63 @@ export function EmergencyReportModal({ visible, onClose, onSubmit }: EmergencyRe
 
     setIsSubmitting(true);
 
-    setTimeout(() => {
-      setIsSubmitting(false);
-      
-      const property = mockProperties.find(p => p.id === selectedProperty);
-      
-      onSubmit({
+    try {
+      const property = properties.find(p => p.id === selectedProperty);
+      const emergencyTypeLabel = EMERGENCY_TYPES.find(t => t.id === selectedType)?.label || selectedType;
+
+      // Build the emergency description with type
+      const fullDescription = `[${emergencyTypeLabel}] ${description}`.trim();
+
+      // Determine priority based on emergency type
+      const priorityMap: Record<string, string> = {
+        'injury': 'critical',
+        'electrical': 'critical',
+        'chemical': 'high',
+        'leak': 'high',
+        'equipment': 'normal',
+        'other': 'normal',
+      };
+
+      const emergencyData = {
         propertyId: selectedProperty,
-        propertyName: property?.name,
-        emergencyType: selectedType,
-        description,
-        timestamp: new Date().toISOString(),
+        propertyName: property?.name || 'Unknown Property',
+        propertyAddress: property?.address || '',
+        submittedById: user?.id || user?.technicianId,
+        submittedByName: user?.name || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.email || 'Unknown',
+        submitterRole: technicianRole,
+        description: fullDescription,
+        priority: priorityMap[selectedType] || 'normal',
+        status: 'pending_review',
+      };
+
+      console.log('[Emergency] Submitting to admin:', emergencyData);
+
+      const response = await fetch(`${getTechOpsUrl()}/api/emergencies`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(emergencyData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('[Emergency] Created successfully:', result);
+
+      // Call the onSubmit callback with the result
+      onSubmit({
+        ...emergencyData,
+        id: result.id,
+        createdAt: result.createdAt,
         notifiedAdmin: true,
       });
 
+      // Reset form
       setSelectedProperty(null);
       setSelectedType(null);
       setDescription('');
@@ -79,10 +173,25 @@ export function EmergencyReportModal({ visible, onClose, onSubmit }: EmergencyRe
       if (Platform.OS !== 'web') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
-    }, 1500);
+
+      Alert.alert(
+        'Emergency Reported',
+        'Admin has been notified and will respond shortly.',
+        [{ text: 'OK' }]
+      );
+    } catch (error: any) {
+      console.error('[Emergency] Submit failed:', error);
+      Alert.alert(
+        'Submission Failed',
+        error.message || 'Could not submit emergency report. Please try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const selectedPropertyData = mockProperties.find(p => p.id === selectedProperty);
+  const selectedPropertyData = properties.find(p => p.id === selectedProperty);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -142,28 +251,43 @@ export function EmergencyReportModal({ visible, onClose, onSubmit }: EmergencyRe
 
               {showPropertyPicker ? (
                 <View style={[styles.propertyList, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-                  {mockProperties.map((property) => (
-                    <Pressable
-                      key={property.id}
-                      style={[
-                        styles.propertyOption,
-                        { borderBottomColor: theme.border },
-                        selectedProperty === property.id && { backgroundColor: BrandColors.azureBlue + '10' }
-                      ]}
-                      onPress={() => {
-                        setSelectedProperty(property.id);
-                        setShowPropertyPicker(false);
-                        if (Platform.OS !== 'web') {
-                          Haptics.selectionAsync();
-                        }
-                      }}
-                    >
-                      <ThemedText style={styles.propertyOptionName}>{property?.name ?? 'Unknown Property'}</ThemedText>
-                      <ThemedText style={[styles.propertyOptionAddress, { color: theme.textSecondary }]}>
-                        {property?.address ?? 'Address unavailable'}
+                  {loadingProperties ? (
+                    <View style={styles.loadingContainer}>
+                      <ActivityIndicator size="small" color={BrandColors.azureBlue} />
+                      <ThemedText style={[styles.loadingText, { color: theme.textSecondary }]}>
+                        Loading properties...
                       </ThemedText>
-                    </Pressable>
-                  ))}
+                    </View>
+                  ) : properties.length === 0 ? (
+                    <View style={styles.emptyContainer}>
+                      <ThemedText style={[styles.emptyText, { color: theme.textSecondary }]}>
+                        No properties available
+                      </ThemedText>
+                    </View>
+                  ) : (
+                    properties.map((property) => (
+                      <Pressable
+                        key={property.id}
+                        style={[
+                          styles.propertyOption,
+                          { borderBottomColor: theme.border },
+                          selectedProperty === property.id && { backgroundColor: BrandColors.azureBlue + '10' }
+                        ]}
+                        onPress={() => {
+                          setSelectedProperty(property.id);
+                          setShowPropertyPicker(false);
+                          if (Platform.OS !== 'web') {
+                            Haptics.selectionAsync();
+                          }
+                        }}
+                      >
+                        <ThemedText style={styles.propertyOptionName}>{property?.name ?? 'Unknown Property'}</ThemedText>
+                        <ThemedText style={[styles.propertyOptionAddress, { color: theme.textSecondary }]}>
+                          {property?.address ?? 'Address unavailable'}
+                        </ThemedText>
+                      </Pressable>
+                    ))
+                  )}
                 </View>
               ) : null}
             </View>
@@ -453,5 +577,23 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     fontSize: 16,
     fontWeight: '500',
+  },
+  loadingContainer: {
+    padding: Spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  loadingText: {
+    fontSize: 14,
+  },
+  emptyContainer: {
+    padding: Spacing.lg,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 14,
+    fontStyle: 'italic',
   },
 });

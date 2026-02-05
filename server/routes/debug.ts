@@ -127,6 +127,24 @@ router.get('/metrics', async (req: Request, res: Response) => {
   }
 });
 
+async function safeCount(table: any): Promise<number> {
+  try {
+    const result = await db.select({ count: count() }).from(table);
+    return result[0]?.count || 0;
+  } catch {
+    return -1;
+  }
+}
+
+async function safeQuery(query: any): Promise<any[]> {
+  try {
+    const result = await db.execute(query);
+    return result.rows;
+  } catch {
+    return [];
+  }
+}
+
 router.get('/database', async (req: Request, res: Response) => {
   try {
     const [
@@ -141,37 +159,37 @@ router.get('/database', async (req: Request, res: Response) => {
       notificationCount,
       adminMessageCount
     ] = await Promise.all([
-      db.select({ count: count() }).from(users),
-      db.select({ count: count() }).from(properties),
-      db.select({ count: count() }).from(jobs),
-      db.select({ count: count() }).from(assignments),
-      db.select({ count: count() }).from(estimates),
-      db.select({ count: count() }).from(sessions),
-      db.select({ count: count() }).from(estimateTemplates),
-      db.select({ count: count() }).from(poolRegulations),
-      db.select({ count: count() }).from(urgentNotifications),
-      db.select({ count: count() }).from(adminMessages)
+      safeCount(users),
+      safeCount(properties),
+      safeCount(jobs),
+      safeCount(assignments),
+      safeCount(estimates),
+      safeCount(sessions),
+      safeCount(estimateTemplates),
+      safeCount(poolRegulations),
+      safeCount(urgentNotifications),
+      safeCount(adminMessages)
     ]);
 
-    const jobsByStatus = await db.execute(sql`
+    const jobsByStatus = await safeQuery(sql`
       SELECT status, COUNT(*) as count 
       FROM jobs 
       GROUP BY status
     `);
 
-    const jobsByPriority = await db.execute(sql`
+    const jobsByPriority = await safeQuery(sql`
       SELECT priority, COUNT(*) as count 
       FROM jobs 
       GROUP BY priority
     `);
 
-    const estimatesByStatus = await db.execute(sql`
+    const estimatesByStatus = await safeQuery(sql`
       SELECT status, COUNT(*) as count 
       FROM estimates 
       GROUP BY status
     `);
 
-    const usersByRole = await db.execute(sql`
+    const usersByRole = await safeQuery(sql`
       SELECT role, COUNT(*) as count 
       FROM users 
       GROUP BY role
@@ -500,17 +518,22 @@ router.get('/estimates', async (req: Request, res: Response) => {
 router.get('/ai-status', async (req: Request, res: Response) => {
   try {
     const [templateCount, regulationCount] = await Promise.all([
-      db.select({ count: count() }).from(estimateTemplates),
-      db.select({ count: count() }).from(poolRegulations)
+      safeCount(estimateTemplates),
+      safeCount(poolRegulations)
     ]);
 
-    const recentTemplates = await db.select({
-      id: estimateTemplates.id,
-      name: estimateTemplates.name,
-      category: estimateTemplates.category,
-      isActive: estimateTemplates.isActive,
-      updatedAt: estimateTemplates.updatedAt
-    }).from(estimateTemplates).orderBy(desc(estimateTemplates.updatedAt)).limit(10);
+    let recentTemplates: any[] = [];
+    try {
+      recentTemplates = await db.select({
+        id: estimateTemplates.id,
+        name: estimateTemplates.name,
+        category: estimateTemplates.category,
+        isActive: estimateTemplates.isActive,
+        updatedAt: estimateTemplates.updatedAt
+      }).from(estimateTemplates).orderBy(desc(estimateTemplates.updatedAt)).limit(10);
+    } catch {
+      recentTemplates = [];
+    }
 
     const openaiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
     
@@ -527,8 +550,8 @@ router.get('/ai-status', async (req: Request, res: Response) => {
         }
       },
       knowledgeBase: {
-        estimateTemplates: templateCount[0]?.count || 0,
-        poolRegulations: regulationCount[0]?.count || 0
+        estimateTemplates: templateCount >= 0 ? templateCount : 'table not found',
+        poolRegulations: regulationCount >= 0 ? regulationCount : 'table not found'
       },
       recentTemplates
     });
@@ -609,19 +632,19 @@ router.get('/full-report', async (req: Request, res: Response) => {
       templateCount,
       notificationCount
     ] = await Promise.all([
-      db.select({ count: count() }).from(users),
-      db.select({ count: count() }).from(properties),
-      db.select({ count: count() }).from(jobs),
-      db.select({ count: count() }).from(estimates),
-      db.select({ count: count() }).from(sessions),
-      db.select({ count: count() }).from(estimateTemplates),
-      db.select({ count: count() }).from(urgentNotifications)
+      safeCount(users),
+      safeCount(properties),
+      safeCount(jobs),
+      safeCount(estimates),
+      safeCount(sessions),
+      safeCount(estimateTemplates),
+      safeCount(urgentNotifications)
     ]);
 
-    const jobsByStatus = await db.execute(sql`
+    const jobsByStatus = await safeQuery(sql`
       SELECT status, COUNT(*) as count FROM jobs GROUP BY status
     `);
-    const estimatesByStatus = await db.execute(sql`
+    const estimatesByStatus = await safeQuery(sql`
       SELECT status, COUNT(*) as count FROM estimates GROUP BY status
     `);
 
@@ -663,16 +686,16 @@ router.get('/full-report', async (req: Request, res: Response) => {
 
       database: {
         tables: {
-          users: userCount[0]?.count || 0,
-          properties: propertyCount[0]?.count || 0,
-          jobs: jobCount[0]?.count || 0,
-          estimates: estimateCount[0]?.count || 0,
-          activeSessions: sessionCount[0]?.count || 0,
-          estimateTemplates: templateCount[0]?.count || 0,
-          urgentNotifications: notificationCount[0]?.count || 0
+          users: userCount >= 0 ? userCount : 'table not found',
+          properties: propertyCount >= 0 ? propertyCount : 'table not found',
+          jobs: jobCount >= 0 ? jobCount : 'table not found',
+          estimates: estimateCount >= 0 ? estimateCount : 'table not found',
+          activeSessions: sessionCount >= 0 ? sessionCount : 'table not found',
+          estimateTemplates: templateCount >= 0 ? templateCount : 'table not found',
+          urgentNotifications: notificationCount >= 0 ? notificationCount : 'table not found'
         },
-        jobsByStatus: jobsByStatus.rows,
-        estimatesByStatus: estimatesByStatus.rows
+        jobsByStatus: jobsByStatus,
+        estimatesByStatus: estimatesByStatus
       },
 
       externalApis: {

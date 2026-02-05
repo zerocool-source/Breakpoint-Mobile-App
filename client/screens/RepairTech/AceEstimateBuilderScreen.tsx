@@ -174,6 +174,7 @@ export default function AceEstimateBuilderScreen() {
   const [showValidationError, setShowValidationError] = useState(false);
   const [validationErrorMessage, setValidationErrorMessage] = useState('');
   const [showDraftSavedModal, setShowDraftSavedModal] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorModalMessage, setErrorModalMessage] = useState('');
   const [messages, setMessages] = useState<AceMessage[]>([]);
@@ -1194,6 +1195,7 @@ export default function AceEstimateBuilderScreen() {
 
       // If just saving draft (not sending to office), we're done - show success modal
       if (!sendToOffice) {
+        setIsSubmitting(false);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setShowDraftSavedModal(true);
         return;
@@ -1772,13 +1774,13 @@ export default function AceEstimateBuilderScreen() {
                     setShowValidationError(true);
                     return;
                   }
-                  setShowSendConfirmModal(true);
+                  setShowPreviewModal(true);
                 }}
                 disabled={isSubmitting}
                 style={styles.saveAndSendButton}
               >
                 <ThemedText style={styles.saveAndSendText}>
-                  {isSubmitting ? 'Sending...' : 'Save & Send'}
+                  {isSubmitting ? 'Sending...' : 'Preview & Send'}
                 </ThemedText>
               </Pressable>
             </View>
@@ -1942,6 +1944,111 @@ export default function AceEstimateBuilderScreen() {
             >
               <ThemedText style={styles.sendConfirmYesText}>OK</ThemedText>
             </Pressable>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={showPreviewModal} animationType="slide" transparent onRequestClose={() => setShowPreviewModal(false)}>
+        <View style={styles.previewOverlay}>
+          <View style={[styles.previewModal, { backgroundColor: '#fff' }]}>
+            <View style={styles.previewHeader}>
+              <ThemedText style={styles.previewTitle}>Estimate Preview</ThemedText>
+              <Pressable onPress={() => setShowPreviewModal(false)} style={styles.previewCloseBtn}>
+                <Feather name="x" size={24} color="#333" />
+              </Pressable>
+            </View>
+            
+            <ScrollView style={styles.previewScroll} showsVerticalScrollIndicator={true}>
+              <View style={styles.previewSection}>
+                <ThemedText style={styles.previewLabel}>ESTIMATE</ThemedText>
+                <ThemedText style={styles.previewValue}>{estimateNumber}</ThemedText>
+                <ThemedText style={styles.previewSubtext}>
+                  Date: {estimateDate.toLocaleDateString()}
+                </ThemedText>
+              </View>
+
+              <View style={styles.previewSection}>
+                <ThemedText style={styles.previewLabel}>PROPERTY</ThemedText>
+                <ThemedText style={styles.previewValue}>{selectedProperty || 'Not selected'}</ThemedText>
+              </View>
+
+              {estimateDescription ? (
+                <View style={styles.previewSection}>
+                  <ThemedText style={styles.previewLabel}>DESCRIPTION</ThemedText>
+                  <ThemedText style={styles.previewDescription}>{estimateDescription}</ThemedText>
+                </View>
+              ) : null}
+
+              <View style={styles.previewSection}>
+                <ThemedText style={styles.previewLabel}>LINE ITEMS ({lineItems.length})</ThemedText>
+                {lineItems.map((item, index) => (
+                  <View key={item.id} style={styles.previewLineItem}>
+                    <View style={styles.previewLineItemHeader}>
+                      <ThemedText style={styles.previewLineItemNum}>{index + 1}.</ThemedText>
+                      <ThemedText style={styles.previewLineItemName} numberOfLines={2}>
+                        {item.product.name}
+                      </ThemedText>
+                    </View>
+                    <ThemedText style={styles.previewLineItemSku}>SKU: {item.product.sku}</ThemedText>
+                    {item.description ? (
+                      <ThemedText style={styles.previewLineItemDesc}>{item.description}</ThemedText>
+                    ) : null}
+                    <View style={styles.previewLineItemPricing}>
+                      <ThemedText style={styles.previewLineItemQty}>
+                        Qty: {item.quantity} x {formatCurrencyDollars(item.rate)}
+                      </ThemedText>
+                      <ThemedText style={styles.previewLineItemTotal}>
+                        {formatCurrencyDollars(item.quantity * item.rate)}
+                      </ThemedText>
+                    </View>
+                  </View>
+                ))}
+              </View>
+
+              <View style={styles.previewTotals}>
+                <View style={styles.previewTotalRow}>
+                  <ThemedText style={styles.previewTotalLabel}>Subtotal</ThemedText>
+                  <ThemedText style={styles.previewTotalValue}>{formatCurrencyDollars(subtotal)}</ThemedText>
+                </View>
+                {discountAmount > 0 ? (
+                  <View style={styles.previewTotalRow}>
+                    <ThemedText style={styles.previewTotalLabel}>
+                      Discount ({discountType === 'percent' ? `${discountValue}%` : 'Fixed'})
+                    </ThemedText>
+                    <ThemedText style={[styles.previewTotalValue, { color: BrandColors.emerald }]}>
+                      -{formatCurrencyDollars(discountAmount)}
+                    </ThemedText>
+                  </View>
+                ) : null}
+                <View style={styles.previewTotalRow}>
+                  <ThemedText style={styles.previewTotalLabel}>Tax ({salesTaxRate}%)</ThemedText>
+                  <ThemedText style={styles.previewTotalValue}>{formatCurrencyDollars(salesTaxAmount)}</ThemedText>
+                </View>
+                <View style={[styles.previewTotalRow, styles.previewGrandTotal]}>
+                  <ThemedText style={styles.previewGrandTotalLabel}>TOTAL</ThemedText>
+                  <ThemedText style={styles.previewGrandTotalValue}>{formatCurrencyDollars(totalAmount)}</ThemedText>
+                </View>
+              </View>
+            </ScrollView>
+
+            <View style={styles.previewFooter}>
+              <Pressable
+                onPress={() => setShowPreviewModal(false)}
+                style={styles.previewCancelBtn}
+              >
+                <ThemedText style={styles.previewCancelText}>Edit</ThemedText>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setShowPreviewModal(false);
+                  setShowSendConfirmModal(true);
+                }}
+                style={styles.previewSendBtn}
+              >
+                <Feather name="send" size={18} color="#fff" />
+                <ThemedText style={styles.previewSendText}>Send to Office</ThemedText>
+              </Pressable>
+            </View>
           </View>
         </View>
       </Modal>
@@ -3506,5 +3613,183 @@ const styles = StyleSheet.create({
     backgroundColor: BrandColors.azureBlue,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  previewOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  previewModal: {
+    maxHeight: '90%',
+    borderTopLeftRadius: BorderRadius.xl,
+    borderTopRightRadius: BorderRadius.xl,
+    overflow: 'hidden',
+  },
+  previewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: Spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  previewTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  previewCloseBtn: {
+    padding: Spacing.xs,
+  },
+  previewScroll: {
+    flex: 1,
+    paddingHorizontal: Spacing.lg,
+  },
+  previewSection: {
+    paddingVertical: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  previewLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#6B7280',
+    letterSpacing: 0.5,
+    marginBottom: Spacing.xs,
+  },
+  previewValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  previewSubtext: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  previewDescription: {
+    fontSize: 14,
+    color: '#374151',
+    lineHeight: 20,
+  },
+  previewLineItem: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    marginTop: Spacing.sm,
+  },
+  previewLineItemHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.xs,
+  },
+  previewLineItemNum: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  previewLineItemName: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  previewLineItemSku: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    marginTop: 2,
+  },
+  previewLineItemDesc: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginTop: Spacing.xs,
+    fontStyle: 'italic',
+  },
+  previewLineItemPricing: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: Spacing.sm,
+    paddingTop: Spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  previewLineItemQty: {
+    fontSize: 13,
+    color: '#6B7280',
+  },
+  previewLineItemTotal: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  previewTotals: {
+    paddingVertical: Spacing.lg,
+  },
+  previewTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: Spacing.xs,
+  },
+  previewTotalLabel: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  previewTotalValue: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  previewGrandTotal: {
+    marginTop: Spacing.sm,
+    paddingTop: Spacing.md,
+    borderTopWidth: 2,
+    borderTopColor: '#111827',
+  },
+  previewGrandTotalLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  previewGrandTotalValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: ESTIMATE_COLORS.primary,
+  },
+  previewFooter: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    padding: Spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  previewCancelBtn: {
+    flex: 1,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  previewCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  previewSendBtn: {
+    flex: 2,
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    backgroundColor: ESTIMATE_COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  previewSendText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
   },
 });
